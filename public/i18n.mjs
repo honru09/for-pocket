@@ -81,13 +81,17 @@ export function categoryLabel(category, language) {
   return category.label;
 }
 export function translateError(message, language) {
-  const key = Object.keys(MESSAGES.zh).find(key => key.startsWith('error') && MESSAGES.zh[key] === message);
+  if (!message) return translate(language, 'errorSave');
+  const key = Object.keys(MESSAGES.zh).find(k => k.startsWith('error') && MESSAGES.zh[k] === message);
   const aliases = {
-    '请从 Telegram bot 重新打开。': 'errorAuth', '找不到这笔记录。': 'errorMissing',
-    '暂时没有保存成功，请稍后重试。': 'errorSave', '账本已达 10000 笔容量，请备份后扩展存储。': 'errorCapacity',
+    '请从 Telegram bot 重新打开。': 'errorAuth',
+    '找不到这笔记录。': 'errorMissing',
+    '暂时没有保存成功，请稍后重试。': 'errorSave',
+    '账本已达 10000 笔容量，请备份后扩展存储。': 'errorCapacity',
+    '请求来源不匹配。': 'errorOrigin',
   };
   if (key || aliases[message]) return translate(language, key || aliases[message]);
-  if (Object.values(MESSAGES[language]).includes(message)) return message;
-  return translate(language, 'errorSave');
+  if (Object.values(MESSAGES[language] || {}).includes(message)) return message;
+  return message;
 }
 

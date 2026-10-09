@@ -70,15 +70,27 @@ export function createApp({ token = process.env.BOT_TOKEN || '', dataDir = path.
         catch { throw new RequestError('请从 Telegram bot 重新打开。', 401); }
         const id = String(user.id);
         if (!['GET', 'HEAD'].includes(req.method) && req.headers.origin) {
-          const forwardedProto = req.headers['x-forwarded-proto'];
-          const host = req.headers.host;
-          const allowedOrigins = new Set([
-            canonicalOrigin,
-            host ? `https://${host}` : null,
-            host ? `http://${host}` : null,
-            forwardedProto && host ? `${forwardedProto}://${host}` : null,
-          ].filter(Boolean));
-          if (!allowedOrigins.has(req.headers.origin)) throw new RequestError('请求来源不匹配。', 403);
+          const origin = req.headers.origin;
+          const isAllowed = (() => {
+            if (origin === 'null') return true;
+            try {
+              const url = new URL(origin);
+              if (url.hostname === 'web.telegram.org' || url.hostname.endsWith('.telegram.org')) return true;
+              if (canonicalOrigin && url.origin === canonicalOrigin) return true;
+              const forwardedHost = (req.headers['x-forwarded-host'] || '').split(',')[0].trim();
+              const host = req.headers.host || '';
+              const allowedHosts = new Set([
+                forwardedHost.split(':')[0],
+                host.split(':')[0],
+                'localhost',
+                '127.0.0.1',
+              ].filter(Boolean));
+              return allowedHosts.has(url.hostname);
+            } catch {
+              return false;
+            }
+          })();
+          if (!isAllowed) throw new RequestError('请求来源不匹配。', 403);
         }
         if (url.pathname === '/api/profile' && req.method === 'GET') {
           await queues.get(id)?.catch(() => {});

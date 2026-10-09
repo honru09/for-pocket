@@ -92,6 +92,7 @@ export default function App() {
         }
         const response = await fetch('/api/config', { signal: AbortSignal.timeout(10000) });
         if (!response.ok) throw new Error('暂时连接不上，请刷新后再打开。');
+        const config = await response.json();
         const isTelegram = Boolean(telegram?.initData);
         if (isTelegram && config.mode !== 'telegram') throw new Error('bot 服务还没有配置完成，请先配置服务端。');
         const backend = (config.mode === 'telegram' && isTelegram) ? remoteService(telegram) : localService();

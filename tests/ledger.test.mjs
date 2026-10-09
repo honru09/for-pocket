@@ -36,12 +36,15 @@ test('ledger persists, isolates users, saves concurrent requests, deduplicates r
     assert.ok(path.basename(dataDir).startsWith('for-pocket-test-'));
     await rm(dataDir, { recursive: true, force: true });
   });
-  async function request(route, { user = 101, method = 'GET', body, auth = signed(user), origin } = {}) {
-    const response = await fetch(base + '/api' + route, { method, headers: { 'Content-Type': 'application/json', 'X-Telegram-Init-Data': auth, ...(origin ? { Origin: origin } : {}) }, body: body ? JSON.stringify(body) : undefined });
+  async function request(route, { user = 101, method = 'GET', body, auth = signed(user), origin, headers = {} } = {}) {
+    const response = await fetch(base + '/api' + route, { method, headers: { 'Content-Type': 'application/json', 'X-Telegram-Init-Data': auth, ...(origin ? { Origin: origin } : {}), ...headers }, body: body ? JSON.stringify(body) : undefined });
     return { status: response.status, data: await response.json() };
   }
   assert.equal((await request('/profile', { auth: '' })).status, 401);
   assert.equal((await request('/settings', { method: 'PUT', origin: 'https://untrusted.example', body: {} })).status, 403);
+  assert.equal((await request('/settings', { method: 'PUT', origin: 'https://web.telegram.org', body: { currency: 'JPY', language: 'zh', categories: [] } })).status, 400); // 400 due to empty categories, not 403 origin!
+  assert.equal((await request('/settings', { method: 'PUT', origin: 'null', body: { currency: 'JPY', language: 'zh', categories: [] } })).status, 400); // not 403!
+  assert.equal((await request('/settings', { method: 'PUT', origin: 'https://for-pocket.onrender.com', headers: { 'X-Forwarded-Host': 'for-pocket.onrender.com' }, body: { currency: 'JPY', language: 'zh', categories: [] } })).status, 400); // not 403!
   const payload = { id: 'expense-test-001', amountMinor: 650, currency: 'JPY', categoryId: 'stomach', consumer: 'xingrun', note: '拉面 🍜', timezone: 'Asia/Tokyo' };
   const first = await request('/expenses', { method: 'POST', body: payload });
   assert.equal(first.status, 200); assert.equal(first.data.amountMinor, 650); assert.equal(first.data.note, '拉面 🍜');
