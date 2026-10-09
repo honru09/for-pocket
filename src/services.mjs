@@ -1,12 +1,16 @@
 import { CURRENCIES, CONSUMERS, COLORS, ICONS, initialSettings, validateSettings, validateExpense, dateKey } from '../public/shared.mjs';
 
 export const PREVIEW_KEY = 'for-pocket.preview.v1';
-export function localService() {
+export function localService(defaultLang = 'zh') {
   const load = () => {
     const raw = localStorage.getItem(PREVIEW_KEY);
-    if (!raw) return { settings: initialSettings(), expenses: [] };
+    if (!raw) return { settings: initialSettings(defaultLang), expenses: [] };
     const profile = JSON.parse(raw);
     profile.settings = validateSettings(profile.settings);
+    if (!profile.settings.languageManual && profile.settings.language !== defaultLang) {
+      profile.settings.language = defaultLang;
+      try { localStorage.setItem(PREVIEW_KEY, JSON.stringify(profile)); } catch {}
+    }
     if (!Array.isArray(profile.expenses) || !profile.expenses.every(e => e && typeof e.id === 'string' && Number.isSafeInteger(e.amountMinor) && e.amountMinor > 0 && CURRENCIES[e.currency] && e.category && ICONS.includes(e.category.icon) && COLORS.includes(e.category.color) && typeof e.category.label === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(e.dayKey) && !Number.isNaN(Date.parse(e.createdAt)) && typeof e.note === 'string' && typeof e.timezone === 'string' && (e.consumer == null || Object.hasOwn(CONSUMERS, e.consumer)))) throw new Error('本机记录格式有误，请先备份浏览器数据。');
     return profile;
   };

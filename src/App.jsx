@@ -1,12 +1,14 @@
 import React, { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { AppRoot, Button, Cell, Input, Placeholder, SegmentedControl, Select, Snackbar, Tappable } from '@telegram-apps/telegram-ui';
-import { CURRENCIES, CONSUMERS, COLORS, ICONS, DEFAULT_CATEGORIES, initialSettings, validateSettings, dateKey } from '../public/shared.mjs';
+import { CURRENCIES, CONSUMERS, COLORS, ICONS, DEFAULT_CATEGORIES, resolveLanguage, initialSettings, validateSettings, dateKey } from '../public/shared.mjs';
 import { LOCALES, translate, translateError, categoryLabel } from '../public/i18n.mjs';
 import { PREVIEW_KEY, localService, remoteService } from './services.mjs';
 import { Icon, Mascot } from './icons.jsx';
 
 const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 const telegram = window.Telegram?.WebApp;
+const browserLang = typeof navigator !== 'undefined' ? navigator.language : 'zh';
+const detectedLang = resolveLanguage(telegram?.initDataUnsafe?.user?.language_code || browserLang, 'zh');
 const supported = version => telegram?.isVersionAtLeast?.(version);
 function haptic(kind = 'selection') {
   if (!supported('6.1')) return;
@@ -33,7 +35,7 @@ function ConsumerBadge({ consumer, t }) {
 }
 
 export default function App() {
-  const [settings, setSettings] = useState(initialSettings);
+  const [settings, setSettings] = useState(() => initialSettings(detectedLang));
   const [expenses, setExpenses] = useState([]);
   const [ready, setReady] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -95,7 +97,7 @@ export default function App() {
         const config = await response.json();
         const isTelegram = Boolean(telegram?.initData);
         if (isTelegram && config.mode !== 'telegram') throw new Error('bot 服务还没有配置完成，请先配置服务端。');
-        const backend = (config.mode === 'telegram' && isTelegram) ? remoteService(telegram) : localService();
+        const backend = (config.mode === 'telegram' && isTelegram) ? remoteService(telegram) : localService(detectedLang);
         const profile = await backend.getProfile();
         if (cancelled) return;
         service.current = backend; setMode(isTelegram && config.mode === 'telegram' ? 'telegram' : 'local'); setHistoryCurrency(profile.settings.currency); applyProfile(profile); setReady(true);
@@ -216,8 +218,9 @@ export default function App() {
 
   async function updateSettings(patch) {
     if (busyRef.current) return;
+    const isManualLanguage = patch.language !== undefined;
     const prevSettings = settingsRef.current;
-    const nextSettings = { ...prevSettings, ...patch };
+    const nextSettings = { ...prevSettings, ...patch, ...(isManualLanguage ? { languageManual: true } : {}) };
     settingsRef.current = nextSettings;
     setSettings(nextSettings);
     if (patch.currency && patch.currency !== prevSettings.currency) {

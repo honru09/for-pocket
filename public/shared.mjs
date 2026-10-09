@@ -15,8 +15,17 @@ export const DEFAULT_CATEGORIES = [
   { id: 'travel', label: '旅游', icon: 'plane', color: 'yellow' },
   { id: 'other', label: '其他', icon: 'spark', color: 'lavender' },
 ];
-export function initialSettings() {
-  return { currency: 'JPY', language: 'zh', categories: structuredClone(DEFAULT_CATEGORIES) };
+export function resolveLanguage(code, fallback = 'zh') {
+  if (!code || typeof code !== 'string') return fallback;
+  const lower = code.toLowerCase().trim();
+  if (lower.startsWith('zh')) return 'zh';
+  if (lower.startsWith('uk') || lower.startsWith('ru')) return 'uk';
+  if (lower.startsWith('en')) return 'en';
+  return 'en';
+}
+export function initialSettings(lang = 'zh') {
+  const language = LANGUAGES.includes(lang) ? lang : resolveLanguage(lang, 'zh');
+  return { currency: 'JPY', language, languageManual: false, categories: structuredClone(DEFAULT_CATEGORIES) };
 }
 export function validateSettings(value) {
   if (value?.language !== undefined && !LANGUAGES.includes(value.language)) throw new Error('请选择有效的语言。');
@@ -33,7 +42,7 @@ export function validateSettings(value) {
     ids.add(item.id); labels.add(label);
     return { id: item.id, label, icon: item.icon, color: item.color };
   });
-  return { currency: value.currency, language: value.language || 'zh', categories };
+  return { currency: value.currency, language: value.language || 'zh', languageManual: Boolean(value.languageManual), categories };
 }
 export function dateKey(date = new Date(), timezone = Intl.DateTimeFormat().resolvedOptions().timeZone) {
   const parts = new Intl.DateTimeFormat('en', { timeZone: timezone, year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(date);

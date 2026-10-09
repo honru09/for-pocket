@@ -7,11 +7,11 @@ import path from 'node:path';
 import { once } from 'node:events';
 import { createApp } from '../server.mjs';
 import { validateInitData } from '../auth.mjs';
-import { dateKey } from '../public/shared.mjs';
+import { dateKey, resolveLanguage } from '../public/shared.mjs';
 
 const token = '123456789:test-only-not-a-real-bot-token';
-function signed(userId = 101, authDate = Math.floor(Date.now() / 1000)) {
-  const fields = { auth_date: String(authDate), query_id: 'test-query', user: JSON.stringify({ id: userId, first_name: '测试用户' }) };
+function signed(userId = 101, authDate = Math.floor(Date.now() / 1000), languageCode = 'zh') {
+  const fields = { auth_date: String(authDate), query_id: 'test-query', user: JSON.stringify({ id: userId, first_name: '测试用户', language_code: languageCode }) };
   const check = Object.keys(fields).sort().map(k => `${k}=${fields[k]}`).join('\n');
   const secret = createHmac('sha256', 'WebAppData').update(token).digest();
   return new URLSearchParams({ ...fields, hash: createHmac('sha256', secret).update(check).digest('hex') }).toString();
@@ -84,4 +84,60 @@ test('ledger persists, isolates users, saves concurrent requests, deduplicates r
   assert.equal(reopened.settings.language, 'uk');
   assert.equal(reopened.expenses.find(e => e.id === 'expense-liia-001').consumer, 'liia');
   assert.equal((await request('/profile', { user: 202 })).data.expenses.length, 0);
+});
+
+test('auto-detects Telegram language and preserves manual language choice', async t => {
+  assert.equal(resolveLanguage('zh-CN'), 'zh');
+  assert.equal(resolveLanguage('zh-Hans'), 'zh');
+  assert.equal(resolveLanguage('uk-UA'), 'uk');
+  assert.equal(resolveLanguage('ru'), 'uk');
+  assert.equal(resolveLanguage('en-US'), 'en');
+  assert.equal(resolveLanguage('ja'), 'en');
+
+  const dataDir = await mkdtemp(path.join(os.tmpdir(), 'for-pocket-lang-test-'));
+  const server = createApp({ token, dataDir });
+  server.listen(0, '127.0.0.1'); await once(server, 'listening');
+  const base = `http://127.0.0.1:${server.address().port}`;
+  t.after(async () => {
+    await new Promise(resolve => server.close(resolve));
+    await rm(dataDir, { recursive: true, force: true });
+  });
+
+  async function request(route, { user = 301, method = 'GET', body, lang = 'zh' } = {}) {
+    const response = await fetch(base + '/api' + route, {
+      method,
+      headers: { 'Content-Type': 'application/json', 'X-Telegram-Init-Data': signed(user, undefined, lang) },
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    return { status: response.status, data: await response.json() };
+  }
+
+  // Ukrainian Telegram user defaults to Ukrainian
+  const ukUser = await request('/profile', { user: 401, lang: 'uk' });
+  assert.equal(ukUser.status, 200);
+  assert.equal(ukUser.data.settings.language, 'uk');
+
+  // English Telegram user defaults to English
+  const enUser = await request('/profile', { user: 402, lang: 'en' });
+  assert.equal(enUser.status, 200);
+  assert.equal(enUser.data.settings.language, 'en');
+
+  // Chinese Telegram user defaults to Chinese
+  const zhUser = await request('/profile', { user: 403, lang: 'zh-Hans' });
+  assert.equal(zhUser.status, 200);
+  assert.equal(zhUser.data.settings.language, 'zh');
+
+  // Manual language change takes precedence
+  const updated = await request('/settings', {
+    user: 403,
+    method: 'PUT',
+    lang: 'zh-Hans',
+    body: { ...zhUser.data.settings, language: 'en', languageManual: true },
+  });
+  assert.equal(updated.status, 200);
+  assert.equal(updated.data.settings.language, 'en');
+
+  // Re-opening still preserves manual choice
+  const reopenedZh = await request('/profile', { user: 403, lang: 'zh-Hans' });
+  assert.equal(reopenedZh.data.settings.language, 'en');
 });

@@ -4,7 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { randomUUID } from 'node:crypto';
 import { validateInitData } from './auth.mjs';
-import { initialSettings, validateSettings, validateExpense, dateKey } from './public/shared.mjs';
+import { initialSettings, resolveLanguage, validateSettings, validateExpense, dateKey } from './public/shared.mjs';
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 const distDir = path.join(root, 'dist');
@@ -16,14 +16,14 @@ export function createApp({ token = process.env.BOT_TOKEN || '', dataDir = path.
   const canonicalOrigin = publicUrl && token ? new URL(publicUrl).origin : null;
   if (!Number.isSafeInteger(maxAgeSeconds) || maxAgeSeconds < 60) throw new Error('AUTH_MAX_AGE_SECONDS must be an integer >= 60');
   const fileFor = userId => path.join(dataDir, `${userId}.json`);
-  async function readProfile(userId) {
+  async function readProfile(userId, defaultLang = 'zh') {
     try {
       const data = JSON.parse(await readFile(fileFor(userId), 'utf8'));
       data.settings = validateSettings(data.settings);
       if (!Array.isArray(data.expenses)) throw new Error('Invalid stored profile');
       return data;
     } catch (err) {
-      if (err.code === 'ENOENT') return { settings: initialSettings(), expenses: [] };
+      if (err.code === 'ENOENT') return { settings: initialSettings(defaultLang), expenses: [] };
       throw err;
     }
   }
@@ -94,13 +94,22 @@ export function createApp({ token = process.env.BOT_TOKEN || '', dataDir = path.
         }
         if (url.pathname === '/api/profile' && req.method === 'GET') {
           await queues.get(id)?.catch(() => {});
-          send(res, 200, visible(await readProfile(id))); return;
+          const autoLang = resolveLanguage(user?.language_code, 'zh');
+          const profile = await readProfile(id, autoLang);
+          if (!profile.settings.languageManual && profile.settings.language !== autoLang) {
+            profile.settings.language = autoLang;
+            await transaction(id, p => { p.settings.language = autoLang; return p; });
+          }
+          send(res, 200, visible(profile)); return;
         }
         if (url.pathname === '/api/settings' && req.method === 'PUT') {
           let settings;
           try { settings = validateSettings(await bodyOf(req)); }
           catch (err) { throw err instanceof RequestError ? err : new RequestError(err.message); }
-          send(res, 200, await transaction(id, profile => { profile.settings = settings; return visible(profile); })); return;
+          send(res, 200, await transaction(id, profile => {
+            profile.settings = { ...settings, languageManual: true };
+            return visible(profile);
+          })); return;
         }
         if (url.pathname === '/api/expenses' && req.method === 'POST') {
           const payload = await bodyOf(req);
