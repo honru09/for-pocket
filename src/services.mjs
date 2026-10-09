@@ -11,10 +11,17 @@ export function localService(defaultLang = 'zh') {
       profile.settings.language = defaultLang;
       try { localStorage.setItem(PREVIEW_KEY, JSON.stringify(profile)); } catch {}
     }
-    if (!Array.isArray(profile.expenses) || !profile.expenses.every(e => e && typeof e.id === 'string' && Number.isSafeInteger(e.amountMinor) && e.amountMinor > 0 && CURRENCIES[e.currency] && e.category && ICONS.includes(e.category.icon) && COLORS.includes(e.category.color) && typeof e.category.label === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(e.dayKey) && !Number.isNaN(Date.parse(e.createdAt)) && typeof e.note === 'string' && typeof e.timezone === 'string' && (e.consumer == null || Object.hasOwn(CONSUMERS, e.consumer)))) throw new Error('本机记录格式有误，请先备份浏览器数据。');
+    if (!Array.isArray(profile.expenses) || !profile.expenses.every(e => e && typeof e.id === 'string' && Number.isSafeInteger(e.amountMinor) && e.amountMinor > 0 && CURRENCIES[e.currency] && e.category && ICONS.includes(e.category.icon) && COLORS.includes(e.category.color) && typeof e.category.label === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(e.dayKey) && !Number.isNaN(Date.parse(e.createdAt)) && typeof e.note === 'string' && typeof e.timezone === 'string' && (e.consumer == null || typeof e.consumer === 'string'))) throw new Error('本机记录格式有误，请先备份浏览器数据。');
+    if (!profile.share) profile.share = { code: 'P8M2K9', isPaired: false, partner: null };
+    if (!profile.user) profile.user = { id: 'u_me', name: profile.settings.consumers?.[0]?.name || '我', color: profile.settings.consumers?.[0]?.color || 'blue', avatar: profile.settings.consumers?.[0]?.avatar || 'cat' };
     return profile;
   };
-  const visible = profile => ({ settings: profile.settings, expenses: profile.expenses.filter(e => !e.deletedAt) });
+  const visible = profile => ({
+    settings: profile.settings,
+    expenses: profile.expenses.filter(e => !e.deletedAt),
+    share: profile.share || { code: 'P8M2K9', isPaired: false, partner: null },
+    user: profile.user || { id: 'u_me', name: profile.settings.consumers?.[0]?.name || '我', color: profile.settings.consumers?.[0]?.color || 'blue', avatar: profile.settings.consumers?.[0]?.avatar || 'cat' },
+  });
   const mutate = callback => {
     const profile = load();
     const result = callback(profile);
@@ -37,6 +44,29 @@ export function localService(defaultLang = 'zh') {
     }),
     deleteExpense: async id => mutate(profile => { const entry = profile.expenses.find(e => e.id === id); if (!entry) throw new Error('这笔记录已经不存在。'); entry.deletedAt = new Date().toISOString(); return entry; }),
     restoreExpense: async id => mutate(profile => { const entry = profile.expenses.find(e => e.id === id); if (!entry) throw new Error('无法恢复这笔记录。'); delete entry.deletedAt; return entry; }),
+    pairLedger: async code => mutate(profile => {
+      if (String(code).trim().toUpperCase() === profile.share.code) throw new Error('不能连接自己的共享码。');
+      profile.share.isPaired = true;
+      profile.share.partner = { id: 'u_partner', name: 'Liia', color: 'milk', avatar: 'bunny' };
+      const partnerMember = profile.settings.consumers.find(c => c.id === 'liia' || c.id === 'u_partner');
+      if (!partnerMember) profile.settings.consumers.push({ id: 'u_partner', name: 'Liia', color: 'milk', avatar: 'bunny' });
+      return visible(profile);
+    }),
+    unpairLedger: async () => mutate(profile => {
+      profile.share.isPaired = false;
+      profile.share.partner = null;
+      return visible(profile);
+    }),
+    updateUserProfile: async user => mutate(profile => {
+      profile.user = { ...profile.user, ...user };
+      const myMember = profile.settings.consumers?.[0];
+      if (myMember) {
+        myMember.name = user.name || myMember.name;
+        myMember.color = user.color || myMember.color;
+        myMember.avatar = user.avatar || myMember.avatar;
+      }
+      return visible(profile);
+    }),
   };
 }
 export function remoteService(telegram) {
@@ -54,5 +84,8 @@ export function remoteService(telegram) {
     addExpense: payload => request('/expenses', 'POST', payload),
     deleteExpense: id => request(`/expenses/${encodeURIComponent(id)}`, 'DELETE'),
     restoreExpense: id => request(`/expenses/${encodeURIComponent(id)}/restore`, 'POST'),
+    pairLedger: code => request('/pair', 'POST', { code }),
+    unpairLedger: () => request('/unpair', 'POST'),
+    updateUserProfile: profile => request('/user-profile', 'PUT', profile),
   };
 }

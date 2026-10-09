@@ -141,3 +141,125 @@ test('auto-detects Telegram language and preserves manual language choice', asyn
   const reopenedZh = await request('/profile', { user: 403, lang: 'zh-Hans' });
   assert.equal(reopenedZh.data.settings.language, 'en');
 });
+
+test('two-person shared ledger pairing, historical merge, real-time sync, and unpairing', async t => {
+  const dataDir = await mkdtemp(path.join(os.tmpdir(), 'for-pocket-share-test-'));
+  const server = createApp({ token, dataDir });
+  server.listen(0, '127.0.0.1'); await once(server, 'listening');
+  const base = `http://127.0.0.1:${server.address().port}`;
+  t.after(async () => {
+    await new Promise(resolve => server.close(resolve));
+    await rm(dataDir, { recursive: true, force: true });
+  });
+
+  async function request(route, { user = 501, method = 'GET', body } = {}) {
+    const response = await fetch(base + '/api' + route, {
+      method,
+      headers: { 'Content-Type': 'application/json', 'X-Telegram-Init-Data': signed(user) },
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    return { status: response.status, data: await response.json() };
+  }
+
+  // User A and User B start with their own profiles
+  const profileA = (await request('/profile', { user: 501 })).data;
+  const profileB = (await request('/profile', { user: 502 })).data;
+
+  assert.ok(profileA.share.code && profileA.share.code.length === 6);
+  assert.ok(profileB.share.code && profileB.share.code.length === 6);
+  assert.notEqual(profileA.share.code, profileB.share.code);
+  assert.equal(profileA.share.isPaired, false);
+  assert.equal(profileB.share.isPaired, false);
+
+  // User A logs an expense
+  const expA = await request('/expenses', {
+    user: 501,
+    method: 'POST',
+    body: { id: 'exp-user-a-01', amountMinor: 1200, currency: 'JPY', categoryId: 'stomach', consumer: 'xingrun', note: 'A的拉面', timezone: 'Asia/Tokyo' }
+  });
+  assert.equal(expA.status, 200);
+
+  // User B logs an expense independently
+  const expB = await request('/expenses', {
+    user: 502,
+    method: 'POST',
+    body: { id: 'exp-user-b-01', amountMinor: 800, currency: 'JPY', categoryId: 'hobby', consumer: 'liia', note: 'B的游戏', timezone: 'Asia/Tokyo' }
+  });
+  assert.equal(expB.status, 200);
+
+  // User B fails to pair with non-existent code
+  const failInvalid = await request('/pair', { user: 502, method: 'POST', body: { code: 'NONEXIST' } });
+  assert.equal(failInvalid.status, 400); // not 6 chars
+
+  const failNotFound = await request('/pair', { user: 502, method: 'POST', body: { code: 'ZZZZZZ' } });
+  assert.equal(failNotFound.status, 404);
+
+  // User B fails to pair with own code
+  const failSelf = await request('/pair', { user: 502, method: 'POST', body: { code: profileB.share.code } });
+  assert.equal(failSelf.status, 400);
+
+  // User B pairs with User A's share code
+  const pairedResult = await request('/pair', { user: 502, method: 'POST', body: { code: profileA.share.code } });
+  assert.equal(pairedResult.status, 200);
+  assert.equal(pairedResult.data.share.isPaired, true);
+
+  // Both expenses are merged in the shared ledger!
+  assert.equal(pairedResult.data.expenses.length, 2);
+  const ids = pairedResult.data.expenses.map(e => e.id);
+  assert.ok(ids.includes('exp-user-a-01'));
+  assert.ok(ids.includes('exp-user-b-01'));
+
+  // User A now fetches their profile, sees paired status and both expenses
+  const freshA = (await request('/profile', { user: 501 })).data;
+  assert.equal(freshA.share.isPaired, true);
+  assert.equal(freshA.expenses.length, 2);
+
+  // User B logs a new expense to the shared ledger
+  const expB2 = await request('/expenses', {
+    user: 502,
+    method: 'POST',
+    body: { id: 'exp-user-b-02', amountMinor: 350, currency: 'JPY', categoryId: 'daily', consumer: 'u_502', note: '共同牙膏', timezone: 'Asia/Tokyo' }
+  });
+  assert.equal(expB2.status, 200);
+
+  // User A immediately sees User B's new expense
+  const refreshedA = (await request('/profile', { user: 501 })).data;
+  assert.equal(refreshedA.expenses.length, 3);
+  assert.ok(refreshedA.expenses.some(e => e.id === 'exp-user-b-02'));
+
+  // User B updates profile
+  const updatedUserB = await request('/user-profile', {
+    user: 502,
+    method: 'PUT',
+    body: { name: 'Liia 宝宝', color: 'milk', avatar: 'bunny' }
+  });
+  assert.equal(updatedUserB.status, 200);
+  assert.equal(updatedUserB.data.user.name, 'Liia 宝宝');
+
+  // User A checks profile, sees partner name updated
+  const freshA2 = (await request('/profile', { user: 501 })).data;
+  assert.equal(freshA2.share.partner.name, 'Liia 宝宝');
+
+  // User B unpairs
+  const unpairResult = await request('/unpair', { user: 502, method: 'POST' });
+  assert.equal(unpairResult.status, 200);
+  assert.equal(unpairResult.data.share.isPaired, false);
+  // User B still has all 3 expenses from the shared ledger (no data loss)
+  assert.equal(unpairResult.data.expenses.length, 3);
+
+  // User A is also unpaired now
+  const freshA3 = (await request('/profile', { user: 501 })).data;
+  assert.equal(freshA3.share.isPaired, false);
+  assert.equal(freshA3.expenses.length, 3);
+
+  // New expense by A is no longer seen by B
+  await request('/expenses', {
+    user: 501,
+    method: 'POST',
+    body: { id: 'exp-user-a-solo', amountMinor: 999, currency: 'JPY', categoryId: 'stomach', consumer: 'xingrun', note: '独立咖啡', timezone: 'Asia/Tokyo' }
+  });
+  const soloA = (await request('/profile', { user: 501 })).data;
+  const soloB = (await request('/profile', { user: 502 })).data;
+  assert.equal(soloA.expenses.length, 4);
+  assert.equal(soloB.expenses.length, 3);
+});

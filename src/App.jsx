@@ -1,6 +1,6 @@
 import React, { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { AppRoot, Button, Cell, Input, Placeholder, SegmentedControl, Select, Snackbar, Tappable } from '@telegram-apps/telegram-ui';
-import { CURRENCIES, CONSUMERS, COLORS, ICONS, DEFAULT_CATEGORIES, resolveLanguage, initialSettings, validateSettings, dateKey } from '../public/shared.mjs';
+import { CURRENCIES, CONSUMERS, COLORS, ICONS, DEFAULT_CATEGORIES, resolveLanguage, initialSettings, validateSettings, dateKey, AVATARS, CONSUMER_COLORS } from '../public/shared.mjs';
 import { LOCALES, translate, translateError, categoryLabel } from '../public/i18n.mjs';
 import { PREVIEW_KEY, localService, remoteService } from './services.mjs';
 import { Icon, Mascot } from './icons.jsx';
@@ -26,12 +26,24 @@ function countText(n, language, currency) {
 const CategoryGrid = memo(function CategoryGrid({ categories, language, selected, disabled, onSelect }) {
   return <div className="categories" id="categories" role="group" aria-label={translate(language, 'categories')}>{categories.map(category => <Tappable Component="button" type="button" interactiveAnimation="background" className={`category ${selected === category.id ? 'selected' : ''}`} key={category.id} data-category={category.id} aria-pressed={selected === category.id} aria-label={categoryLabel(category, language)} disabled={disabled} onClick={() => onSelect(category.id)}><span className="check" aria-hidden="true">✓</span><span className="category-icon" style={{ background: `var(--${category.color})` }}><Icon name={category.icon}/></span><span className="category-label">{categoryLabel(category, language)}</span></Tappable>)}</div>;
 });
-const ConsumerPicker = memo(function ConsumerPicker({ language, consumer, disabled, onSelect }) {
-  return <fieldset className="consumer-picker"><legend>{translate(language, 'consumer')}</legend><div className="consumer-options" id="consumers">{Object.entries(CONSUMERS).map(([id, name]) => <Tappable Component="button" type="button" className={`consumer-option consumer-${id} ${consumer === id ? 'selected' : ''}`} data-consumer={id} key={id} aria-pressed={consumer === id} disabled={disabled} onClick={() => onSelect(id)}><span className="consumer-avatar" aria-hidden="true"><Icon name="face"/></span><span>{name}</span><span className="consumer-check" aria-hidden="true">✓</span></Tappable>)}</div></fieldset>;
+const ConsumerPicker = memo(function ConsumerPicker({ language, consumers, consumer, disabled, onSelect }) {
+  const list = consumers && consumers.length ? consumers : DEFAULT_CONSUMERS;
+  return <fieldset className="consumer-picker"><legend>{translate(language, 'consumer')}</legend><div className="consumer-options" id="consumers">{list.map(c => {
+    const colorClass = `consumer-color-${c.color || 'milk'} consumer-${c.id}`;
+    return <Tappable Component="button" type="button" className={`consumer-option ${colorClass} ${consumer === c.id ? 'selected' : ''}`} data-consumer={c.id} key={c.id} aria-pressed={consumer === c.id} disabled={disabled} onClick={() => onSelect(c.id)}>
+      <span className="consumer-avatar" aria-hidden="true">
+        {c.avatar && (c.avatar.startsWith('http') || c.avatar.startsWith('data:')) ? <img src={c.avatar} alt="" className="avatar-img" /> : <Icon name={c.avatar || 'cat'} />}
+      </span>
+      <span>{c.name}</span>
+      <span className="consumer-check" aria-hidden="true">✓</span>
+    </Tappable>;
+  })}</div></fieldset>;
 });
-function ConsumerBadge({ consumer, t }) {
-  const id = Object.hasOwn(CONSUMERS, consumer) ? consumer : 'unassigned';
-  return <span className={`consumer-badge consumer-${id}`}><i aria-hidden="true"/>{CONSUMERS[id] || t('unknownConsumer')}</span>;
+function ConsumerBadge({ consumer, consumers, t }) {
+  const member = (consumers || DEFAULT_CONSUMERS).find(c => c.id === consumer);
+  const colorClass = member ? `consumer-color-${member.color || 'milk'} consumer-${member.id}` : (consumer === 'liia' ? 'consumer-color-milk' : 'consumer-color-blue');
+  const name = member ? member.name : (CONSUMERS[consumer] || t('unknownConsumer'));
+  return <span className={`consumer-badge ${colorClass}`}><i aria-hidden="true"/>{name}</span>;
 }
 
 export default function App() {
@@ -51,6 +63,12 @@ export default function App() {
   const [editing, setEditing] = useState([]);
   const [notice, setNotice] = useState(null);
   const [today, setToday] = useState(() => dateKey(new Date(), timezone));
+  const [shareInfo, setShareInfo] = useState({ code: '', isPaired: false, partner: null });
+  const [myProfile, setMyProfile] = useState({ id: '', name: '', color: 'blue', avatar: 'cat' });
+  const [pairCode, setPairCode] = useState('');
+  const [editName, setEditName] = useState('');
+  const [editColor, setEditColor] = useState('blue');
+  const [editAvatar, setEditAvatar] = useState('cat');
   const service = useRef(null), pending = useRef(null), busyRef = useRef(false), settingsRef = useRef(settings), stateRef = useRef({});
   const keyboard = useRef(false), direction = useRef(1), pageRef = useRef(null), mascotRef = useRef(null), stageRef = useRef(null), amountLineRef = useRef(null);
   const disabled = busy || !ready;
@@ -71,7 +89,15 @@ export default function App() {
     const next = validateSettings(profile.settings);
     if (settingsRef.current.currency !== next.currency) { setRaw('0'); pending.current = null; }
     settingsRef.current = next; setSettings(next); setExpenses(profile.expenses);
+    if (profile.share) setShareInfo(profile.share);
+    if (profile.user) {
+      setMyProfile(profile.user);
+      setEditName(profile.user.name);
+      setEditColor(profile.user.color);
+      setEditAvatar(profile.user.avatar);
+    }
     setSelected(current => next.categories.some(category => category.id === current) ? current : null);
+    setConsumer(current => next.consumers.some(c => c.id === current) ? current : (next.consumers[0]?.id || null));
   }, []);
   const changeBusy = value => { busyRef.current = value; setBusy(value); };
   const navigate = useCallback((next, focus = false) => {
@@ -100,7 +126,19 @@ export default function App() {
         const backend = (config.mode === 'telegram' && isTelegram) ? remoteService(telegram) : localService(detectedLang);
         const profile = await backend.getProfile();
         if (cancelled) return;
-        service.current = backend; setMode(isTelegram && config.mode === 'telegram' ? 'telegram' : 'local'); setHistoryCurrency(profile.settings.currency); applyProfile(profile); setReady(true);
+        service.current = backend; setMode(isTelegram && config.mode === 'telegram' ? 'telegram' : 'local'); setHistoryCurrency(profile.settings.currency); applyProfile(profile);
+        if (telegram?.initDataUnsafe?.user) {
+          const tgUser = telegram.initDataUnsafe.user;
+          const tgName = (tgUser.first_name || tgUser.username || '').trim();
+          if (tgName && (!profile.user?.name || profile.user.name === '我')) {
+            backend.updateUserProfile({
+              name: tgName.slice(0, 24),
+              color: profile.user?.color || 'blue',
+              avatar: tgUser.photo_url || profile.user?.avatar || 'cat',
+            }).then(p => { if (!cancelled) applyProfile(p); }).catch(() => {});
+          }
+        }
+        setReady(true);
       } catch (error) { if (!cancelled) { setFailed(true); showError(error); } }
     }
     boot();
@@ -125,9 +163,9 @@ export default function App() {
     const element = pageRef.current;
     if (!element) return;
     const animation = element.animate([
-      { opacity: 0, transform: `translate3d(${direction.current * 18}px,0,0) scale(0.985)` },
+      { opacity: 0, transform: `translate3d(${direction.current * 16}px,0,0) scale(0.99)` },
       { opacity: 1, transform: 'translate3d(0,0,0) scale(1)' }
-    ], { duration: 260, easing: 'cubic-bezier(.34,1.56,.64,1)' });
+    ], { duration: 420, easing: 'cubic-bezier(.22,1,.36,1)' });
     return () => animation.cancel();
   }, [view]);
 
@@ -135,19 +173,19 @@ export default function App() {
     setSelected(id); pending.current = null; haptic();
     mascotRef.current?.animate([
       { transform: 'rotate(-8deg) scale(1)' },
-      { transform: 'rotate(-14deg) scale(1.14,0.9)' },
-      { transform: 'rotate(-5deg) scale(0.97,1.04)' },
+      { transform: 'rotate(-13deg) scale(1.12,0.92)' },
+      { transform: 'rotate(-5deg) scale(0.98,1.03)' },
       { transform: 'rotate(-8deg) scale(1)' }
-    ], { duration: 320, easing: 'cubic-bezier(.34,1.56,.64,1)' });
+    ], { duration: 650, easing: 'cubic-bezier(.22,1,.36,1)' });
   }, []);
   const selectConsumer = useCallback(id => {
     setConsumer(id); pending.current = null; haptic();
     mascotRef.current?.animate([
       { transform: 'rotate(-8deg) scale(1)' },
-      { transform: 'rotate(2deg) scale(1.16,0.88)' },
-      { transform: 'rotate(-11deg) scale(0.96,1.05)' },
+      { transform: 'rotate(2deg) scale(1.14,0.9)' },
+      { transform: 'rotate(-11deg) scale(0.97,1.04)' },
       { transform: 'rotate(-8deg) scale(1)' }
-    ], { duration: 320, easing: 'cubic-bezier(.34,1.56,.64,1)' });
+    ], { duration: 650, easing: 'cubic-bezier(.22,1,.36,1)' });
   }, []);
   const pushKey = useCallback(key => {
     if (busyRef.current || !stateRef.current.ready) return;
@@ -166,18 +204,18 @@ export default function App() {
     pending.current = null; stateRef.current.raw = next; setRaw(next);
     amountLineRef.current?.animate([
       { transform: 'scale(1,1)' },
-      { transform: 'scale(1.05,0.90)' },
-      { transform: 'scale(0.98,1.03)' },
-      { transform: 'scale(1.01,0.995)' },
+      { transform: 'scale(1.04,0.92)' },
+      { transform: 'scale(0.99,1.02)' },
+      { transform: 'scale(1.005,0.998)' },
       { transform: 'scale(1,1)' }
-    ], { duration: 300, easing: 'cubic-bezier(.34,1.56,.64,1)' });
+    ], { duration: 480, easing: 'cubic-bezier(.22,1,.36,1)' });
     mascotRef.current?.animate([
       { transform: 'rotate(-8deg) scale(1,1)' },
-      { transform: 'rotate(-3deg) scale(1.18,0.84)' },
-      { transform: 'rotate(-13deg) scale(0.95,1.07)' },
-      { transform: 'rotate(-6deg) scale(1.02,0.99)' },
+      { transform: 'rotate(-3deg) scale(1.14,0.88)' },
+      { transform: 'rotate(-12deg) scale(0.96,1.05)' },
+      { transform: 'rotate(-6deg) scale(1.01,0.99)' },
       { transform: 'rotate(-8deg) scale(1,1)' }
-    ], { duration: 340, easing: 'cubic-bezier(.34,1.56,.64,1)' });
+    ], { duration: 580, easing: 'cubic-bezier(.22,1,.36,1)' });
   }, [notify]);
   const saveExpense = useCallback(async () => {
     const current = stateRef.current;
@@ -186,16 +224,17 @@ export default function App() {
     pending.current = payload; changeBusy(true);
     try {
       const entry = await service.current.addExpense(payload);
-      setExpenses(current => current.some(e => e.id === entry.id) ? current : [...current, entry]);
-      setRaw('0'); setSelected(null); setConsumer(null); setNote(''); pending.current = null;
-      notify('saved', { person: CONSUMERS[entry.consumer], amount: money(entry.amountMinor, entry.currency) }); haptic('success');
+      setExpenses(currentEntries => currentEntries.some(e => e.id === entry.id) ? currentEntries : [...currentEntries, entry]);
+      setRaw('0'); setSelected(null); setNote(''); pending.current = null;
+      const member = settingsRef.current.consumers?.find(c => c.id === entry.consumer);
+      notify('saved', { person: member?.name || CONSUMERS[entry.consumer] || '', amount: money(entry.amountMinor, entry.currency) }); haptic('success');
       mascotRef.current?.animate([
         { transform: 'rotate(-8deg) scale(1) translateY(0)' },
-        { transform: 'rotate(16deg) scale(1.28,1.15) translateY(-26px)' },
-        { transform: 'rotate(-14deg) scale(1.12,0.92) translateY(-10px)' },
-        { transform: 'rotate(6deg) scale(1.04,1.02) translateY(-2px)' },
+        { transform: 'rotate(14deg) scale(1.22,1.12) translateY(-22px)' },
+        { transform: 'rotate(-12deg) scale(1.08,0.94) translateY(-8px)' },
+        { transform: 'rotate(5deg) scale(1.03,1.01) translateY(-2px)' },
         { transform: 'rotate(-8deg) scale(1) translateY(0)' }
-      ], { duration: 560, easing: 'cubic-bezier(.34,1.56,.64,1)' });
+      ], { duration: 850, easing: 'cubic-bezier(.22,1,.36,1)' });
     } catch (error) { showError(error); }
     finally { changeBusy(false); }
   }, [money, notify, showError]);
@@ -241,6 +280,61 @@ export default function App() {
       changeBusy(false);
     }
   }
+
+  const handleCopyCode = useCallback(() => {
+    if (!shareInfo.code) return;
+    try {
+      navigator.clipboard?.writeText(shareInfo.code);
+      notify('codeCopied');
+      haptic('selection');
+    } catch {
+      notify('codeCopied');
+    }
+  }, [shareInfo.code, notify]);
+
+  const handlePair = useCallback(async event => {
+    event?.preventDefault();
+    if (busyRef.current || !service.current) return;
+    const clean = pairCode.trim().toUpperCase();
+    if (clean.length !== 6) { showError(new Error(t('errorInvalidCode'))); return; }
+    changeBusy(true);
+    try {
+      const updated = await service.current.pairLedger(clean);
+      applyProfile(updated);
+      setPairCode('');
+      notify('pairedSuccess');
+      haptic('success');
+    } catch (err) { showError(err); }
+    finally { changeBusy(false); }
+  }, [pairCode, applyProfile, notify, showError, t]);
+
+  const handleUnpair = useCallback(async () => {
+    if (busyRef.current || !service.current) return;
+    changeBusy(true);
+    try {
+      const updated = await service.current.unpairLedger();
+      applyProfile(updated);
+      notify('unpairedSuccess');
+      haptic('selection');
+    } catch (err) { showError(err); }
+    finally { changeBusy(false); }
+  }, [applyProfile, notify, showError]);
+
+  const handleSaveUserProfile = useCallback(async event => {
+    event?.preventDefault();
+    if (busyRef.current || !service.current) return;
+    const name = editName.trim();
+    if (!name || Array.from(name).length > 24) { showError(new Error(t('errorConsumerName'))); return; }
+    changeBusy(true);
+    try {
+      const updated = await service.current.updateUserProfile({ name, color: editColor, avatar: editAvatar });
+      applyProfile(updated);
+      notify('membersSaved');
+      haptic('success');
+    } catch (err) { showError(err); }
+    finally { changeBusy(false); }
+  }, [editName, editColor, editAvatar, applyProfile, notify, showError, t]);
+
   async function saveCategories(event) {
     event.preventDefault(); if (busyRef.current) return;
     let next;
@@ -299,7 +393,15 @@ export default function App() {
           </section>
           <section className="purposes" aria-labelledby="purposes-title"><div className="section-heading"><h2 id="purposes-title">{t('categories')}</h2><Button id="edit-categories" className="text-button" size="s" mode="plain" before={<Icon name="edit"/>} disabled={disabled} onClick={() => navigate('manage', true)}>{t('editCategories')}</Button></div><CategoryGrid categories={settings.categories} language={settings.language} selected={selected} disabled={disabled} onSelect={selectCategory}/></section>
           <section id="keypad" className="keypad" aria-label={t('keypad')}>{['1','2','3','4','5','6','7','8','9',decimalDigits ? '.' : 'clear','0','backspace'].map(key => <Tappable Component="button" type="button" className={`key ${key.length > 1 || key === '.' ? 'key-secondary' : ''}`} data-key={key} key={key} id={key === '.' || key === 'clear' ? 'decimal-key' : undefined} disabled={disabled} aria-label={key === 'clear' ? t('clear') : key === '.' ? t('decimal') : key === 'backspace' ? t('backspace') : key} onPointerDownCapture={() => { if (!disabled) stageRef.current?.setAttribute('data-press', 'true'); }} onClick={() => { pushKey(key); haptic('impact'); }}>{key === 'clear' ? 'C' : key === '.' ? decimalSeparator : key === 'backspace' ? <Icon name="backspace"/> : key}</Tappable>)}</section>
-          <section className="finish" aria-label={t('save')}><ConsumerPicker language={settings.language} consumer={consumer} disabled={disabled} onSelect={selectConsumer}/><Input className="note-field" id="note" before={<Icon name="edit"/>} aria-label={t('note')} placeholder={t('notePlaceholder')} value={note} maxLength={160} disabled={disabled} onChange={event => { pending.current = null; setNote(event.target.value); }}/><Button size="l" stretched className="save-button" id="save-expense" disabled={disabled || !amountMinor || !selected || !consumer} loading={busy} aria-label={saveLabel} after={<span className="save-icon" aria-hidden="true">↗</span>} onClick={saveExpense}><span id="save-label">{saveLabel}</span></Button></section>
+          <section className="finish" aria-label={t('save')}>
+            <ConsumerPicker language={settings.language} consumers={settings.consumers} consumer={consumer} disabled={disabled} onSelect={selectConsumer}/>
+            <div className="finish-row">
+              <Input className="note-field" id="note" before={<Icon name="edit"/>} aria-label={t('note')} placeholder={t('notePlaceholder')} value={note} maxLength={160} disabled={disabled} onChange={event => { pending.current = null; setNote(event.target.value); }}/>
+              <Button size="l" className="save-fab" id="save-expense" disabled={disabled || !amountMinor || !selected || !consumer} loading={busy} aria-label={saveLabel} onClick={saveExpense}>
+                <Icon name="check"/>
+              </Button>
+            </div>
+          </section>
         </div>
         <div className="today-strip"><span className="today-icon" aria-hidden="true">↳</span><div><span>{t('todayTotal')}</span><strong id="today-total">{money(todayEntries.reduce((sum, e) => sum + e.amountMinor, 0))}</strong><small id="today-count">{countText(todayEntries.length, settings.language, settings.currency)}</small></div><Button className="text-button" size="s" mode="plain" data-view="history" onClick={() => navigate('history')}>{t('ledger')} →</Button></div>
       </>}
@@ -307,11 +409,79 @@ export default function App() {
         <div className="page-heading"><h1 id="history-title" tabIndex={-1}>{t('historyTitle')}</h1><Button size="s" mode="plain" className="text-button" data-view="record" onClick={() => navigate('record')}>{t('newEntry')}</Button></div>
         <div className="history-controls"><SegmentedControl className="period-tabs" aria-label={t('period')}>{['month','all'].map(value => <SegmentedControl.Item data-period={value} key={value} selected={period === value} aria-selected={period === value} onClick={() => { setPeriod(value); haptic(); }}>{t(value)}</SegmentedControl.Item>)}</SegmentedControl><Select id="history-currency" className="history-currency" aria-label={t('ledgerCurrency')} value={historyCurrency} onChange={event => setHistoryCurrency(event.target.value)}>{Object.keys(CURRENCIES).map(code => <option value={code} key={code}>{code}</option>)}</Select></div>
         <section className="history-summary" aria-label={t('summary')}><div className="history-summary-amount"><span id="history-period-label">{t(period === 'all' ? 'allSpending' : 'monthSpending')}</span><strong id="history-total">{money(historyTotal, historyCurrency)}</strong><small id="history-total-count">{countText(historyEntries.length, settings.language, historyCurrency)}</small></div><div className="breakdown" id="breakdown">{breakdown.map(group => <div className="breakdown-row" key={group.category.id}><span>{label(group.category)}</span><div className="bar-track"><div className="bar-fill" style={{ transform: `scaleX(${historyTotal ? group.total / historyTotal : 0})` }}/></div><span>{money(group.total, historyCurrency)}</span></div>)}</div></section>
-        <div id="history-list" className="history-list">{historyDays.length ? historyDays.map(([day, entries]) => <section key={day}><div className="history-day">{dateLabel(day)}</div>{entries.map(entry => <Cell key={entry.id} Component="article" readOnly multiline className="expense-row" before={<span className="category-icon" style={{ background: `var(--${entry.category.color})` }}><Icon name={entry.category.icon}/></span>} subtitle={<span className="expense-meta"><ConsumerBadge consumer={entry.consumer} t={t}/><time>{new Intl.DateTimeFormat(locale, { timeZone: entry.timezone, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date(entry.createdAt))}</time></span>} description={entry.note ? <span className="expense-note">{entry.note}</span> : undefined} after={<div className="expense-actions"><span className="expense-money">{money(entry.amountMinor, entry.currency)}</span><Button className="delete-expense" mode="plain" size="s" disabled={busy} data-delete={entry.id} aria-label={t('deleteExpense', { category: label(entry.category), amount: money(entry.amountMinor, entry.currency) })} onClick={() => deleteExpense(entry.id)}><Icon name="trash"/></Button></div>}><strong>{label(entry.category)}</strong></Cell>)}</section>) : <Placeholder className="empty-state" header={t('emptyTitle')} description={t('emptyText')}><span className="empty-face" aria-hidden="true">◡</span><Button mode="filled" size="m" data-view="record" onClick={() => navigate('record')}>{t('newEntry')}</Button></Placeholder>}</div>
+        <div id="history-list" className="history-list">{historyDays.length ? historyDays.map(([day, entries]) => <section key={day}><div className="history-day">{dateLabel(day)}</div>{entries.map(entry => <Cell key={entry.id} Component="article" readOnly multiline className="expense-row" before={<span className="category-icon" style={{ background: `var(--${entry.category.color})` }}><Icon name={entry.category.icon}/></span>} subtitle={<span className="expense-meta"><ConsumerBadge consumer={entry.consumer} consumers={settings.consumers} t={t}/><time>{new Intl.DateTimeFormat(locale, { timeZone: entry.timezone, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date(entry.createdAt))}</time></span>} description={entry.note ? <span className="expense-note">{entry.note}</span> : undefined} after={<div className="expense-actions"><span className="expense-money">{money(entry.amountMinor, entry.currency)}</span><Button className="delete-expense" mode="plain" size="s" disabled={busy} data-delete={entry.id} aria-label={t('deleteExpense', { category: label(entry.category), amount: money(entry.amountMinor, entry.currency) })} onClick={() => deleteExpense(entry.id)}><Icon name="trash"/></Button></div>}><strong>{label(entry.category)}</strong></Cell>)}</section>) : <Placeholder className="empty-state" header={t('emptyTitle')} description={t('emptyText')}><span className="empty-face" aria-hidden="true">◡</span><Button mode="filled" size="m" data-view="record" onClick={() => navigate('record')}>{t('newEntry')}</Button></Placeholder>}</div>
       </>}
       {view === 'manage' && <>
         <div className="page-heading"><h1 id="manage-title" tabIndex={-1}>{t('manageTitle')}</h1><Button size="s" mode="plain" id="cancel-edit" className="text-button" onClick={() => navigate('record', true)}>{t('back')}</Button></div>
-        <form id="category-form" onSubmit={saveCategories}><div className="category-editor" id="category-editor">{editing.map(category => <div className="editor-row" key={category.id} data-editor-id={category.id}><span className="category-icon" style={{ background: `var(--${category.color})` }}><Icon name={category.icon}/></span><Input className="editor-label" data-field="label" value={label(category)} aria-label={t('categoryName', { name: label(category) })} maxLength={24} disabled={busy} required onChange={event => setEditing(current => current.map(c => c.id === category.id ? { ...c, label: event.target.value } : c))}/><Select className="editor-select" data-field="icon" aria-label={t('categoryIcon', { name: label(category) })} value={category.icon} disabled={busy} onChange={event => setEditing(current => current.map(c => c.id === category.id ? { ...c, icon: event.target.value } : c))}>{ICONS.map(type => <option value={type} key={type}>{t(type)}</option>)}</Select><Select className="editor-select" data-field="color" aria-label={t('categoryColor', { name: label(category) })} value={category.color} disabled={busy} onChange={event => setEditing(current => current.map(c => c.id === category.id ? { ...c, color: event.target.value } : c))}>{COLORS.map(color => <option value={color} key={color}>{t(color)}</option>)}</Select><Button type="button" className="editor-remove" size="s" mode="plain" disabled={busy} data-remove={category.id} aria-label={t('removeCategory', { name: label(category) })} onClick={() => { if (editing.length === 1) notify('keepCategory'); else setEditing(current => current.filter(c => c.id !== category.id)); }}>×</Button></div>)}</div><Button type="button" id="add-category" className="add-category" mode="outline" stretched disabled={busy || editing.length >= 18} onClick={() => { setEditing(current => [...current, { id: crypto.randomUUID(), label: '', icon: 'heart', color: 'peach' }]); requestAnimationFrame(() => document.querySelector('.editor-row:last-child input')?.focus()); }}>{t('addCategory')}</Button><div className="editor-actions"><Button type="button" size="s" mode="plain" className="text-button" id="reset-categories" disabled={busy} onClick={() => setEditing(structuredClone(DEFAULT_CATEGORIES))}>{t('resetCategories')}</Button><Button type="submit" size="l" className="save-button" loading={busy} disabled={busy} after={<span className="save-icon" aria-hidden="true">✓</span>}>{t('saveCategories')}</Button></div></form>
+        <div className="manage-container">
+          <section className="manage-card" aria-labelledby="shared-ledger-title">
+            <div className="manage-card-header">
+              <h2 id="shared-ledger-title" className="manage-card-title"><Icon name="link"/>{t('sharedLedger')}</h2>
+              {shareInfo.isPaired && <span className="share-paired-name">🤝 {t('pairedStatus', { partner: shareInfo.partner?.name || 'Ta' })}</span>}
+            </div>
+            <p className="manage-card-desc">{t('sharedLedgerIntro')}</p>
+            {shareInfo.isPaired ? (
+              <div className="share-paired-info">
+                <div className="share-paired-name"><span>{t('pairedStatus', { partner: shareInfo.partner?.name || 'Ta' })}</span></div>
+                <Button size="m" mode="outline" disabled={busy} onClick={handleUnpair}>{t('unpairButton')}</Button>
+              </div>
+            ) : (
+              <>
+                <div className="share-code-box">
+                  <div>
+                    <div style={{ fontSize: 10, color: 'var(--muted)', fontWeight: 800 }}>{t('myShareCode')}</div>
+                    <div className="share-code-val">{shareInfo.code || '······'}</div>
+                  </div>
+                  <Button size="s" mode="filled" disabled={busy || !shareInfo.code} onClick={handleCopyCode}><Icon name="copy" style={{ width: 14, height: 14, marginRight: 4 }}/>{t('copyCode')}</Button>
+                </div>
+                <form className="share-pair-form" onSubmit={handlePair}>
+                  <input className="share-pair-input" placeholder={t('partnerCodePlaceholder')} value={pairCode} maxLength={6} disabled={busy} onChange={e => setPairCode(e.target.value.toUpperCase())}/>
+                  <Button type="submit" size="m" mode="filled" disabled={busy || pairCode.trim().length !== 6}>{t('connectButton')}</Button>
+                </form>
+              </>
+            )}
+          </section>
+
+          <section className="manage-card" aria-labelledby="my-profile-title">
+            <div className="manage-card-header"><h2 id="my-profile-title" className="manage-card-title"><Icon name="user"/>{t('manageMembers')}</h2></div>
+            <p className="manage-card-desc">{t('manageMembersIntro')}</p>
+            <form onSubmit={handleSaveUserProfile} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 800, color: '#7c876c', marginBottom: 6 }}>{t('consumerName', { name: '' })}</div>
+                <Input className="editor-label" value={editName} maxLength={24} disabled={busy} required placeholder={myProfile.name || '我的名字'} onChange={e => setEditName(e.target.value)}/>
+              </div>
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 800, color: '#7c876c', marginBottom: 6 }}>{t('avatar')}</div>
+                <div className="avatar-grid">
+                  {AVATARS.map(av => (
+                    <button type="button" key={av} className={`avatar-btn ${editAvatar === av ? 'selected' : ''}`} onClick={() => { setEditAvatar(av); haptic(); }}>
+                      <Icon name={av}/>
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 800, color: '#7c876c', marginBottom: 6 }}>{t('consumerColor', { name: '' })}</div>
+                <div className="color-palette">
+                  {CONSUMER_COLORS.map(c => (
+                    <button type="button" key={c} className={`color-dot-btn ${editColor === c ? 'selected' : ''}`} onClick={() => { setEditColor(c); haptic(); }} aria-label={t(c) || c}>
+                      <span className="color-dot-inner" style={{ background: c === 'milk' ? '#fbf8f1' : `var(--${c})`, border: c === 'milk' ? '1px solid #dcd5c5' : 'none' }}/>
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 4 }}>
+                <Button type="submit" size="m" mode="filled" disabled={busy} loading={busy}>{t('saveMembers')}</Button>
+              </div>
+            </form>
+          </section>
+
+          <section className="manage-card" aria-labelledby="categories-manage-title">
+            <div className="manage-card-header"><h2 id="categories-manage-title" className="manage-card-title"><Icon name="edit"/>{t('manageTitle')}</h2></div>
+            <p className="manage-card-desc">{t('manageIntro')}</p>
+            <form id="category-form" onSubmit={saveCategories}><div className="category-editor" id="category-editor">{editing.map(category => <div className="editor-row" key={category.id} data-editor-id={category.id}><span className="category-icon" style={{ background: `var(--${category.color})` }}><Icon name={category.icon}/></span><Input className="editor-label" data-field="label" value={label(category)} aria-label={t('categoryName', { name: label(category) })} maxLength={24} disabled={busy} required onChange={event => setEditing(current => current.map(c => c.id === category.id ? { ...c, label: event.target.value } : c))}/><Select className="editor-select" data-field="icon" aria-label={t('categoryIcon', { name: label(category) })} value={category.icon} disabled={busy} onChange={event => setEditing(current => current.map(c => c.id === category.id ? { ...c, icon: event.target.value } : c))}>{ICONS.map(type => <option value={type} key={type}>{t(type)}</option>)}</Select><Select className="editor-select" data-field="color" aria-label={t('categoryColor', { name: label(category) })} value={category.color} disabled={busy} onChange={event => setEditing(current => current.map(c => c.id === category.id ? { ...c, color: event.target.value } : c))}>{COLORS.map(color => <option value={color} key={color}>{t(color)}</option>)}</Select><Button type="button" className="editor-remove" size="s" mode="plain" disabled={busy} data-remove={category.id} aria-label={t('removeCategory', { name: label(category) })} onClick={() => { if (editing.length === 1) notify('keepCategory'); else setEditing(current => current.filter(c => c.id !== category.id)); }}>×</Button></div>)}</div><Button type="button" id="add-category" className="add-category" mode="outline" stretched disabled={busy || editing.length >= 18} onClick={() => { setEditing(current => [...current, { id: crypto.randomUUID(), label: '', icon: 'heart', color: 'peach' }]); requestAnimationFrame(() => document.querySelector('.editor-row:last-child input')?.focus()); }}>{t('addCategory')}</Button><div className="editor-actions"><Button type="button" size="s" mode="plain" className="text-button" id="reset-categories" disabled={busy} onClick={() => setEditing(structuredClone(DEFAULT_CATEGORIES))}>{t('resetCategories')}</Button><Button type="submit" size="l" className="save-button" loading={busy} disabled={busy} after={<span className="save-icon" aria-hidden="true">✓</span>}>{t('saveCategories')}</Button></div></form>
+          </section>
+        </div>
       </>}
       </main>
       <footer className="app-footer"><span id="storage-status" role="status">{t(failed ? 'unavailable' : !ready ? 'loading' : mode === 'telegram' ? 'remoteStorage' : 'localStorage')}</span></footer>
