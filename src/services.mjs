@@ -1,6 +1,8 @@
 import { CURRENCIES, CONSUMERS, COLORS, ICONS, initialSettings, validateSettings, validateExpense, dateKey } from '../public/shared.mjs';
 
 export const PREVIEW_KEY = 'for-pocket.preview.v1';
+export const SESSION_KEY = 'for-pocket.session.v1';
+
 export function localService(defaultLang = 'zh') {
   const load = () => {
     const raw = localStorage.getItem(PREVIEW_KEY);
@@ -11,16 +13,17 @@ export function localService(defaultLang = 'zh') {
       profile.settings.language = defaultLang;
       try { localStorage.setItem(PREVIEW_KEY, JSON.stringify(profile)); } catch {}
     }
-    if (!Array.isArray(profile.expenses) || !profile.expenses.every(e => e && typeof e.id === 'string' && Number.isSafeInteger(e.amountMinor) && e.amountMinor > 0 && CURRENCIES[e.currency] && e.category && ICONS.includes(e.category.icon) && COLORS.includes(e.category.color) && typeof e.category.label === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(e.dayKey) && !Number.isNaN(Date.parse(e.createdAt)) && typeof e.note === 'string' && typeof e.timezone === 'string' && (e.consumer == null || typeof e.consumer === 'string'))) throw new Error('本机记录格式有误，请先备份浏览器数据。');
     if (!profile.share) profile.share = { code: 'P8M2K9', isPaired: false, partner: null };
-    if (!profile.user) profile.user = { id: 'u_me', name: profile.settings.consumers?.[0]?.name || '我', color: profile.settings.consumers?.[0]?.color || 'blue', avatar: profile.settings.consumers?.[0]?.avatar || 'cat' };
+    if (!profile.user) profile.user = { id: 'u_me', name: profile.settings.consumers?.[0]?.name || '我', color: profile.settings.consumers?.[0]?.color || 'blue', avatar: profile.settings.consumers?.[0]?.avatar || 'cat', friendCode: 'P8M2K9' };
+    if (!profile.social) profile.social = { friendCode: 'P8M2K9', friends: [], circles: [], activeCircleId: null, activeCircle: null };
     return profile;
   };
   const visible = profile => ({
     settings: profile.settings,
     expenses: profile.expenses.filter(e => !e.deletedAt),
     share: profile.share || { code: 'P8M2K9', isPaired: false, partner: null },
-    user: profile.user || { id: 'u_me', name: profile.settings.consumers?.[0]?.name || '我', color: profile.settings.consumers?.[0]?.color || 'blue', avatar: profile.settings.consumers?.[0]?.avatar || 'cat' },
+    user: profile.user || { id: 'u_me', name: profile.settings.consumers?.[0]?.name || '我', color: profile.settings.consumers?.[0]?.color || 'blue', avatar: profile.settings.consumers?.[0]?.avatar || 'cat', friendCode: 'P8M2K9' },
+    social: profile.social || { friendCode: 'P8M2K9', friends: [], circles: [], activeCircleId: null, activeCircle: null },
   });
   const mutate = callback => {
     const profile = load();
@@ -67,15 +70,70 @@ export function localService(defaultLang = 'zh') {
       }
       return visible(profile);
     }),
+    loginWithGoogle: async credential => mutate(profile => {
+      profile.user.googleEmail = 'user@gmail.com';
+      return visible(profile);
+    }),
+    getLinkCode: async () => ({ code: 'SYNC88' }),
+    verifyLinkCode: async code => mutate(profile => {
+      profile.user.googleEmail = profile.user.googleEmail || 'linked@gmail.com';
+      return visible(profile);
+    }),
+    addFriend: async friendCode => mutate(profile => {
+      const code = String(friendCode).trim().toUpperCase();
+      if (!profile.social.friends.some(f => f.friendCode === code)) {
+        profile.social.friends.push({ id: `u_${code}`, name: `好友 ${code}`, avatar: 'chick', color: 'mint', friendCode: code });
+      }
+      return visible(profile);
+    }),
+    createCircle: async (name, friendIds) => mutate(profile => {
+      const circleId = `cir_${Date.now()}`;
+      const friends = profile.social.friends.filter(f => friendIds.includes(f.id));
+      const members = [{ id: profile.user.id, name: profile.user.name, avatar: profile.user.avatar, color: profile.user.color }, ...friends];
+      const newCircle = { id: circleId, name, ownerId: profile.user.id, isOwner: true, memberCount: members.length, members };
+      profile.social.circles.push(newCircle);
+      profile.social.activeCircleId = circleId;
+      profile.social.activeCircle = newCircle;
+      profile.settings.consumers = members;
+      return visible(profile);
+    }),
+    switchCircle: async circleId => mutate(profile => {
+      if (!circleId) {
+        profile.social.activeCircleId = null;
+        profile.social.activeCircle = null;
+      } else {
+        const c = profile.social.circles.find(x => x.id === circleId);
+        if (c) {
+          profile.social.activeCircleId = c.id;
+          profile.social.activeCircle = c;
+          profile.settings.consumers = c.members;
+        }
+      }
+      return visible(profile);
+    }),
+    leaveCircle: async circleId => mutate(profile => {
+      profile.social.circles = profile.social.circles.filter(c => c.id !== circleId);
+      if (profile.social.activeCircleId === circleId) {
+        profile.social.activeCircleId = null;
+        profile.social.activeCircle = null;
+      }
+      return visible(profile);
+    }),
   };
 }
-export function remoteService(telegram) {
+
+export function remoteService(telegram, sessionToken = null) {
+  let currentToken = sessionToken || (typeof localStorage !== 'undefined' ? localStorage.getItem(SESSION_KEY) : null);
   async function request(route, method = 'GET', body) {
     let response;
-    try { response = await fetch(`/api${route}`, { method, headers: { 'Content-Type': 'application/json', 'X-Telegram-Init-Data': telegram?.initData || '' }, body: body ? JSON.stringify(body) : undefined, signal: AbortSignal.timeout(15000) }); }
+    const headers = { 'Content-Type': 'application/json' };
+    if (telegram?.initData) headers['X-Telegram-Init-Data'] = telegram.initData;
+    if (currentToken) headers['Authorization'] = `Bearer ${currentToken}`;
+
+    try { response = await fetch(`/api${route}`, { method, headers, body: body ? JSON.stringify(body) : undefined, signal: AbortSignal.timeout(15000) }); }
     catch { throw new Error('连接没成功，这次操作还未确认。请再试一次。'); }
     const data = await response.json();
-    if (!response.ok) throw new Error(response.status === 401 ? '请从 Telegram bot 重新打开，以验证身份。' : data.error || '暂时没有保存成功，请再试一次。');
+    if (!response.ok) throw new Error(response.status === 401 ? '请先登录以验证身份。' : data.error || '暂时没有保存成功，请再试一次。');
     return data;
   }
   return {
@@ -87,5 +145,22 @@ export function remoteService(telegram) {
     pairLedger: code => request('/pair', 'POST', { code }),
     unpairLedger: () => request('/unpair', 'POST'),
     updateUserProfile: profile => request('/user-profile', 'PUT', profile),
+    loginWithGoogle: async credential => {
+      const res = await request('/auth/google', 'POST', typeof credential === 'string' ? { credential } : credential);
+      if (res?.sessionToken) {
+        currentToken = res.sessionToken;
+        try { localStorage.setItem(SESSION_KEY, res.sessionToken); } catch {}
+      }
+      return res.profile;
+    },
+    getLinkCode: () => request('/auth/link-code', 'POST'),
+    verifyLinkCode: async code => {
+      const res = await request('/auth/link-verify', 'POST', { code });
+      return res.profile;
+    },
+    addFriend: friendCode => request('/friends/add', 'POST', { friendCode }),
+    createCircle: (name, friendIds) => request('/circles/create', 'POST', { name, friendIds }),
+    switchCircle: circleId => request('/circles/switch', 'POST', { circleId }),
+    leaveCircle: circleId => request('/circles/leave', 'POST', { circleId }),
   };
 }

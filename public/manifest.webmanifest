@@ -1,0 +1,22 @@
+﻿{
+  name: for. 花给生活,
+  short_name: for.,
+  description: 随手记下，钱花给了什么,
+  start_url: /,
+  display: standalone,
+  background_color: #f8f7f1,
+  theme_color: #f8f7f1,
+  icons: [
+    {
+      src: /apple-touch-icon.png,
+      sizes: 512x512,
+      type: image/png,
+      purpose: any maskable
+    },
+    {
+      src: /apple-touch-icon-180x180.png,
+      sizes: 180x180,
+      type: image/png
+    }
+  ]
+}

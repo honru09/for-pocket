@@ -3,7 +3,7 @@ export const CURRENCIES = {
   CNY: { symbol: '¥', name: '人民币', digits: 2 },
   USD: { symbol: '$', name: '美元', digits: 2 },
 };
-export const ICONS = ['bowl', 'book', 'bag', 'game', 'plane', 'spark', 'heart', 'coffee'];
+export const ICONS = ['bowl', 'book', 'bag', 'game', 'plane', 'spark', 'heart', 'coffee', 'wallet', 'coins', 'gift', 'receipt', 'piggy', 'card', 'transfer', 'users', 'google', 'sprout', 'flower', 'star'];
 export const COLORS = ['peach', 'blue', 'mint', 'pink', 'yellow', 'lavender'];
 export const LANGUAGES = ['zh', 'en', 'uk'];
 export const AVATARS = ['cat', 'bunny', 'bear', 'chick', 'fox', 'panda', 'coffee', 'flower', 'sprout', 'star'];
@@ -21,6 +21,14 @@ export const DEFAULT_CATEGORIES = [
   { id: 'travel', label: '旅游', icon: 'plane', color: 'yellow' },
   { id: 'other', label: '其他', icon: 'spark', color: 'lavender' },
 ];
+export const DEFAULT_INCOME_CATEGORIES = [
+  { id: 'wage', label: '工资', icon: 'wallet', color: 'mint' },
+  { id: 'bonus', label: '奖金', icon: 'coins', color: 'yellow' },
+  { id: 'redpacket', label: '红包', icon: 'gift', color: 'peach' },
+  { id: 'parttime', label: '兼职', icon: 'sprout', color: 'blue' },
+  { id: 'reimburse', label: '报销', icon: 'receipt', color: 'lavender' },
+  { id: 'other_in', label: '其他入账', icon: 'spark', color: 'pink' },
+];
 export function resolveLanguage(code, fallback = 'zh') {
   if (!code || typeof code !== 'string') return fallback;
   const lower = code.toLowerCase().trim();
@@ -36,6 +44,7 @@ export function initialSettings(lang = 'zh') {
     language,
     languageManual: false,
     categories: structuredClone(DEFAULT_CATEGORIES),
+    incomeCategories: structuredClone(DEFAULT_INCOME_CATEGORIES),
     consumers: structuredClone(DEFAULT_CONSUMERS),
   };
 }
@@ -52,6 +61,19 @@ export function validateSettings(value) {
     if (!label || Array.from(label).length > 24 || labels.has(label)) throw new Error('分类名称需为 1–24 个字，且不能重复。');
     if (!ICONS.includes(item.icon) || !COLORS.includes(item.color)) throw new Error('请选择有效的图标和颜色。');
     ids.add(item.id); labels.add(label);
+    return { id: item.id, label, icon: item.icon, color: item.color };
+  });
+
+  const rawIncome = Array.isArray(value.incomeCategories) && value.incomeCategories.length > 0 ? value.incomeCategories : DEFAULT_INCOME_CATEGORIES;
+  const incomeIds = new Set();
+  const incomeLabels = new Set();
+  const incomeCategories = rawIncome.map(item => {
+    if (!item || typeof item.id !== 'string' || !/^[a-zA-Z0-9_-]{1,64}$/.test(item.id)
+      || incomeIds.has(item.id) || typeof item.label !== 'string') throw new Error('收入分类格式有误。');
+    const label = item.label.trim();
+    if (!label || Array.from(label).length > 24 || incomeLabels.has(label)) throw new Error('分类名称需为 1–24 个字，且不能重复。');
+    if (!ICONS.includes(item.icon) || !COLORS.includes(item.color)) throw new Error('请选择有效的图标和颜色。');
+    incomeIds.add(item.id); incomeLabels.add(label);
     return { id: item.id, label, icon: item.icon, color: item.color };
   });
 
@@ -74,6 +96,7 @@ export function validateSettings(value) {
     language: value.language || 'zh',
     languageManual: Boolean(value.languageManual),
     categories,
+    incomeCategories,
     consumers,
   };
 }
@@ -86,13 +109,15 @@ export function validateExpense(value, settings) {
   if (!value || typeof value.id !== 'string' || !/^[a-zA-Z0-9_-]{8,64}$/.test(value.id)) throw new Error('记录编号有误。');
   if (!CURRENCIES[value.currency] || !Number.isSafeInteger(value.amountMinor) || value.amountMinor < 1
     || value.amountMinor > 10 ** (8 + CURRENCIES[value.currency].digits) - 1) throw new Error('请输入有效金额。');
-  const category = settings.categories.find(x => x.id === value.categoryId);
-  if (!category) throw new Error('请选择一个花销方向。');
+  const type = value.type === 'income' ? 'income' : 'expense';
+  const categoryPool = [...(settings.categories || []), ...(settings.incomeCategories || DEFAULT_INCOME_CATEGORIES)];
+  const category = categoryPool.find(x => x.id === value.categoryId);
+  if (!category) throw new Error('请选择一个分类方向。');
   const allowedConsumers = new Set((settings.consumers || DEFAULT_CONSUMERS).map(c => c.id));
   if (!allowedConsumers.has(value.consumer)) throw new Error('请选择有效的记账角色。');
   if (typeof value.note !== 'string' || value.note.length > 160) throw new Error('备注最多 160 个字符。');
   if (typeof value.timezone !== 'string' || value.timezone.length > 80) throw new Error('时区格式有误。');
   dateKey(new Date(), value.timezone);
-  return { id: value.id, amountMinor: value.amountMinor, currency: value.currency,
+  return { id: value.id, type, amountMinor: value.amountMinor, currency: value.currency,
     categoryId: category.id, category: structuredClone(category), consumer: value.consumer, note: value.note.trim(), timezone: value.timezone };
 }

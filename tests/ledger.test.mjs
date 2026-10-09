@@ -263,3 +263,167 @@ test('two-person shared ledger pairing, historical merge, real-time sync, and un
   assert.equal(soloA.expenses.length, 4);
   assert.equal(soloB.expenses.length, 3);
 });
+
+test('income entries, Google login, cross-device sync codes, friends and Life360 circles (max 4)', async t => {
+  const dataDir = await mkdtemp(path.join(os.tmpdir(), 'for-pocket-circle-test-'));
+  const server = createApp({ token, dataDir });
+  server.listen(0, '127.0.0.1'); await once(server, 'listening');
+  const base = `http://127.0.0.1:${server.address().port}`;
+
+  t.after(async () => {
+    await new Promise(resolve => server.close(resolve));
+    await rm(dataDir, { recursive: true, force: true });
+  });
+
+  async function request(route, { user = 601, method = 'GET', body, auth = signed(user), token: sessionToken, origin, headers = {} } = {}) {
+    const authHeaders = sessionToken ? { Authorization: `Bearer ${sessionToken}` } : { 'X-Telegram-Init-Data': auth };
+    const response = await fetch(base + '/api' + route, {
+      method,
+      headers: { 'Content-Type': 'application/json', ...authHeaders, ...(origin ? { Origin: origin } : {}), ...headers },
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    return { status: response.status, data: await response.json() };
+  }
+
+  // 1. Record income entry
+  const incomeRes = await request('/expenses', {
+    user: 601,
+    method: 'POST',
+    body: {
+      id: 'inc-user-601-01',
+      type: 'income',
+      amountMinor: 300000,
+      currency: 'JPY',
+      categoryId: 'wage',
+      consumer: 'u_601',
+      note: '月薪入账',
+      timezone: 'Asia/Tokyo'
+    }
+  });
+  assert.equal(incomeRes.status, 200);
+  assert.equal(incomeRes.data.type, 'income');
+  assert.equal(incomeRes.data.amountMinor, 300000);
+
+  const profile601 = (await request('/profile', { user: 601 })).data;
+  assert.equal(profile601.expenses.length, 1);
+  assert.equal(profile601.expenses[0].type, 'income');
+
+  // 2. Google Login & Session
+  const googleRes = await request('/auth/google', {
+    auth: '',
+    method: 'POST',
+    body: { email: 'xingrun@example.com', sub: 'google-sub-601', name: 'Xingrun Google' }
+  });
+  assert.equal(googleRes.status, 200);
+  assert.ok(googleRes.data.sessionToken);
+  const googleToken = googleRes.data.sessionToken;
+
+  // Read profile using Google session token
+  const googleProfileRes = await request('/profile', { token: googleToken, auth: '' });
+  assert.equal(googleProfileRes.status, 200);
+  assert.equal(googleProfileRes.data.account.hasGoogle, true);
+
+  // 3. Link Code (merge Google user with Telegram user 601)
+  const linkCodeRes = await request('/auth/link-code', { user: 601, method: 'POST' });
+  assert.equal(linkCodeRes.status, 200);
+  assert.equal(linkCodeRes.data.code.length, 6);
+  const syncCode = linkCodeRes.data.code;
+
+  const verifyRes = await request('/auth/link-verify', {
+    token: googleToken,
+    auth: '',
+    method: 'POST',
+    body: { code: syncCode }
+  });
+  assert.equal(verifyRes.status, 200);
+  assert.equal(verifyRes.data.ok, true);
+
+  // After link, Google user sees the income recorded on Telegram!
+  const unifiedGoogleProfile = (await request('/profile', { token: googleToken, auth: '' })).data;
+  assert.equal(unifiedGoogleProfile.expenses.length, 1);
+  assert.equal(unifiedGoogleProfile.expenses[0].id, 'inc-user-601-01');
+
+  // 4. Friends & Circles (Life360 Model)
+  // Create users 701, 702, 703, 704, 705
+  const p701 = (await request('/profile', { user: 701 })).data;
+  const p702 = (await request('/profile', { user: 702 })).data;
+  const p703 = (await request('/profile', { user: 703 })).data;
+  const p704 = (await request('/profile', { user: 704 })).data;
+  const p705 = (await request('/profile', { user: 705 })).data;
+
+  // 701 attempts to create circle with 702 before becoming friends -> 400
+  const earlyCircle = await request('/circles/create', {
+    user: 701,
+    method: 'POST',
+    body: { name: '早退圈', friendIds: ['702'] }
+  });
+  assert.equal(earlyCircle.status, 400);
+
+  // 701 adds 702, 703, 704, 705 as friends via friend codes
+  assert.equal((await request('/friends/add', { user: 701, method: 'POST', body: { friendCode: p702.social.myFriendCode } })).status, 200);
+  assert.equal((await request('/friends/add', { user: 701, method: 'POST', body: { friendCode: p703.social.myFriendCode } })).status, 200);
+  assert.equal((await request('/friends/add', { user: 701, method: 'POST', body: { friendCode: p704.social.myFriendCode } })).status, 200);
+  assert.equal((await request('/friends/add', { user: 701, method: 'POST', body: { friendCode: p705.social.myFriendCode } })).status, 200);
+
+  // Mutual friend check: 702 now has 701 in friends list
+  const p702Friends = (await request('/profile', { user: 702 })).data;
+  assert.ok(p702Friends.social.friends.some(f => f.userId === '701' || f.id === 'u_701'));
+
+  // 701 tries to create circle with 4 friends (total 5 people) -> exceeds max 4
+  const exceedCircle = await request('/circles/create', {
+    user: 701,
+    method: 'POST',
+    body: { name: '超员圈', friendIds: ['702', '703', '704', '705'] }
+  });
+  assert.equal(exceedCircle.status, 400);
+
+  // 701 creates circle with 3 friends (total 4 people) -> success
+  const createCircleRes = await request('/circles/create', {
+    user: 701,
+    method: 'POST',
+    body: { name: '温馨四人小窝', friendIds: ['702', '703', '704'] }
+  });
+  assert.equal(createCircleRes.status, 200);
+  const circleId = createCircleRes.data.social.activeCircleId;
+  assert.ok(circleId);
+
+  // Active circle has 4 consumers
+  assert.equal(createCircleRes.data.settings.consumers.length, 4);
+
+  // 701 records an expense in the circle ledger
+  const circleExpense = await request('/expenses', {
+    user: 701,
+    method: 'POST',
+    body: {
+      id: 'cir-exp-01',
+      amountMinor: 12000,
+      currency: 'JPY',
+      categoryId: 'stomach',
+      consumer: 'u_701',
+      note: '四人家庭聚餐',
+      timezone: 'Asia/Tokyo'
+    }
+  });
+  assert.equal(circleExpense.status, 200);
+
+  // 702 switches to this circle and sees the expense!
+  const switch702 = await request('/circles/switch', {
+    user: 702,
+    method: 'POST',
+    body: { circleId }
+  });
+  assert.equal(switch702.status, 200);
+  assert.equal(switch702.data.expenses.length, 1);
+  assert.equal(switch702.data.expenses[0].id, 'cir-exp-01');
+
+  // 701 switches back to personal ledger -> circle expense not in personal ledger
+  const switchBack701 = await request('/circles/switch', {
+    user: 701,
+    method: 'POST',
+    body: { circleId: null }
+  });
+  assert.equal(switchBack701.status, 200);
+  assert.equal(switchBack701.data.social.activeCircleId, null);
+  assert.equal(switchBack701.data.expenses.length, 0);
+});
+

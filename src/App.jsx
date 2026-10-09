@@ -1,6 +1,6 @@
 import React, { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { AppRoot, Button, Cell, Input, Placeholder, SegmentedControl, Select, Snackbar, Tappable } from '@telegram-apps/telegram-ui';
-import { CURRENCIES, CONSUMERS, COLORS, ICONS, DEFAULT_CATEGORIES, resolveLanguage, initialSettings, validateSettings, dateKey, AVATARS, CONSUMER_COLORS } from '../public/shared.mjs';
+import { CURRENCIES, CONSUMERS, COLORS, ICONS, DEFAULT_CATEGORIES, DEFAULT_INCOME_CATEGORIES, resolveLanguage, initialSettings, validateSettings, dateKey, AVATARS, CONSUMER_COLORS } from '../public/shared.mjs';
 import { LOCALES, translate, translateError, categoryLabel } from '../public/i18n.mjs';
 import { PREVIEW_KEY, localService, remoteService } from './services.mjs';
 import { Icon, Mascot } from './icons.jsx';
@@ -52,6 +52,7 @@ export default function App() {
   const [ready, setReady] = useState(false);
   const [busy, setBusy] = useState(false);
   const [view, setView] = useState('record');
+  const [recordType, setRecordType] = useState('expense');
   const [raw, setRaw] = useState('0');
   const [selected, setSelected] = useState(null);
   const [consumer, setConsumer] = useState(null);
@@ -64,6 +65,14 @@ export default function App() {
   const [notice, setNotice] = useState(null);
   const [today, setToday] = useState(() => dateKey(new Date(), timezone));
   const [shareInfo, setShareInfo] = useState({ code: '', isPaired: false, partner: null });
+  const [socialInfo, setSocialInfo] = useState({ myFriendCode: '', friends: [], circles: [], activeCircleId: null });
+  const [accountInfo, setAccountInfo] = useState({ hasGoogle: false, hasTelegram: false, googleEmail: null, tgUsername: null });
+  const [friendCodeInput, setFriendCodeInput] = useState('');
+  const [newCircleName, setNewCircleName] = useState('');
+  const [selectedFriendIds, setSelectedFriendIds] = useState([]);
+  const [syncCodeInput, setSyncCodeInput] = useState('');
+  const [activeSyncCode, setActiveSyncCode] = useState('');
+  const [googleClientId, setGoogleClientId] = useState('');
   const [myProfile, setMyProfile] = useState({ id: '', name: '', color: 'blue', avatar: 'cat' });
   const [pairCode, setPairCode] = useState('');
   const [editName, setEditName] = useState('');
@@ -90,15 +99,18 @@ export default function App() {
     if (settingsRef.current.currency !== next.currency) { setRaw('0'); pending.current = null; }
     settingsRef.current = next; setSettings(next); setExpenses(profile.expenses);
     if (profile.share) setShareInfo(profile.share);
+    if (profile.social) setSocialInfo(profile.social);
+    if (profile.account) setAccountInfo(profile.account);
     if (profile.user) {
       setMyProfile(profile.user);
       setEditName(profile.user.name);
       setEditColor(profile.user.color);
       setEditAvatar(profile.user.avatar);
     }
-    setSelected(current => next.categories.some(category => category.id === current) ? current : null);
+    const pool = recordType === 'income' ? (next.incomeCategories || DEFAULT_INCOME_CATEGORIES) : next.categories;
+    setSelected(current => pool.some(category => category.id === current) ? current : null);
     setConsumer(current => next.consumers.some(c => c.id === current) ? current : (next.consumers[0]?.id || null));
-  }, []);
+  }, [recordType]);
   const changeBusy = value => { busyRef.current = value; setBusy(value); };
   const navigate = useCallback((next, focus = false) => {
     if (busyRef.current || !stateRef.current.ready || next === stateRef.current.view) return;
@@ -121,12 +133,14 @@ export default function App() {
         const response = await fetch('/api/config', { signal: AbortSignal.timeout(10000) });
         if (!response.ok) throw new Error('暂时连接不上，请刷新后再打开。');
         const config = await response.json();
+        if (config.googleClientId) setGoogleClientId(config.googleClientId);
         const isTelegram = Boolean(telegram?.initData);
         if (isTelegram && config.mode !== 'telegram') throw new Error('bot 服务还没有配置完成，请先配置服务端。');
-        const backend = (config.mode === 'telegram' && isTelegram) ? remoteService(telegram) : localService(detectedLang);
+        const hasSession = typeof localStorage !== 'undefined' && Boolean(localStorage.getItem('for_pocket_session_token'));
+        const backend = (config.mode === 'telegram' && (isTelegram || hasSession)) ? remoteService(telegram) : localService(detectedLang);
         const profile = await backend.getProfile();
         if (cancelled) return;
-        service.current = backend; setMode(isTelegram && config.mode === 'telegram' ? 'telegram' : 'local'); setHistoryCurrency(profile.settings.currency); applyProfile(profile);
+        service.current = backend; setMode((isTelegram || hasSession) && config.mode === 'telegram' ? 'telegram' : 'local'); setHistoryCurrency(profile.settings.currency); applyProfile(profile);
         if (telegram?.initDataUnsafe?.user) {
           const tgUser = telegram.initDataUnsafe.user;
           const tgName = (tgUser.first_name || tgUser.username || '').trim();
@@ -147,6 +161,38 @@ export default function App() {
     window.addEventListener('storage', storage); document.addEventListener('visibilitychange', visible);
     return () => { cancelled = true; window.removeEventListener('storage', storage); document.removeEventListener('visibilitychange', visible); };
   }, [applyProfile, showError]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.google?.accounts?.id || !googleClientId) return;
+    try {
+      window.google.accounts.id.initialize({
+        client_id: googleClientId,
+        callback: async res => {
+          if (!res.credential || !service.current) return;
+          changeBusy(true);
+          try {
+            const updated = await service.current.loginWithGoogle(res.credential);
+            applyProfile(updated);
+            notify('linkSuccess');
+            haptic('success');
+          } catch (err) {
+            showError(err);
+          } finally {
+            changeBusy(false);
+          }
+        },
+      });
+      const googleBtnEl = document.getElementById('google-signin-btn-container');
+      if (googleBtnEl) {
+        window.google.accounts.id.renderButton(googleBtnEl, {
+          theme: 'outline',
+          size: 'large',
+          text: 'signin_with',
+          shape: 'pill',
+        });
+      }
+    } catch {}
+  }, [googleClientId, applyProfile, notify, showError]);
   useEffect(() => { document.documentElement.lang = locale; document.title = `for. · ${t('title')}`; }, [locale, t]);
   useEffect(() => {
     if (!telegram?.BackButton) return;
@@ -220,14 +266,15 @@ export default function App() {
   const saveExpense = useCallback(async () => {
     const current = stateRef.current;
     if (busyRef.current || !current.ready || !current.amountMinor || !current.selected || !current.consumer) return;
-    const payload = { id: pending.current?.id || crypto.randomUUID(), amountMinor: current.amountMinor, currency: settingsRef.current.currency, categoryId: current.selected, consumer: current.consumer, note: current.note, timezone };
+    const payload = { id: pending.current?.id || crypto.randomUUID(), type: recordType, amountMinor: current.amountMinor, currency: settingsRef.current.currency, categoryId: current.selected, consumer: current.consumer, note: current.note, timezone };
     pending.current = payload; changeBusy(true);
     try {
       const entry = await service.current.addExpense(payload);
       setExpenses(currentEntries => currentEntries.some(e => e.id === entry.id) ? currentEntries : [...currentEntries, entry]);
       setRaw('0'); setSelected(null); setNote(''); pending.current = null;
       const member = settingsRef.current.consumers?.find(c => c.id === entry.consumer);
-      notify('saved', { person: member?.name || CONSUMERS[entry.consumer] || '', amount: money(entry.amountMinor, entry.currency) }); haptic('success');
+      const isIncome = entry.type === 'income';
+      notify(isIncome ? 'savedIncome' : 'saved', { person: member?.name || CONSUMERS[entry.consumer] || '', amount: money(entry.amountMinor, entry.currency) }); haptic('success');
       mascotRef.current?.animate([
         { transform: 'rotate(-8deg) scale(1) translateY(0)' },
         { transform: 'rotate(14deg) scale(1.22,1.12) translateY(-22px)' },
@@ -237,7 +284,7 @@ export default function App() {
       ], { duration: 850, easing: 'cubic-bezier(.22,1,.36,1)' });
     } catch (error) { showError(error); }
     finally { changeBusy(false); }
-  }, [money, notify, showError]);
+  }, [recordType, money, notify, showError]);
   useEffect(() => {
     const keydown = event => {
       keyboard.current = true; document.documentElement.classList.add('keyboard-action');
@@ -335,6 +382,104 @@ export default function App() {
     finally { changeBusy(false); }
   }, [editName, editColor, editAvatar, applyProfile, notify, showError, t]);
 
+  const handleCopyFriendCode = useCallback(() => {
+    const code = socialInfo.myFriendCode || shareInfo.code;
+    if (!code) return;
+    try {
+      navigator.clipboard?.writeText(code);
+      notify('codeCopied');
+      haptic('selection');
+    } catch {
+      notify('codeCopied');
+    }
+  }, [socialInfo.myFriendCode, shareInfo.code, notify]);
+
+  const handleAddFriend = useCallback(async event => {
+    event?.preventDefault();
+    if (busyRef.current || !service.current) return;
+    const clean = friendCodeInput.trim().toUpperCase();
+    if (clean.length !== 6) { showError(new Error(t('errorInvalidCode'))); return; }
+    changeBusy(true);
+    try {
+      const updated = await service.current.addFriend(clean);
+      applyProfile(updated);
+      setFriendCodeInput('');
+      notify('friendAdded');
+      haptic('success');
+    } catch (err) { showError(err); }
+    finally { changeBusy(false); }
+  }, [friendCodeInput, applyProfile, notify, showError, t]);
+
+  const handleCreateCircle = useCallback(async event => {
+    event?.preventDefault();
+    if (busyRef.current || !service.current) return;
+    const name = newCircleName.trim();
+    if (!name) { showError(new Error(t('circleNamePlaceholder'))); return; }
+    if (selectedFriendIds.length > 3) { showError(new Error('好友圈成员最多 4 人（包含自己）')); return; }
+    changeBusy(true);
+    try {
+      const updated = await service.current.createCircle(name, selectedFriendIds);
+      applyProfile(updated);
+      setNewCircleName('');
+      setSelectedFriendIds([]);
+      notify('circleCreated');
+      haptic('success');
+    } catch (err) { showError(err); }
+    finally { changeBusy(false); }
+  }, [newCircleName, selectedFriendIds, applyProfile, notify, showError, t]);
+
+  const handleSwitchCircle = useCallback(async circleId => {
+    if (busyRef.current || !service.current) return;
+    changeBusy(true);
+    try {
+      const updated = await service.current.switchCircle(circleId);
+      applyProfile(updated);
+      notify('circleJoined');
+      haptic('selection');
+    } catch (err) { showError(err); }
+    finally { changeBusy(false); }
+  }, [applyProfile, notify, showError]);
+
+  const handleLeaveCircle = useCallback(async circleId => {
+    if (busyRef.current || !service.current) return;
+    changeBusy(true);
+    try {
+      const updated = await service.current.leaveCircle(circleId);
+      applyProfile(updated);
+      notify('unpairedSuccess');
+      haptic('selection');
+    } catch (err) { showError(err); }
+    finally { changeBusy(false); }
+  }, [applyProfile, notify, showError]);
+
+  const handleGetLinkCode = useCallback(async () => {
+    if (busyRef.current || !service.current) return;
+    changeBusy(true);
+    try {
+      const res = await service.current.getLinkCode();
+      setActiveSyncCode(res.code);
+      haptic('selection');
+    } catch (err) { showError(err); }
+    finally { changeBusy(false); }
+  }, [showError]);
+
+  const handleVerifyLinkCode = useCallback(async event => {
+    event?.preventDefault();
+    if (busyRef.current || !service.current) return;
+    const clean = syncCodeInput.trim().toUpperCase();
+    if (clean.length !== 6) { showError(new Error('请输入 6 位连携码')); return; }
+    changeBusy(true);
+    try {
+      const res = await service.current.verifyLinkCode(clean);
+      if (res.profile) applyProfile(res.profile);
+      setSyncCodeInput('');
+      setActiveSyncCode('');
+      notify('linkSuccess');
+      haptic('success');
+    } catch (err) { showError(err); }
+    finally { changeBusy(false); }
+  }, [syncCodeInput, applyProfile, notify, showError]);
+
   async function saveCategories(event) {
     event.preventDefault(); if (busyRef.current) return;
     let next;
@@ -358,12 +503,38 @@ export default function App() {
     catch (error) { showError(error); }
     finally { changeBusy(false); }
   }
+
+  const activeCircle = useMemo(() => {
+    if (!socialInfo?.activeCircleId) return null;
+    return (socialInfo?.circles || []).find(c => c.id === socialInfo.activeCircleId) || null;
+  }, [socialInfo]);
+
+  const activeCategories = useMemo(() => {
+    if (recordType === 'income') {
+      return settings.incomeCategories && settings.incomeCategories.length
+        ? settings.incomeCategories
+        : DEFAULT_INCOME_CATEGORIES;
+    }
+    return settings.categories;
+  }, [recordType, settings.categories, settings.incomeCategories]);
+
   const todayEntries = useMemo(() => expenses.filter(e => e.dayKey === today && e.currency === settings.currency), [expenses, today, settings.currency]);
+  const todayExpenseTotal = useMemo(() => todayEntries.filter(e => e.type !== 'income').reduce((sum, e) => sum + e.amountMinor, 0), [todayEntries]);
+  const todayIncomeTotal = useMemo(() => todayEntries.filter(e => e.type === 'income').reduce((sum, e) => sum + e.amountMinor, 0), [todayEntries]);
+
   const historyEntries = useMemo(() => expenses.filter(e => e.currency === historyCurrency && (period === 'all' || e.dayKey.startsWith(today.slice(0, 7)))).sort((a, b) => b.createdAt.localeCompare(a.createdAt)), [expenses, historyCurrency, period, today]);
-  const historyTotal = useMemo(() => historyEntries.reduce((sum, e) => sum + e.amountMinor, 0), [historyEntries]);
+  const historyExpenseTotal = useMemo(() => historyEntries.filter(e => e.type !== 'income').reduce((sum, e) => sum + e.amountMinor, 0), [historyEntries]);
+  const historyIncomeTotal = useMemo(() => historyEntries.filter(e => e.type === 'income').reduce((sum, e) => sum + e.amountMinor, 0), [historyEntries]);
+  const historyNetBalance = historyIncomeTotal - historyExpenseTotal;
+  const historyTotal = historyExpenseTotal;
+
   const breakdown = useMemo(() => {
     const groups = new Map();
-    historyEntries.forEach(entry => { const group = groups.get(entry.categoryId) || { category: entry.category, total: 0 }; group.total += entry.amountMinor; groups.set(entry.categoryId, group); });
+    historyEntries.filter(e => e.type !== 'income').forEach(entry => {
+      const group = groups.get(entry.categoryId) || { category: entry.category, total: 0 };
+      group.total += entry.amountMinor;
+      groups.set(entry.categoryId, group);
+    });
     return [...groups.values()].sort((a, b) => b.total - a.total).slice(0, 6);
   }, [historyEntries]);
   const historyDays = useMemo(() => {
@@ -375,23 +546,62 @@ export default function App() {
 
   return <AppRoot appearance="light" platform={platform} className="for-root" data-ui-kit="telegram-ui">
     <div className="app-shell">
-      <header className="app-header"><a className="brand" href="#record" aria-label={t('record')} onClick={event => { event.preventDefault(); navigate('record'); }}><span className="brand-word">for<span>.</span></span></a><div className="header-actions">
-        <SegmentedControl className="view-tabs" aria-label={t('navigation')}>
-          <SegmentedControl.Item className="tab" data-view="record" selected={view !== 'history'} aria-selected={view !== 'history'} disabled={disabled} onClick={event => navigate('record', event.detail === 0)}>{t('record')}</SegmentedControl.Item>
-          <SegmentedControl.Item className="tab" data-view="history" selected={view === 'history'} aria-selected={view === 'history'} disabled={disabled} onClick={event => navigate('history', event.detail === 0)}>{t('ledger')} <span className="count-dot" id="record-count">{expenses.length > 99 ? '99+' : expenses.length}</span></SegmentedControl.Item>
-        </SegmentedControl>
-        <Select id="language" className="language-control" before={<Icon name="globe"/>} aria-label={t('language')} value={settings.language} disabled={disabled} onChange={event => updateSettings({ language: event.target.value })}><option value="zh">中文</option><option value="en">EN</option><option value="uk">УКР</option></Select>
-      </div></header>
+      <header className="app-header">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <a className="brand" href="#record" aria-label={t('record')} onClick={event => { event.preventDefault(); navigate('record'); }}>
+            <img src="/logo.png" alt="logo" className="brand-logo-img" />
+            <span className="brand-word">for<span>.</span></span>
+          </a>
+          {activeCircle && (
+            <div className="circle-header-chip" title={t('currentCircle')}>
+              <Icon name="users" />
+              <span>{activeCircle.name}</span>
+            </div>
+          )}
+        </div>
+        <div className="header-actions">
+          <SegmentedControl className="view-tabs" aria-label={t('navigation')}>
+            <SegmentedControl.Item className="tab" data-view="record" selected={view !== 'history'} aria-selected={view !== 'history'} disabled={disabled} onClick={event => navigate('record', event.detail === 0)}>{t('record')}</SegmentedControl.Item>
+            <SegmentedControl.Item className="tab" data-view="history" selected={view === 'history'} aria-selected={view === 'history'} disabled={disabled} onClick={event => navigate('history', event.detail === 0)}>{t('ledger')} <span className="count-dot" id="record-count">{expenses.length > 99 ? '99+' : expenses.length}</span></SegmentedControl.Item>
+          </SegmentedControl>
+          <Select id="language" className="language-control" before={<Icon name="globe"/>} aria-label={t('language')} value={settings.language} disabled={disabled} onChange={event => updateSettings({ language: event.target.value })}><option value="zh">中文</option><option value="en">EN</option><option value="uk">УКР</option></Select>
+        </div>
+      </header>
 
       <main ref={pageRef} className="page" key={view} id={`${view}-view`} aria-labelledby={`${view}-title`}>
       {view === 'record' && <>
         <div className="page-heading"><h1 id="record-title" tabIndex={-1}>{t('recordTitle')}<span>{settings.language === 'zh' ? '？' : '?'}</span></h1><span className="date-label" id="today-label">{new Intl.DateTimeFormat(locale, { month: 'short', day: 'numeric' }).format(new Date())}</span></div>
         <div className="record-layout">
-          <section ref={stageRef} className={`amount-stage ${raw.length >= 6 ? 'long-amount' : ''}`} aria-label={t('amountInput')}><div className="amount-meta"><span>{t('amountLabel')}</span><Select id="currency" className="currency-control" value={settings.currency} aria-label={t('currency')} disabled={disabled} onChange={event => updateSettings({ currency: event.target.value })}>{Object.keys(CURRENCIES).map(code => <option key={code} value={code}>{code} · {t(code)}</option>)}</Select></div>
+          <section ref={stageRef} className={`amount-stage ${raw.length >= 6 ? 'long-amount' : ''} ${recordType === 'income' ? 'is-income' : ''}`} aria-label={t('amountInput')}>
+            <div className="amount-meta">
+              <div className="type-toggle-pill" role="radiogroup" aria-label="Type">
+                <button
+                  type="button"
+                  className={`type-pill-btn ${recordType === 'expense' ? 'active is-expense' : ''}`}
+                  onClick={() => { setRecordType('expense'); setSelected(null); haptic(); }}
+                >
+                  {t('expense')}
+                </button>
+                <button
+                  type="button"
+                  className={`type-pill-btn ${recordType === 'income' ? 'active is-income' : ''}`}
+                  onClick={() => { setRecordType('income'); setSelected(null); haptic(); }}
+                >
+                  {t('income')}
+                </button>
+              </div>
+              <Select id="currency" className="currency-control" value={settings.currency} aria-label={t('currency')} disabled={disabled} onChange={event => updateSettings({ currency: event.target.value })}>{Object.keys(CURRENCIES).map(code => <option key={code} value={code}>{code} · {t(code)}</option>)}</Select>
+            </div>
             <div ref={amountLineRef} className="amount-line"><span className="currency-symbol" id="currency-symbol">{CURRENCIES[settings.currency].symbol}</span><output id="amount-display" aria-label={t('currentAmount')} data-length={raw.length < 6 ? 'short' : raw.length > 9 ? 'long' : raw.length}>{amountDisplay}</output><span className="input-caret" aria-hidden="true"/></div>
-            <div className="amount-bottom"><span id="amount-hint">{selected ? label(settings.categories.find(c => c.id === selected)) : ''}</span><span className="small-spark" aria-hidden="true">✳</span></div><Mascot mascotRef={mascotRef}/>
+            <div className="amount-bottom"><span id="amount-hint">{selected ? label(activeCategories.find(c => c.id === selected)) : ''}</span><span className="small-spark" aria-hidden="true">✳</span></div><Mascot mascotRef={mascotRef}/>
           </section>
-          <section className="purposes" aria-labelledby="purposes-title"><div className="section-heading"><h2 id="purposes-title">{t('categories')}</h2><Button id="edit-categories" className="text-button" size="s" mode="plain" before={<Icon name="edit"/>} disabled={disabled} onClick={() => navigate('manage', true)}>{t('editCategories')}</Button></div><CategoryGrid categories={settings.categories} language={settings.language} selected={selected} disabled={disabled} onSelect={selectCategory}/></section>
+          <section className="purposes" aria-labelledby="purposes-title">
+            <div className="section-heading">
+              <h2 id="purposes-title">{recordType === 'income' ? t('income') : t('categories')}</h2>
+              {recordType === 'expense' && <Button id="edit-categories" className="text-button" size="s" mode="plain" before={<Icon name="edit"/>} disabled={disabled} onClick={() => navigate('manage', true)}>{t('editCategories')}</Button>}
+            </div>
+            <CategoryGrid categories={activeCategories} language={settings.language} selected={selected} disabled={disabled} onSelect={selectCategory}/>
+          </section>
           <section id="keypad" className="keypad" aria-label={t('keypad')}>{['1','2','3','4','5','6','7','8','9',decimalDigits ? '.' : 'clear','0','backspace'].map(key => <Tappable Component="button" type="button" className={`key ${key.length > 1 || key === '.' ? 'key-secondary' : ''}`} data-key={key} key={key} id={key === '.' || key === 'clear' ? 'decimal-key' : undefined} disabled={disabled} aria-label={key === 'clear' ? t('clear') : key === '.' ? t('decimal') : key === 'backspace' ? t('backspace') : key} onPointerDownCapture={() => { if (!disabled) stageRef.current?.setAttribute('data-press', 'true'); }} onClick={() => { pushKey(key); haptic('impact'); }}>{key === 'clear' ? 'C' : key === '.' ? decimalSeparator : key === 'backspace' ? <Icon name="backspace"/> : key}</Tappable>)}</section>
           <section className="finish" aria-label={t('save')}>
             <ConsumerPicker language={settings.language} consumers={settings.consumers} consumer={consumer} disabled={disabled} onSelect={selectConsumer}/>
@@ -403,17 +613,210 @@ export default function App() {
             </div>
           </section>
         </div>
-        <div className="today-strip"><span className="today-icon" aria-hidden="true">↳</span><div><span>{t('todayTotal')}</span><strong id="today-total">{money(todayEntries.reduce((sum, e) => sum + e.amountMinor, 0))}</strong><small id="today-count">{countText(todayEntries.length, settings.language, settings.currency)}</small></div><Button className="text-button" size="s" mode="plain" data-view="history" onClick={() => navigate('history')}>{t('ledger')} →</Button></div>
+        <div className="today-strip">
+          <span className="today-icon" aria-hidden="true">↳</span>
+          <div className="today-strip-stats">
+            <div>
+              <span>{t('todayExpense')}</span>
+              <strong id="today-total">{money(todayExpenseTotal)}</strong>
+            </div>
+            {todayIncomeTotal > 0 && (
+              <div>
+                <span>{t('todayIncome')}</span>
+                <strong style={{ color: 'var(--green)' }}>+{money(todayIncomeTotal)}</strong>
+              </div>
+            )}
+            <small id="today-count">{countText(todayEntries.length, settings.language, settings.currency)}</small>
+          </div>
+          <Button className="text-button" size="s" mode="plain" data-view="history" onClick={() => navigate('history')}>{t('ledger')} →</Button>
+        </div>
       </>}
       {view === 'history' && <>
         <div className="page-heading"><h1 id="history-title" tabIndex={-1}>{t('historyTitle')}</h1><Button size="s" mode="plain" className="text-button" data-view="record" onClick={() => navigate('record')}>{t('newEntry')}</Button></div>
         <div className="history-controls"><SegmentedControl className="period-tabs" aria-label={t('period')}>{['month','all'].map(value => <SegmentedControl.Item data-period={value} key={value} selected={period === value} aria-selected={period === value} onClick={() => { setPeriod(value); haptic(); }}>{t(value)}</SegmentedControl.Item>)}</SegmentedControl><Select id="history-currency" className="history-currency" aria-label={t('ledgerCurrency')} value={historyCurrency} onChange={event => setHistoryCurrency(event.target.value)}>{Object.keys(CURRENCIES).map(code => <option value={code} key={code}>{code}</option>)}</Select></div>
-        <section className="history-summary" aria-label={t('summary')}><div className="history-summary-amount"><span id="history-period-label">{t(period === 'all' ? 'allSpending' : 'monthSpending')}</span><strong id="history-total">{money(historyTotal, historyCurrency)}</strong><small id="history-total-count">{countText(historyEntries.length, settings.language, historyCurrency)}</small></div><div className="breakdown" id="breakdown">{breakdown.map(group => <div className="breakdown-row" key={group.category.id}><span>{label(group.category)}</span><div className="bar-track"><div className="bar-fill" style={{ transform: `scaleX(${historyTotal ? group.total / historyTotal : 0})` }}/></div><span>{money(group.total, historyCurrency)}</span></div>)}</div></section>
-        <div id="history-list" className="history-list">{historyDays.length ? historyDays.map(([day, entries]) => <section key={day}><div className="history-day">{dateLabel(day)}</div>{entries.map(entry => <Cell key={entry.id} Component="article" readOnly multiline className="expense-row" before={<span className="category-icon" style={{ background: `var(--${entry.category.color})` }}><Icon name={entry.category.icon}/></span>} subtitle={<span className="expense-meta"><ConsumerBadge consumer={entry.consumer} consumers={settings.consumers} t={t}/><time>{new Intl.DateTimeFormat(locale, { timeZone: entry.timezone, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date(entry.createdAt))}</time></span>} description={entry.note ? <span className="expense-note">{entry.note}</span> : undefined} after={<div className="expense-actions"><span className="expense-money">{money(entry.amountMinor, entry.currency)}</span><Button className="delete-expense" mode="plain" size="s" disabled={busy} data-delete={entry.id} aria-label={t('deleteExpense', { category: label(entry.category), amount: money(entry.amountMinor, entry.currency) })} onClick={() => deleteExpense(entry.id)}><Icon name="trash"/></Button></div>}><strong>{label(entry.category)}</strong></Cell>)}</section>) : <Placeholder className="empty-state" header={t('emptyTitle')} description={t('emptyText')}><span className="empty-face" aria-hidden="true">◡</span><Button mode="filled" size="m" data-view="record" onClick={() => navigate('record')}>{t('newEntry')}</Button></Placeholder>}</div>
+        <section className="history-summary" aria-label={t('summary')}>
+          <div className="history-summary-amount">
+            <span id="history-period-label">{t(period === 'all' ? 'allSpending' : 'monthSpending')}</span>
+            <strong id="history-total">{money(historyExpenseTotal, historyCurrency)}</strong>
+            {historyIncomeTotal > 0 && (
+              <div style={{ display: 'flex', gap: 12, marginTop: 4, fontSize: 13, fontWeight: 700 }}>
+                <span style={{ color: 'var(--green)' }}>+{money(historyIncomeTotal, historyCurrency)} {t('income')}</span>
+                <span style={{ color: historyNetBalance >= 0 ? 'var(--green)' : 'var(--ink)' }}>{t('netBalance')}: {historyNetBalance >= 0 ? '+' : ''}{money(historyNetBalance, historyCurrency)}</span>
+              </div>
+            )}
+            <small id="history-total-count">{countText(historyEntries.length, settings.language, historyCurrency)}</small>
+          </div>
+          <div className="breakdown" id="breakdown">{breakdown.map(group => <div className="breakdown-row" key={group.category.id}><span>{label(group.category)}</span><div className="bar-track"><div className="bar-fill" style={{ transform: `scaleX(${historyExpenseTotal ? group.total / historyExpenseTotal : 0})` }}/></div><span>{money(group.total, historyCurrency)}</span></div>)}</div>
+        </section>
+        <div id="history-list" className="history-list">{historyDays.length ? historyDays.map(([day, entries]) => <section key={day}><div className="history-day">{dateLabel(day)}</div>{entries.map(entry => <Cell key={entry.id} Component="article" readOnly multiline className="expense-row" before={<span className="category-icon" style={{ background: `var(--${entry.category.color})` }}><Icon name={entry.category.icon}/></span>} subtitle={<span className="expense-meta"><ConsumerBadge consumer={entry.consumer} consumers={settings.consumers} t={t}/>{entry.type === 'income' && <span className="income-badge">{t('income')}</span>}<time>{new Intl.DateTimeFormat(locale, { timeZone: entry.timezone, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date(entry.createdAt))}</time></span>} description={entry.note ? <span className="expense-note">{entry.note}</span> : undefined} after={<div className="expense-actions"><span className={`expense-money ${entry.type === 'income' ? 'is-income' : ''}`} style={entry.type === 'income' ? { color: 'var(--green)' } : {}}>{entry.type === 'income' ? `+${money(entry.amountMinor, entry.currency)}` : money(entry.amountMinor, entry.currency)}</span><Button className="delete-expense" mode="plain" size="s" disabled={busy} data-delete={entry.id} aria-label={t('deleteExpense', { category: label(entry.category), amount: money(entry.amountMinor, entry.currency) })} onClick={() => deleteExpense(entry.id)}><Icon name="trash"/></Button></div>}><strong>{label(entry.category)}</strong></Cell>)}</section>) : <Placeholder className="empty-state" header={t('emptyTitle')} description={t('emptyText')}><span className="empty-face" aria-hidden="true">◡</span><Button mode="filled" size="m" data-view="record" onClick={() => navigate('record')}>{t('newEntry')}</Button></Placeholder>}</div>
       </>}
       {view === 'manage' && <>
         <div className="page-heading"><h1 id="manage-title" tabIndex={-1}>{t('manageTitle')}</h1><Button size="s" mode="plain" id="cancel-edit" className="text-button" onClick={() => navigate('record', true)}>{t('back')}</Button></div>
         <div className="manage-container">
+          <section className="manage-card" aria-labelledby="account-link-title">
+            <div className="manage-card-header">
+              <h2 id="account-link-title" className="manage-card-title"><Icon name="google"/>{t('linkCodeLabel')} / {t('googleLogin')}</h2>
+            </div>
+            <p className="manage-card-desc">{t('linkSuccess')}</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 12 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
+                <span>Telegram:</span>
+                <strong>{accountInfo.tgUsername || (accountInfo.hasTelegram ? t('tgLinked') : t('tgNotLinked'))}</strong>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
+                <span>Google:</span>
+                <strong>{accountInfo.googleEmail || (accountInfo.hasGoogle ? t('googleLinked') : t('googleNotLinked'))}</strong>
+              </div>
+            </div>
+            <div id="google-signin-btn-container" style={{ margin: '8px 0' }}/>
+            <div style={{ borderTop: '1px dashed var(--line)', paddingTop: 12, marginTop: 12 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#7c876c', marginBottom: 6 }}>{t('syncCodeHint')}</div>
+              {activeSyncCode ? (
+                <div className="share-code-box">
+                  <div>
+                    <div style={{ fontSize: 10, color: 'var(--muted)', fontWeight: 800 }}>{t('linkCodeLabel')}</div>
+                    <div className="share-code-val">{activeSyncCode}</div>
+                  </div>
+                  <Button size="s" mode="filled" onClick={() => { navigator.clipboard?.writeText(activeSyncCode); notify('codeCopied'); }}><Icon name="copy" style={{ width: 14, height: 14, marginRight: 4 }}/>{t('copyCode')}</Button>
+                </div>
+              ) : (
+                <Button size="s" mode="outline" disabled={busy} onClick={handleGetLinkCode} style={{ marginBottom: 10 }}>{t('generateLinkCode')}</Button>
+              )}
+              <form className="share-pair-form" onSubmit={handleVerifyLinkCode}>
+                <input className="share-pair-input" placeholder={t('linkCodePlaceholder')} value={syncCodeInput} maxLength={6} disabled={busy} onChange={e => setSyncCodeInput(e.target.value.toUpperCase())}/>
+                <Button type="submit" size="m" mode="filled" disabled={busy || syncCodeInput.trim().length !== 6}>{t('linkButton')}</Button>
+              </form>
+            </div>
+          </section>
+
+          <section className="manage-card" aria-labelledby="friends-manage-title">
+            <div className="manage-card-header">
+              <h2 id="friends-manage-title" className="manage-card-title"><Icon name="user"/>{t('friends')}</h2>
+            </div>
+            <p className="manage-card-desc">{t('needFriendsFirst')}</p>
+            <div className="share-code-box">
+              <div>
+                <div style={{ fontSize: 10, color: 'var(--muted)', fontWeight: 800 }}>{t('myFriendCode')}</div>
+                <div className="share-code-val">{socialInfo.myFriendCode || shareInfo.code || '······'}</div>
+              </div>
+              <Button size="s" mode="filled" disabled={busy || (!socialInfo.myFriendCode && !shareInfo.code)} onClick={handleCopyFriendCode}>
+                <Icon name="copy" style={{ width: 14, height: 14, marginRight: 4 }}/>{t('copyCode')}
+              </Button>
+            </div>
+            <form className="share-pair-form" onSubmit={handleAddFriend}>
+              <input className="share-pair-input" placeholder={t('friendCodePlaceholder')} value={friendCodeInput} maxLength={6} disabled={busy} onChange={e => setFriendCodeInput(e.target.value.toUpperCase())}/>
+              <Button type="submit" size="m" mode="filled" disabled={busy || friendCodeInput.trim().length !== 6}>{t('addFriend')}</Button>
+            </form>
+            <div style={{ marginTop: 14 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: '#7c876c', marginBottom: 8 }}>{t('friendList')} ({socialInfo.friends?.length || 0})</div>
+              {socialInfo.friends && socialInfo.friends.length > 0 ? (
+                <div className="friends-list" style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {socialInfo.friends.map(f => (
+                    <div key={f.id} className="friend-item">
+                      <span className="consumer-avatar" aria-hidden="true">
+                        {f.avatar && (f.avatar.startsWith('http') || f.avatar.startsWith('data:')) ? <img src={f.avatar} alt="" className="avatar-img" /> : <Icon name={f.avatar || 'cat'} />}
+                      </span>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: 700, fontSize: 14 }}>{f.name}</div>
+                        {f.tgUsername && <div style={{ fontSize: 11, color: 'var(--muted)' }}>{f.tgUsername}</div>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div style={{ fontSize: 12, color: 'var(--muted)', padding: '4px 0' }}>{t('noFriends')}</div>
+              )}
+            </div>
+          </section>
+
+          <section className="manage-card" aria-labelledby="circles-manage-title">
+            <div className="manage-card-header">
+              <h2 id="circles-manage-title" className="manage-card-title"><Icon name="users"/>{t('circleMax4')}</h2>
+            </div>
+            {activeCircle ? (
+              <div style={{ background: 'rgba(230,235,215,0.6)', padding: '10px 14px', borderRadius: 12, marginBottom: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <div style={{ fontSize: 10, color: 'var(--muted)', fontWeight: 800 }}>{t('currentCircle')}</div>
+                  <div style={{ fontWeight: 800, fontSize: 15, color: 'var(--ink)' }}>{activeCircle.name} ({activeCircle.members?.length || 1}/4)</div>
+                </div>
+                <Button size="s" mode="outline" disabled={busy} onClick={() => handleSwitchCircle(null)}>{t('switchToDefaultLedger')}</Button>
+              </div>
+            ) : (
+              <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 12 }}>{t('defaultLedger')}</div>
+            )}
+
+            {socialInfo.circles && socialInfo.circles.length > 0 && (
+              <div style={{ marginBottom: 16, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {socialInfo.circles.map(c => {
+                  const isActive = socialInfo.activeCircleId === c.id;
+                  return (
+                    <div key={c.id} className="circle-item">
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                        <strong style={{ fontSize: 14 }}>{c.name}</strong>
+                        <div style={{ display: 'flex', gap: 6 }}>
+                          {!isActive && <Button size="s" mode="filled" disabled={busy} onClick={() => handleSwitchCircle(c.id)}>{t('switchCircle')}</Button>}
+                          <Button size="s" mode="plain" disabled={busy} onClick={() => handleLeaveCircle(c.id)}>{t('leaveCircle')}</Button>
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                        {c.members?.map(mId => {
+                          const f = (socialInfo.friends || []).find(friend => friend.id === mId || `u_${friend.id}` === mId);
+                          const isMe = mId === myProfile.id || mId === `u_${myProfile.id}`;
+                          const mName = isMe ? (myProfile.name || '我') : (f?.name || '成员');
+                          return (
+                            <span key={mId} className="circle-member-chip">
+                              {mName}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            <form onSubmit={handleCreateCircle} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: '#7c876c' }}>{t('createCircle')}</div>
+              <Input
+                placeholder={t('circleNamePlaceholder')}
+                value={newCircleName}
+                maxLength={24}
+                disabled={busy}
+                required
+                onChange={e => setNewCircleName(e.target.value)}
+              />
+              {socialInfo.friends && socialInfo.friends.length > 0 ? (
+                <div>
+                  <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 6 }}>{t('selectFriends')} ({selectedFriendIds.length}/3)</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    {socialInfo.friends.map(f => {
+                      const checked = selectedFriendIds.includes(f.id);
+                      return (
+                        <label key={f.id} className="circle-friend-check">
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            disabled={busy || (!checked && selectedFriendIds.length >= 3)}
+                            onChange={() => {
+                              setSelectedFriendIds(prev => checked ? prev.filter(id => id !== f.id) : [...prev, f.id]);
+                            }}
+                          />
+                          <span>{f.name}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : (
+                <div style={{ fontSize: 11, color: 'var(--muted)' }}>{t('needFriendsFirst')}</div>
+              )}
+              <Button type="submit" size="m" mode="filled" disabled={busy || !newCircleName.trim() || selectedFriendIds.length > 3}>
+                {t('createCircle')}
+              </Button>
+            </form>
+          </section>
+
           <section className="manage-card" aria-labelledby="shared-ledger-title">
             <div className="manage-card-header">
               <h2 id="shared-ledger-title" className="manage-card-title"><Icon name="link"/>{t('sharedLedger')}</h2>
