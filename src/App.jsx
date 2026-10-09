@@ -93,12 +93,12 @@ export default function App() {
         }
         const response = await fetch('/api/config', { signal: AbortSignal.timeout(10000) });
         if (!response.ok) throw new Error('暂时连接不上，请刷新后再打开。');
-        const config = await response.json();
-        if (telegram?.initData && config.mode !== 'telegram') throw new Error('bot 服务还没有配置完成，请先配置服务端。');
-        const backend = config.mode === 'telegram' ? remoteService(telegram) : localService();
+        const isTelegram = Boolean(telegram?.initData);
+        if (isTelegram && config.mode !== 'telegram') throw new Error('bot 服务还没有配置完成，请先配置服务端。');
+        const backend = (config.mode === 'telegram' && isTelegram) ? remoteService(telegram) : localService();
         const profile = await backend.getProfile();
         if (cancelled) return;
-        service.current = backend; setMode(config.mode); setHistoryCurrency(profile.settings.currency); applyProfile(profile); setReady(true);
+        service.current = backend; setMode(isTelegram && config.mode === 'telegram' ? 'telegram' : 'local'); setHistoryCurrency(profile.settings.currency); applyProfile(profile); setReady(true);
       } catch (error) { if (!cancelled) { setFailed(true); showError(error); } }
     }
     boot();
@@ -178,11 +178,28 @@ export default function App() {
   }, [navigate, pushKey, saveExpense]);
 
   async function updateSettings(patch) {
-    if (busyRef.current || !ready) return;
+    if (busyRef.current) return;
+    const prevSettings = settingsRef.current;
+    const nextSettings = { ...prevSettings, ...patch };
+    settingsRef.current = nextSettings;
+    setSettings(nextSettings);
+    if (patch.currency && patch.currency !== prevSettings.currency) {
+      setRaw('0');
+      pending.current = null;
+    }
+    if (!ready || !service.current) return;
     changeBusy(true);
-    try { applyProfile(await service.current.saveSettings({ ...settingsRef.current, ...patch })); setNotice(null); if (patch.currency) notify('currencyChanged', { currency: patch.currency }); }
-    catch (error) { showError(error); }
-    finally { changeBusy(false); }
+    try {
+      applyProfile(await service.current.saveSettings(nextSettings));
+      setNotice(null);
+      if (patch.currency && patch.currency !== prevSettings.currency) notify('currencyChanged', { currency: patch.currency });
+    } catch (error) {
+      settingsRef.current = prevSettings;
+      setSettings(prevSettings);
+      showError(error);
+    } finally {
+      changeBusy(false);
+    }
   }
   async function saveCategories(event) {
     event.preventDefault(); if (busyRef.current) return;

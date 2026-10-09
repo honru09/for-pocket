@@ -65,9 +65,20 @@ export function translate(language, key, values = {}) {
   if (message === undefined) throw new Error(`Missing translation: ${key}`);
   return message.replace(/\{(\w+)\}/g, (_, field) => String(values[field] ?? ''));
 }
+const DEFAULT_LABEL_MAP = {
+  stomach: ['胃', 'Food', 'Їжа'],
+  learning: ['学习', 'Learning', 'Навчання'],
+  daily: ['日常用品', 'Daily needs', 'Для дому'],
+  hobby: ['兴趣', 'Hobbies', 'Захоплення'],
+  travel: ['旅游', 'Travel', 'Подорожі'],
+  other: ['其他', 'Other', 'Інше'],
+};
 export function categoryLabel(category, language) {
-  const original = DEFAULT_CATEGORIES.find(item => item.id === category.id && item.label === category.label);
-  return original ? translate(language, original.id) : category.label;
+  const standard = DEFAULT_LABEL_MAP[category.id];
+  if (standard && standard.includes(category.label)) {
+    return translate(language, category.id);
+  }
+  return category.label;
 }
 export function translateError(message, language) {
   const key = Object.keys(MESSAGES.zh).find(key => key.startsWith('error') && MESSAGES.zh[key] === message);
