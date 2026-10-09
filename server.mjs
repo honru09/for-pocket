@@ -113,7 +113,7 @@ export function createApp({ token = process.env.BOT_TOKEN || '', dataDir = path.
         }
         throw new RequestError('接口不存在。', 404);
       }
-      if (url.pathname === '/health' && req.method === 'GET') { send(res, 200, { ok: true }); return; }
+      if (['/health', '/healthz'].includes(url.pathname) && req.method === 'GET') { send(res, 200, { ok: true }); return; }
       const isIndex = url.pathname === '/' || url.pathname === '/index.html';
       const assetName = /^\/assets\/([a-zA-Z0-9_.-]+)$/.exec(url.pathname)?.[1];
       const contentType = isIndex ? 'text/html' : assetName && contentTypes[path.extname(assetName)];
@@ -136,7 +136,7 @@ export function createApp({ token = process.env.BOT_TOKEN || '', dataDir = path.
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const port = Number(process.env.PORT || 8787);
-  const host = process.env.HOST || '127.0.0.1';
+  const host = process.env.HOST || (process.env.RENDER ? '0.0.0.0' : '127.0.0.1');
   const app = createApp();
   app.listen(port, host, () => console.log(`for. is ready at http://${host}:${port} (${process.env.BOT_TOKEN ? 'Telegram authentication enabled' : 'local preview'})`));
   process.on('SIGINT', () => app.close(() => process.exit(0)));
