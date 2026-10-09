@@ -48,10 +48,9 @@ export default function App() {
   const [period, setPeriod] = useState('month');
   const [editing, setEditing] = useState([]);
   const [notice, setNotice] = useState(null);
-  const [reduced, setReduced] = useState(() => matchMedia('(prefers-reduced-motion: reduce)').matches);
   const [today, setToday] = useState(() => dateKey(new Date(), timezone));
   const service = useRef(null), pending = useRef(null), busyRef = useRef(false), settingsRef = useRef(settings), stateRef = useRef({});
-  const keyboard = useRef(false), direction = useRef(1), pageRef = useRef(null), mascotRef = useRef(null), stageRef = useRef(null);
+  const keyboard = useRef(false), direction = useRef(1), pageRef = useRef(null), mascotRef = useRef(null), stageRef = useRef(null), amountLineRef = useRef(null);
   const disabled = busy || !ready;
   const t = useCallback((key, values) => translate(settings.language, key, values), [settings.language]);
   const locale = LOCALES[settings.language];
@@ -104,10 +103,8 @@ export default function App() {
     boot();
     const storage = event => { if (event.key === PREVIEW_KEY && service.current && !busyRef.current) service.current.getProfile().then(profile => { if (!cancelled) applyProfile(profile); }).catch(showError); };
     const visible = () => { if (!document.hidden) setToday(dateKey(new Date(), timezone)); };
-    const media = matchMedia('(prefers-reduced-motion: reduce)');
-    const motion = event => setReduced(event.matches);
-    window.addEventListener('storage', storage); document.addEventListener('visibilitychange', visible); media.addEventListener('change', motion);
-    return () => { cancelled = true; window.removeEventListener('storage', storage); document.removeEventListener('visibilitychange', visible); media.removeEventListener('change', motion); };
+    window.addEventListener('storage', storage); document.addEventListener('visibilitychange', visible);
+    return () => { cancelled = true; window.removeEventListener('storage', storage); document.removeEventListener('visibilitychange', visible); };
   }, [applyProfile, showError]);
   useEffect(() => { document.documentElement.lang = locale; document.title = `for. · ${t('title')}`; }, [locale, t]);
   useEffect(() => {
@@ -123,13 +120,32 @@ export default function App() {
   }, [amountMinor, note]);
   useLayoutEffect(() => {
     const element = pageRef.current;
-    if (!element || keyboard.current || reduced) return;
-    const animation = element.animate([{ opacity: 0, transform: `translate3d(${direction.current * 12}px,0,0)` }, { opacity: 1, transform: 'translate3d(0,0,0)' }], { duration: 220, easing: 'cubic-bezier(.23,1,.32,1)' });
+    if (!element) return;
+    const animation = element.animate([
+      { opacity: 0, transform: `translate3d(${direction.current * 18}px,0,0) scale(0.985)` },
+      { opacity: 1, transform: 'translate3d(0,0,0) scale(1)' }
+    ], { duration: 260, easing: 'cubic-bezier(.34,1.56,.64,1)' });
     return () => animation.cancel();
-  }, [view, reduced]);
+  }, [view]);
 
-  const selectCategory = useCallback(id => { setSelected(id); pending.current = null; haptic(); }, []);
-  const selectConsumer = useCallback(id => { setConsumer(id); pending.current = null; haptic(); }, []);
+  const selectCategory = useCallback(id => {
+    setSelected(id); pending.current = null; haptic();
+    mascotRef.current?.animate([
+      { transform: 'rotate(-8deg) scale(1)' },
+      { transform: 'rotate(-14deg) scale(1.14,0.9)' },
+      { transform: 'rotate(-5deg) scale(0.97,1.04)' },
+      { transform: 'rotate(-8deg) scale(1)' }
+    ], { duration: 320, easing: 'cubic-bezier(.34,1.56,.64,1)' });
+  }, []);
+  const selectConsumer = useCallback(id => {
+    setConsumer(id); pending.current = null; haptic();
+    mascotRef.current?.animate([
+      { transform: 'rotate(-8deg) scale(1)' },
+      { transform: 'rotate(2deg) scale(1.16,0.88)' },
+      { transform: 'rotate(-11deg) scale(0.96,1.05)' },
+      { transform: 'rotate(-8deg) scale(1)' }
+    ], { duration: 320, easing: 'cubic-bezier(.34,1.56,.64,1)' });
+  }, []);
   const pushKey = useCallback(key => {
     if (busyRef.current || !stateRef.current.ready) return;
     const digits = CURRENCIES[settingsRef.current.currency].digits;
@@ -145,6 +161,20 @@ export default function App() {
       next = current === '0' ? key : current + key;
     }
     pending.current = null; stateRef.current.raw = next; setRaw(next);
+    amountLineRef.current?.animate([
+      { transform: 'scale(1,1)' },
+      { transform: 'scale(1.05,0.90)' },
+      { transform: 'scale(0.98,1.03)' },
+      { transform: 'scale(1.01,0.995)' },
+      { transform: 'scale(1,1)' }
+    ], { duration: 300, easing: 'cubic-bezier(.34,1.56,.64,1)' });
+    mascotRef.current?.animate([
+      { transform: 'rotate(-8deg) scale(1,1)' },
+      { transform: 'rotate(-3deg) scale(1.18,0.84)' },
+      { transform: 'rotate(-13deg) scale(0.95,1.07)' },
+      { transform: 'rotate(-6deg) scale(1.02,0.99)' },
+      { transform: 'rotate(-8deg) scale(1,1)' }
+    ], { duration: 340, easing: 'cubic-bezier(.34,1.56,.64,1)' });
   }, [notify]);
   const saveExpense = useCallback(async () => {
     const current = stateRef.current;
@@ -156,10 +186,16 @@ export default function App() {
       setExpenses(current => current.some(e => e.id === entry.id) ? current : [...current, entry]);
       setRaw('0'); setSelected(null); setConsumer(null); setNote(''); pending.current = null;
       notify('saved', { person: CONSUMERS[entry.consumer], amount: money(entry.amountMinor, entry.currency) }); haptic('success');
-      if (!reduced && !keyboard.current) mascotRef.current?.animate([{ transform: 'rotate(-8deg) scale(1.06,.95)' }, { transform: 'rotate(-8deg) scale(1)' }], { duration: 240, easing: 'cubic-bezier(.23,1,.32,1)' });
+      mascotRef.current?.animate([
+        { transform: 'rotate(-8deg) scale(1) translateY(0)' },
+        { transform: 'rotate(16deg) scale(1.28,1.15) translateY(-26px)' },
+        { transform: 'rotate(-14deg) scale(1.12,0.92) translateY(-10px)' },
+        { transform: 'rotate(6deg) scale(1.04,1.02) translateY(-2px)' },
+        { transform: 'rotate(-8deg) scale(1) translateY(0)' }
+      ], { duration: 560, easing: 'cubic-bezier(.34,1.56,.64,1)' });
     } catch (error) { showError(error); }
     finally { changeBusy(false); }
-  }, [money, notify, reduced, showError]);
+  }, [money, notify, showError]);
   useEffect(() => {
     const keydown = event => {
       keyboard.current = true; document.documentElement.classList.add('keyboard-action');
@@ -254,11 +290,11 @@ export default function App() {
         <div className="page-heading"><h1 id="record-title" tabIndex={-1}>{t('recordTitle')}<span>{settings.language === 'zh' ? '？' : '?'}</span></h1><span className="date-label" id="today-label">{new Intl.DateTimeFormat(locale, { month: 'short', day: 'numeric' }).format(new Date())}</span></div>
         <div className="record-layout">
           <section ref={stageRef} className={`amount-stage ${raw.length >= 6 ? 'long-amount' : ''}`} aria-label={t('amountInput')}><div className="amount-meta"><span>{t('amountLabel')}</span><Select id="currency" className="currency-control" value={settings.currency} aria-label={t('currency')} disabled={disabled} onChange={event => updateSettings({ currency: event.target.value })}>{Object.keys(CURRENCIES).map(code => <option key={code} value={code}>{code} · {t(code)}</option>)}</Select></div>
-            <div className="amount-line"><span className="currency-symbol" id="currency-symbol">{CURRENCIES[settings.currency].symbol}</span><output id="amount-display" aria-label={t('currentAmount')} data-length={raw.length < 6 ? 'short' : raw.length > 9 ? 'long' : raw.length}>{amountDisplay}</output><span className="input-caret" aria-hidden="true"/></div>
+            <div ref={amountLineRef} className="amount-line"><span className="currency-symbol" id="currency-symbol">{CURRENCIES[settings.currency].symbol}</span><output id="amount-display" aria-label={t('currentAmount')} data-length={raw.length < 6 ? 'short' : raw.length > 9 ? 'long' : raw.length}>{amountDisplay}</output><span className="input-caret" aria-hidden="true"/></div>
             <div className="amount-bottom"><span id="amount-hint">{selected ? label(settings.categories.find(c => c.id === selected)) : ''}</span><span className="small-spark" aria-hidden="true">✳</span></div><Mascot mascotRef={mascotRef}/>
           </section>
           <section className="purposes" aria-labelledby="purposes-title"><div className="section-heading"><h2 id="purposes-title">{t('categories')}</h2><Button id="edit-categories" className="text-button" size="s" mode="plain" before={<Icon name="edit"/>} disabled={disabled} onClick={() => navigate('manage', true)}>{t('editCategories')}</Button></div><CategoryGrid categories={settings.categories} language={settings.language} selected={selected} disabled={disabled} onSelect={selectCategory}/></section>
-          <section id="keypad" className="keypad" aria-label={t('keypad')}>{['1','2','3','4','5','6','7','8','9',decimalDigits ? '.' : 'clear','0','backspace'].map(key => <Tappable Component="button" type="button" className={`key ${key.length > 1 || key === '.' ? 'key-secondary' : ''}`} data-key={key} key={key} id={key === '.' || key === 'clear' ? 'decimal-key' : undefined} disabled={disabled} aria-label={key === 'clear' ? t('clear') : key === '.' ? t('decimal') : key === 'backspace' ? t('backspace') : key} onPointerDownCapture={() => { if (!reduced && !disabled) stageRef.current?.setAttribute('data-press', 'true'); }} onClick={() => { pushKey(key); haptic('impact'); }}>{key === 'clear' ? 'C' : key === '.' ? decimalSeparator : key === 'backspace' ? <Icon name="backspace"/> : key}</Tappable>)}</section>
+          <section id="keypad" className="keypad" aria-label={t('keypad')}>{['1','2','3','4','5','6','7','8','9',decimalDigits ? '.' : 'clear','0','backspace'].map(key => <Tappable Component="button" type="button" className={`key ${key.length > 1 || key === '.' ? 'key-secondary' : ''}`} data-key={key} key={key} id={key === '.' || key === 'clear' ? 'decimal-key' : undefined} disabled={disabled} aria-label={key === 'clear' ? t('clear') : key === '.' ? t('decimal') : key === 'backspace' ? t('backspace') : key} onPointerDownCapture={() => { if (!disabled) stageRef.current?.setAttribute('data-press', 'true'); }} onClick={() => { pushKey(key); haptic('impact'); }}>{key === 'clear' ? 'C' : key === '.' ? decimalSeparator : key === 'backspace' ? <Icon name="backspace"/> : key}</Tappable>)}</section>
           <section className="finish" aria-label={t('save')}><ConsumerPicker language={settings.language} consumer={consumer} disabled={disabled} onSelect={selectConsumer}/><Input className="note-field" id="note" before={<Icon name="edit"/>} aria-label={t('note')} placeholder={t('notePlaceholder')} value={note} maxLength={160} disabled={disabled} onChange={event => { pending.current = null; setNote(event.target.value); }}/><Button size="l" stretched className="save-button" id="save-expense" disabled={disabled || !amountMinor || !selected || !consumer} loading={busy} aria-label={saveLabel} after={<span className="save-icon" aria-hidden="true">↗</span>} onClick={saveExpense}><span id="save-label">{saveLabel}</span></Button></section>
         </div>
         <div className="today-strip"><span className="today-icon" aria-hidden="true">↳</span><div><span>{t('todayTotal')}</span><strong id="today-total">{money(todayEntries.reduce((sum, e) => sum + e.amountMinor, 0))}</strong><small id="today-count">{countText(todayEntries.length, settings.language, settings.currency)}</small></div><Button className="text-button" size="s" mode="plain" data-view="history" onClick={() => navigate('history')}>{t('ledger')} →</Button></div>
