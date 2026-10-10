@@ -129,7 +129,7 @@ test('AI parser selects the configured text and vision models and returns safe p
   await assert.rejects(broken.parse({ text: 'lunch' }, initialSettings()), { name: 'AiError', message: 'errorAiUnavailable', status: 503 });
 });
 
-test('default parsing and reports use Flash Lite and only explicitly enhanced images use Flash', async t => {
+test('default parsing, reports and explicit image retries all use standard Flash Lite', async t => {
   useDefaultModels(t);
   const usedModels = [];
   const vertex = { getGenerativeModel({ model, generationConfig }) {
@@ -152,7 +152,7 @@ test('default parsing and reports use Flash Lite and only explicitly enhanced im
   const summarizer = createExpenseSummarizer({ projectId: 'fixture-project', vertex });
   assert.equal(await summarizer.summarize({ prompt: 'Summarize these verified totals.' }), '本月支出以餐饮为主。');
   assert.deepEqual(usedModels, [
-    'gemini-3.1-flash-lite', 'gemini-3.1-flash-lite', 'gemini-3.5-flash',
+    'gemini-3.1-flash-lite', 'gemini-3.1-flash-lite', 'gemini-3.1-flash-lite',
     'gemini-3.1-flash-lite', 'gemini-3.1-flash-lite', 'gemini-3.1-flash-lite', 'gemini-3.1-flash-lite',
   ]);
 });

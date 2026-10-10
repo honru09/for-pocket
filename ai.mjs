@@ -8,10 +8,10 @@ import {
   validateEntryTime,
 } from './public/shared.mjs';
 
-// Use Flash-Lite for everyday work. Enhanced image recognition is opt-in.
+// Keep every AI path on the predictable standard-price Flash-Lite model.
 const DEFAULT_TEXT_MODEL = 'gemini-3.1-flash-lite';
 const DEFAULT_VISION_MODEL = 'gemini-3.1-flash-lite';
-const DEFAULT_ENHANCED_MODEL = 'gemini-3.5-flash';
+const DEFAULT_ENHANCED_MODEL = 'gemini-3.1-flash-lite';
 const DEFAULT_LOCATION = 'global';
 const MAX_TEXT = 4000;
 const MAX_NOTE = 160;
@@ -213,7 +213,7 @@ export function createExpenseParser(options = {}) {
       const safeSettings = { ...settings, categories: settings?.categories?.length ? settings.categories : DEFAULT_CATEGORIES, incomeCategories: settings?.incomeCategories?.length ? settings.incomeCategories : DEFAULT_INCOME_CATEGORIES, currency: Object.hasOwn(CURRENCIES, settings?.currency) ? settings.currency : 'JPY' };
       const parts = [{ text: promptFor(input, safeSettings) }];
       if (input.image) parts.push({ inlineData: { data: input.image.data, mimeType: input.image.mimeType } });
-      // The more expensive model is used only after an explicit image retry.
+      // An explicit image retry repeats the same predictable-cost model.
       const modelName = input.image ? input.enhanced === true ? enhancedModelName : visionModelName : textModelName;
       let response;
       try { response = (await (await getModel(modelName)).generateContent({ contents: [{ role: 'user', parts }] })).response; }

@@ -48,7 +48,7 @@ npm start
 
 ## AI 解析 API
 
-AI 解析使用 Google Cloud Vertex AI Gemini。服务端从 Application Default Credentials 取得凭据，不把密钥发到浏览器。默认模型规划如下：一句话记账、周/月小结和普通截图使用 `gemini-3.1-flash-lite`；只有用户在首次图片识别后点击“用 3.5 Flash 重试”时才使用 `gemini-3.5-flash`。服务端不会因为普通模型失败而自动升级。可用 `VERTEX_PROJECT_ID`（或 `GOOGLE_CLOUD_PROJECT`）、`VERTEX_LOCATION`、`VERTEX_TEXT_MODEL`、`VERTEX_VISION_MODEL`、`VERTEX_SUMMARY_MODEL` 和 `VERTEX_ENHANCED_MODEL` 覆盖默认值；未配置项目或服务账号没有 Vertex AI User 权限时接口返回 `errorAiUnavailable`。
+AI 解析使用 Google Cloud Vertex AI Gemini。服务端从 Application Default Credentials 取得凭据，不把密钥发到浏览器。文字记账、普通截图、月报和图片“重试”统一使用 `gemini-3.1-flash-lite`，按标准价 $0.25 / 百万输入、$1.50 / 百万输出计费；重试只是再次识别，不会自动切换到更贵模型。可用 `VERTEX_PROJECT_ID`（或 `GOOGLE_CLOUD_PROJECT`）、`VERTEX_LOCATION`、`VERTEX_TEXT_MODEL`、`VERTEX_VISION_MODEL`、`VERTEX_SUMMARY_MODEL` 和 `VERTEX_ENHANCED_MODEL` 覆盖默认值；未配置项目或服务账号没有 Vertex AI User 权限时接口返回 `errorAiUnavailable`。
 
 公开的 `POST /api/ai/parse-expense` 需要已有网页会话（`Authorization: Bearer <sessionToken>`，或新鲜的 `X-Telegram-Init-Data`）。JSON 请求可以传 `{ "text": "今天午饭拉面 1200 日元", "timezone": "Asia/Tokyo" }`；也可以直接上传 `image/jpeg`、`image/png`、`image/webp` 或 `image/gif` 原始图片流。响应为 `{ "items": [...] }`，每项含 `amountMinor`、`amount`、`currency`、`type`、`categoryId`、`categoryLabel`、`merchant`、`note`、`rawText`、`occurredAt`、`dayKey`、`timezone`、`confidence`、`consumer` 和分摊字段。图片只在请求期间送入模型，服务器不会持久化图片。图片缺少日期时会要求在预览中确认当前时间；解析结果始终先进入可编辑预览，用户确认后才批量保存。
 
