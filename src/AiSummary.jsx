@@ -3,6 +3,7 @@ import { Button, Tappable, Textarea } from '@telegram-apps/telegram-ui';
 import { CURRENCIES } from '../public/shared.mjs';
 import { LOCALES, categoryLabel, translateError } from '../public/i18n.mjs';
 import { Icon } from './icons.jsx';
+import { aiSummaryUiEnabled } from './ai-availability.mjs';
 import './ai-summary.css';
 
 export default function AiSummary({ t, profile, settings, currency = settings?.currency || 'JPY', busy = false, run, service, isRemote = false, config = {}, onAccount }) {
@@ -19,7 +20,7 @@ export default function AiSummary({ t, profile, settings, currency = settings?.c
   const scope = `${profile?.user?.id || ''}:${profile?.ledgerId || ''}:${activeCurrency}:${language}`;
   const scopeRef = useRef(scope), operationRef = useRef(0), workingRef = useRef(false), mountedRef = useRef(true);
   scopeRef.current = scope;
-  const enabled = Boolean(isRemote && config?.aiEnabled && typeof service?.aiSummary === 'function');
+  const enabled = aiSummaryUiEnabled({ isRemote, config, service });
   const currentResult = result?.scope === scope ? result : null;
   const stats = currentResult?.stats;
   const money = minor => new Intl.NumberFormat(LOCALES[language] || 'zh-CN', {

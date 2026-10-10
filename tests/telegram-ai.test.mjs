@@ -300,6 +300,20 @@ test('plain spending sentences with amounts stay on the parsing path', async t =
   assert.equal(f.aiCalls.length, 2);
 });
 
+test('Telegram users can switch between automatic and manual confirmation', async t => {
+  const f = await fixture(t);
+  assert.equal((await f.handler.handle(message(145, '/auto'))).kind, 'auto-enabled');
+  const saved = await f.handler.handle(message(146, '今天午饭 188 日元'));
+  assert.equal(saved.kind, 'confirmed');
+  assert.equal(saved.auto, true);
+  assert.equal((await f.database()).ledgers['101'].expenses.length, 1);
+  assert.equal((await f.handler.handle(message(147, '/manual'))).kind, 'manual-enabled');
+  const draft = await f.handler.handle(message(148, '今天咖啡 250 日元'));
+  assert.equal(draft.kind, 'draft');
+  assert.equal((await f.database()).ledgers['101'].expenses.length, 1);
+  assert.equal((await f.database()).telegram.preferences['101'].mode, 'manual');
+});
+
 test('bot configuration is read-only by default and explicit apply preserves pending updates', async () => {
   const calls = [];
   const url = 'https://example.com';
@@ -366,4 +380,14 @@ test('webhook secret derivation is deterministic, explicit secrets are validated
     allowed_updates: ['message', 'callback_query'],
     max_connections: 1,
   });
+});
+
+test('automatic webhook registration can migrate the legacy endpoint without taking over another webhook', async () => {
+  const calls = [];
+  const result = await ensureTelegramWebhook({ token: '123456:fixture', publicUrl: 'https://example.com', webhookPath: '/api/telegram-webhook', legacyPaths: ['/api/telegram/webhook'], callTelegram: async (method, body) => {
+    calls.push({ method, body });
+    return method === 'getWebhookInfo' ? { url: 'https://example.com/api/telegram/webhook' } : true;
+  } });
+  assert.deepEqual(result, { status: 'configured' });
+  assert.equal(calls[1].body.url, 'https://example.com/api/telegram-webhook');
 });

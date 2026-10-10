@@ -3,6 +3,7 @@ import { Button, Input, Select, Tappable, Textarea } from '@telegram-apps/telegr
 import { CURRENCIES, validateExpense } from '../public/shared.mjs';
 import { categoryLabel, translateError } from '../public/i18n.mjs';
 import { Icon } from './icons.jsx';
+import { aiUiEnabled } from './ai-availability.mjs';
 import './ai-import.css';
 
 // Keep these keys together so the settings entry can add the same copy to
@@ -149,7 +150,7 @@ export default function AiImportPage({ t, profile, settings, busy = false, run, 
   scopeRef.current = scope;
   const consumers = settings?.consumers || [];
   const hasSource = Boolean(text.trim() || file);
-  const aiEnabled = Boolean(isRemote && config?.aiEnabled);
+  const aiEnabled = aiUiEnabled({ isRemote, config, service });
   const canParse = hasSource && aiEnabled && !working && !busy;
 
   const updateFile = next => {

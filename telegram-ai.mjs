@@ -19,6 +19,7 @@ const MAX_RETRY_CACHE_BYTES = 32 * 1024 * 1024;
 const MAX_PREVIEW_ITEMS = 50;
 const DEFAULT_TIMEZONE = process.env.APP_TIMEZONE || 'Asia/Tokyo';
 const TELEGRAM_ID = /^\d{1,20}$/;
+const DEFAULT_AUTO_CONFIRM = /^(1|true|yes|on)$/i.test(String(process.env.TELEGRAM_AI_AUTO_CONFIRM || ''));
 
 const atMillis = value => {
   const result = typeof value === 'function' ? value() : value;
@@ -149,6 +150,7 @@ function ensureTelegramState(db) {
   if (!db.telegram || typeof db.telegram !== 'object') db.telegram = {};
   if (!db.telegram.updates || typeof db.telegram.updates !== 'object') db.telegram.updates = {};
   if (!db.telegram.drafts || typeof db.telegram.drafts !== 'object') db.telegram.drafts = {};
+  if (!db.telegram.preferences || typeof db.telegram.preferences !== 'object') db.telegram.preferences = {};
   return db.telegram;
 }
 
@@ -203,6 +205,7 @@ export function createTelegramHandler({
   downloadFile,
   timezone = DEFAULT_TIMEZONE,
   maxDrafts = 32,
+  autoConfirm = DEFAULT_AUTO_CONFIRM,
 } = {}) {
   if (!store || typeof store.run !== 'function') throw new TypeError('Telegram handler requires a store');
   const telegram = callTelegram || makeInternalTelegramCall(token);
@@ -283,7 +286,9 @@ export function createTelegramHandler({
       const uid = ensureUser(db, `telegram:${telegramId}`, info);
       const profile = visible(db, uid);
       const fallback = resolveLanguage(user?.language_code || 'zh', 'zh');
-      return { uid, telegramId, profile, language: botLanguage(profile.settings.language, fallback), at, operation };
+      const preference = ensureTelegramState(db).preferences[uid];
+      const mode = preference?.mode === 'auto' ? true : preference?.mode === 'manual' ? false : Boolean(autoConfirm);
+      return { uid, telegramId, profile, language: botLanguage(profile.settings.language, fallback), autoConfirm: mode, at, operation };
     });
   }
 
@@ -496,7 +501,48 @@ export function createTelegramHandler({
       return reply(context, message.chat.id, enhanced ? 'enhanceFailed' : 'noResult', { ok: false, reason: 'no-result' }, retryMarkup(retryId, context.language));
     }
     if (retryId) { const cached = getCachedImage(retryId); if (cached) cached.draftId = draft.id; }
+    if (context.autoConfirm) return autoConfirmDraft(context, draft);
     return deliverDraft(draft);
+  }
+
+  async function autoConfirmDraft(context, draft) {
+    const at = atMillis(now);
+    let outcome;
+    try {
+      outcome = await store.run(db => {
+        const state = ensureTelegramState(db);
+        const stored = state.drafts[draft.id];
+        if (!stored || stored.uid !== context.uid || stored.status !== 'pending') return { kind: 'already', count: stored?.savedIds?.length || 0 };
+        const profile = visible(db, context.uid);
+        const savedIds = [];
+        for (const item of stored.items || []) {
+          const expense = { ...item.expense, ...(!item.expense.occurredAt ? { occurredAt: new Date(at).toISOString() } : {}), ledgerId: stored.ledgerId };
+          const result = handleDomain(db, context.uid, '/expenses', 'POST', expense, { now: at, limit, ledgerQuery: null });
+          savedIds.push(result.id);
+        }
+        stored.status = 'confirmed';
+        stored.savedIds = savedIds;
+        stored.confirmedAt = at;
+        stored.ledgerId = profile.ledgerId;
+        stored.previewSent = 0;
+        stored.previewComplete = true;
+        return { kind: 'confirmed', count: savedIds.length, retryId: stored.retryId };
+      });
+    } catch (error) {
+      outcome = { kind: error instanceof RequestError ? error.message : 'failed' };
+    }
+    if (outcome.retryId) deleteCachedImage(outcome.retryId);
+    const key = outcome.kind === 'confirmed' ? 'confirmed' : outcome.kind === 'already' ? 'alreadyConfirmed' : outcome.kind === 'errorLedgerChanged' ? 'ledgerChanged' : 'failed';
+    return deliverReply(context.operation, { type: 'reply', chatId: draft.chatId, text: botText(context.language, key, { n: outcome.count }), result: { ok: ['confirmed', 'already'].includes(outcome.kind), auto: true, ...outcome } });
+  }
+
+  async function setConfirmationMode(context, chatId, mode) {
+    await store.run(db => {
+      const state = ensureTelegramState(db);
+      state.preferences[context.uid] = { mode, updatedAt: atMillis(now) };
+    });
+    await sendMessage(chatId, botText(context.language, mode === 'auto' ? 'autoEnabled' : 'manualEnabled'));
+    return { ok: true, kind: mode === 'auto' ? 'auto-enabled' : 'manual-enabled', mode };
   }
 
   async function summaryFor(context, message, text) {
@@ -625,7 +671,7 @@ export function createTelegramHandler({
     const context = await contextFor(message.from, operation);
     if (!context) return { ok: false, reason: 'invalid-user' };
     const text = firstText(message.text || '');
-    const command = /^\/(start|help|cancel|month|week)(?:@[^\s]+)?(?:\s+([\s\S]*))?$/i.exec(text);
+    const command = /^\/(start|help|cancel|month|week|auto|manual)(?:@[^\s]+)?(?:\s+([\s\S]*))?$/i.exec(text);
     if (command) {
       const name = command[1].toLowerCase();
       if (name === 'start') {
@@ -634,6 +680,8 @@ export function createTelegramHandler({
       }
       if (name === 'help') { await sendMessage(message.chat.id, botText(context.language, 'help')); return { ok: true, kind: 'help' }; }
       if (name === 'cancel') return cancelDrafts(context, message.chat.id);
+      if (name === 'auto') return setConfirmationMode(context, message.chat.id, 'auto');
+      if (name === 'manual') return setConfirmationMode(context, message.chat.id, 'manual');
       return summaryFor(context, message, name === 'week' ? '/week' : '/month');
     }
     if (summaryQuestion(text)) return summaryFor(context, message, text);

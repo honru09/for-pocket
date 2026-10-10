@@ -14,13 +14,14 @@ export function deriveTelegramWebhookSecret(token, configured = '') {
 }
 
 /** Register this exact endpoint only when it is free or already ours. */
-export async function ensureTelegramWebhook({ token, publicUrl, webhookSecret, callTelegram } = {}) {
+export async function ensureTelegramWebhook({ token, publicUrl, webhookSecret, callTelegram, webhookPath = '/api/telegram/webhook', legacyPaths = [] } = {}) {
   if (typeof token !== 'string' || !token.trim() || !publicUrl) throw new Error('BOT_TOKEN and PUBLIC_URL are required for Telegram webhook setup.');
   let target;
   try {
     const origin = new URL(publicUrl);
     if (origin.protocol !== 'https:' || origin.username || origin.password) throw new Error();
-    target = new URL('/api/telegram/webhook', origin).href;
+    if (typeof webhookPath !== 'string' || !webhookPath.startsWith('/') || webhookPath.includes('..')) throw new Error();
+    target = new URL(webhookPath, origin).href;
   } catch { throw new Error('PUBLIC_URL must use HTTPS for Telegram webhook setup.'); }
   const secret = deriveTelegramWebhookSecret(token, webhookSecret);
   const call = callTelegram || (async (method, parameters = {}) => {
@@ -33,7 +34,8 @@ export async function ensureTelegramWebhook({ token, publicUrl, webhookSecret, c
   });
   const hook = await call('getWebhookInfo');
   if (!hook || typeof hook.url !== 'string') throw new Error('Telegram webhook status is unavailable.');
-  if (hook.url && hook.url !== target) return { status: 'blocked', reason: 'existing-webhook' };
+  const legacyTargets = Array.isArray(legacyPaths) ? legacyPaths.map(value => new URL(value, publicUrl).href) : [];
+  if (hook.url && hook.url !== target && !legacyTargets.includes(hook.url)) return { status: 'blocked', reason: 'existing-webhook' };
   const configured = await call('setWebhook', {
     url: target,
     secret_token: secret,

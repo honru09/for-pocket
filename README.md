@@ -44,7 +44,9 @@ npm start
 3. 在可提供 HTTPS 的 Node 服务上执行 `npm ci`、`npm start`。平台需要时设置 `HOST=0.0.0.0` 和 `PORT`。
 4. 单独运行 `npm run bot` 设置菜单入口并响应 `/start`。同一个 bot 只运行一个轮询进程。
 
-`bot.mjs` 检测到已有 webhook 会停止，避免覆盖已有服务。网页服务器启动时不会自动修改 Telegram 菜单或 Telegram webhook；上线后在私有环境运行一次 `npm run bot:configure -- --apply`，脚本只会接管空 webhook 或已经指向本服务 `/api/telegram/webhook` 的 webhook。若发现其他地址会安全停止。`TELEGRAM_WEBHOOK_SECRET` 留空时，服务端和配置脚本会从 `BOT_TOKEN` 派生同一个随机不可读的校验值。
+`bot.mjs` 检测到已有 webhook 会停止，避免覆盖已有服务。Cloud Run 以 `BOT_TOKEN` 和 `PUBLIC_URL` 启动时会自动把 webhook 注册到 `/api/telegram-webhook`；旧的 `/api/telegram/webhook` 会安全迁移，其他地址不会接管。没有这两个变量时仍可使用 `npm run bot:configure -- --apply` 手动配置。`TELEGRAM_WEBHOOK_SECRET` 留空时，服务端和配置脚本会从 `BOT_TOKEN` 派生同一个随机不可读的校验值。
+
+Telegram 私聊支持直接发文字、照片或图片文件。AI 会用 Vertex AI Gemini 解析金额、币种、用途、商户、时间、付款人和分摊，默认先发预览并提供确认按钮；发送 `/auto` 后识别结果会直接入账，缺少时间时使用当前时间，发送 `/manual` 可恢复手动确认。图片不会写入账本或持久化，识别失败仍可重试或重发。
 
 ## AI 解析 API
 

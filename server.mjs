@@ -11,7 +11,7 @@ import { CURRENCIES, resolveLanguage } from './public/shared.mjs';
 import { AiError, createExpenseParser, createExpenseSummarizer } from './ai.mjs';
 import { summarizeExpenses } from './ai-summary.mjs';
 import { createTelegramHandler } from './telegram-ai.mjs';
-import { deriveTelegramWebhookSecret } from './telegram-config.mjs';
+import { deriveTelegramWebhookSecret, ensureTelegramWebhook } from './telegram-config.mjs';
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 const { version } = JSON.parse(await readFile(path.join(root, 'package.json'), 'utf8'));
@@ -125,7 +125,7 @@ export function createApp({ token = process.env.BOT_TOKEN || '', dataDir = path.
       if (url.pathname === '/api/config' && req.method === 'GET') { send(res, 200, { ...release, mode: token || googleClientId ? 'remote' : 'local', googleClientId, telegramEnabled: Boolean(token), aiEnabled: Boolean(aiParser?.enabled) }); return; }
       if (url.pathname.startsWith('/api/')) {
         checkOrigin(req);
-        if (url.pathname === '/api/telegram/webhook' && req.method === 'POST') {
+        if (['/api/telegram/webhook', '/api/telegram-webhook'].includes(url.pathname) && req.method === 'POST') {
           if (!token || !safeTokenEqual(req.headers['x-telegram-bot-api-secret-token'], resolvedWebhookSecret)) fail('errorAuth', 401);
           const update = await bodyOf(req, 65536);
           if (!Number.isSafeInteger(update?.update_id) || update.update_id < 0) fail('errorAiInput', 400);
@@ -248,6 +248,12 @@ export function createApp({ token = process.env.BOT_TOKEN || '', dataDir = path.
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const port = Number(process.env.PORT || 8787), host = process.env.HOST || (process.env.RENDER || process.env.K_SERVICE || process.env.NODE_ENV === 'production' ? '0.0.0.0' : '127.0.0.1');
   const app = createApp(); app.listen(port, host, () => console.log(`for. ready at http://${host}:${port}`));
+  if (process.env.BOT_TOKEN && process.env.PUBLIC_URL) {
+    ensureTelegramWebhook({ token: process.env.BOT_TOKEN, publicUrl: process.env.PUBLIC_URL, webhookSecret: process.env.TELEGRAM_WEBHOOK_SECRET,
+      webhookPath: '/api/telegram-webhook', legacyPaths: ['/api/telegram/webhook'] })
+      .then(result => console.log(`Telegram webhook ${result.status}.`))
+      .catch(error => console.error(`Telegram webhook setup skipped: ${error.message}`));
+  }
   process.on('SIGINT', () => app.close(() => process.exit(0)));
   process.on('SIGTERM', () => app.close(() => process.exit(0)));
 }

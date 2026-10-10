@@ -4,7 +4,7 @@
 export const BOT_COPY = {
   zh: {
     welcome: 'for. 花给生活\n\n发一句话，或发一张小票截图，AI 会先整理成待确认记录。',
-    help: '直接发送：\n• 一句话，例如「昨晚拉面 188 日元」\n• 收据或消费截图\n\n确认前可以取消。/month 查看本月小结，/week 查看本周小结。',
+    help: '直接发送：\n• 一句话，例如「昨晚拉面 188 日元」\n• 收据或消费截图\n\n默认先预览再确认。/auto 自动记账，/manual 恢复手动确认；/month 查看本月小结，/week 查看本周小结。',
     open: '打开小账本',
     unavailable: 'AI 识别暂时不可用，请稍后再试。',
     noInput: '请发一句消费描述，或附上一张收据截图。',
@@ -26,6 +26,8 @@ export const BOT_COPY = {
     confirmNow: '✓ 用现在时间记下',
     cancel: '取消',
     confirmed: '记好啦，共 {n} 笔。',
+    autoEnabled: '已开启自动记账。AI 识别后会直接写入账本；发送 /manual 可恢复确认模式。',
+    manualEnabled: '已恢复手动确认。AI 会先发预览，点击确认后才写入账本。',
     alreadyConfirmed: '这组记录已经记过啦。',
     cancelled: '已取消，没有写入账本。',
     expired: '这组待确认记录已过期，请重新发送。',
@@ -46,7 +48,7 @@ export const BOT_COPY = {
   },
   en: {
     welcome: 'for. Little spending\n\nSend one sentence or a receipt screenshot. AI will prepare a draft for you to confirm.',
-    help: 'Send:\n• One sentence, such as “ramen ¥188 last night”\n• A receipt or spending screenshot\n\nYou can cancel before saving. Use /month or /week for a tiny summary.',
+    help: 'Send:\n• One sentence, such as “ramen ¥188 last night”\n• A receipt or spending screenshot\n\nManual confirmation is on by default. Use /auto for automatic saving or /manual to switch back. Use /month or /week for a tiny summary.',
     open: 'Open ledger',
     unavailable: 'AI recognition is unavailable right now. Please try again later.',
     noInput: 'Send a spending sentence or attach a receipt screenshot.',
@@ -68,6 +70,8 @@ export const BOT_COPY = {
     confirmNow: '✓ Use current time',
     cancel: 'Cancel',
     confirmed: 'Saved {n} record(s).',
+    autoEnabled: 'Automatic saving is on. AI results will be written immediately. Use /manual to require confirmation again.',
+    manualEnabled: 'Manual confirmation is on. AI will show a preview before saving.',
     alreadyConfirmed: 'These records have already been saved.',
     cancelled: 'Cancelled. Nothing was added.',
     expired: 'This draft expired. Please send it again.',
@@ -88,7 +92,7 @@ export const BOT_COPY = {
   },
   uk: {
     welcome: 'for. Маленькі витрати\n\nНадішліть одне речення або знімок чека. AI підготує чернетку для підтвердження.',
-    help: 'Надішліть:\n• Одне речення, наприклад «рамен ¥188 учора»\n• Чек або знімок витрати\n\nДо збереження можна скасувати. Використовуйте /month або /week для короткого підсумку.',
+    help: 'Надішліть:\n• Одне речення, наприклад «рамен ¥188 учора»\n• Чек або знімок витрати\n\nЗа замовчуванням спочатку показується перегляд. /auto вмикає автоматичне збереження, /manual повертає підтвердження. /month або /week — короткий підсумок.',
     open: 'Відкрити гаманець',
     unavailable: 'Розпізнавання AI зараз недоступне. Спробуйте пізніше.',
     noInput: 'Надішліть речення про витрату або додайте знімок чека.',
@@ -110,6 +114,8 @@ export const BOT_COPY = {
     confirmNow: '✓ Використати поточний час',
     cancel: 'Скасувати',
     confirmed: 'Збережено записів: {n}.',
+    autoEnabled: 'Автоматичне збереження увімкнено. Результати AI записуватимуться одразу. /manual повертає підтвердження.',
+    manualEnabled: 'Ручне підтвердження увімкнено. AI спочатку покаже перегляд.',
     alreadyConfirmed: 'Ці записи вже збережено.',
     cancelled: 'Скасовано. Нічого не додано.',
     expired: 'Чернетка протермінована. Надішліть її ще раз.',
