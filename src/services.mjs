@@ -1,166 +1,83 @@
-import { CURRENCIES, CONSUMERS, COLORS, ICONS, initialSettings, validateSettings, validateExpense, dateKey } from '../public/shared.mjs';
-
+import { initialSettings, validateSettings, validateExpense, validateUserProfile, validateEntryTime, dateKey } from '../public/shared.mjs';
 export const PREVIEW_KEY = 'for-pocket.preview.v1';
 export const SESSION_KEY = 'for-pocket.session.v1';
-
 export function localService(defaultLang = 'zh') {
   const load = () => {
-    const raw = localStorage.getItem(PREVIEW_KEY);
-    if (!raw) return { settings: initialSettings(defaultLang), expenses: [] };
-    const profile = JSON.parse(raw);
-    profile.settings = validateSettings(profile.settings);
-    if (!profile.settings.languageManual && profile.settings.language !== defaultLang) {
-      profile.settings.language = defaultLang;
-      try { localStorage.setItem(PREVIEW_KEY, JSON.stringify(profile)); } catch {}
-    }
-    if (!profile.share) profile.share = { code: 'P8M2K9', isPaired: false, partner: null };
-    if (!profile.user) profile.user = { id: 'u_me', name: profile.settings.consumers?.[0]?.name || '我', color: profile.settings.consumers?.[0]?.color || 'blue', avatar: profile.settings.consumers?.[0]?.avatar || 'cat', friendCode: 'P8M2K9' };
-    if (!profile.social) profile.social = { friendCode: 'P8M2K9', friends: [], circles: [], activeCircleId: null, activeCircle: null };
-    return profile;
+    const saved = localStorage.getItem(PREVIEW_KEY);
+    const p = saved ? JSON.parse(saved) : { settings: initialSettings(defaultLang), expenses: [] };
+    p.settings = validateSettings(p.settings);
+    if (!Array.isArray(p.expenses)) throw new Error('errorLocalData');
+    if (!p.settings.languageManual) p.settings.language = defaultLang;
+    p.expenses = p.expenses.map(e => ({ ...e, member: e.member || p.settings.consumers.find(m => m.id === e.consumer) || null }));
+    p.user ||= { id: 'u_local', name: ({ zh: '我', en: 'Me', uk: 'Я' })[p.settings.language], color: 'yellow', avatar: 'cloud' };
+    if (['我', 'Me', 'Я'].includes(p.user.name) && p.user.color === 'blue' && p.user.avatar === 'cat') p.user = { ...p.user, color: 'yellow', avatar: 'cloud' };
+    p.settings.consumers = [{ id: p.user.id, name: p.user.name, color: p.user.color, avatar: p.user.avatar }];
+    return p;
   };
-  const visible = profile => ({
-    settings: profile.settings,
-    expenses: profile.expenses.filter(e => !e.deletedAt),
-    share: profile.share || { code: 'P8M2K9', isPaired: false, partner: null },
-    user: profile.user || { id: 'u_me', name: profile.settings.consumers?.[0]?.name || '我', color: profile.settings.consumers?.[0]?.color || 'blue', avatar: profile.settings.consumers?.[0]?.avatar || 'cat', friendCode: 'P8M2K9' },
-    social: profile.social || { friendCode: 'P8M2K9', friends: [], circles: [], activeCircleId: null, activeCircle: null },
-  });
+  const visible = p => ({ ledgerId: 'local', settings: p.settings, expenses: p.expenses.filter(e => !e.deletedAt).map(e => ({ ...e, canDelete: true })), user: p.user, account: { hasGoogle: false, hasTelegram: false }, social: { circles: [], activeCircleId: null, activeCircle: null } });
   const mutate = callback => {
-    const profile = load();
-    const result = callback(profile);
-    try { localStorage.setItem(PREVIEW_KEY, JSON.stringify(profile)); }
-    catch { throw new Error('本机空间不足或存储被禁用，这笔还没保存。'); }
+    const p = load(), result = callback(p);
+    try { localStorage.setItem(PREVIEW_KEY, JSON.stringify(p)); } catch { throw new Error('errorLocalSpace'); }
     return result;
   };
   return {
     getProfile: async () => visible(load()),
-    saveSettings: async settings => mutate(profile => { profile.settings = validateSettings(settings); return visible(profile); }),
-    addExpense: async payload => mutate(profile => {
-      const existing = profile.expenses.find(e => e.id === payload.id);
-      if (existing) {
-        if (existing.deletedAt) throw new Error('这笔记录已移除，请重新输入。');
-        return existing;
-      }
-      const now = new Date();
-      const entry = { ...validateExpense(payload, profile.settings), createdAt: now.toISOString(), dayKey: dateKey(now, payload.timezone) };
-      profile.expenses.push(entry); return entry;
+    saveSettings: async settings => mutate(p => { p.settings = validateSettings({ ...settings, consumers: p.settings.consumers }); return visible(p); }),
+    updateUserProfile: async value => mutate(p => { p.user = { ...p.user, ...validateUserProfile(value) }; p.settings.consumers = [p.user]; return visible(p); }),
+    addExpense: async value => mutate(p => {
+      const existing = p.expenses.find(e => e.id === value.id);
+      if (existing) { if (existing.deletedAt) throw new Error('errorDeleted'); return existing; }
+      const valid = validateExpense(value, p.settings);
+      const occurredAt = valid.occurredAt || new Date().toISOString();
+      const entry = { ...valid, occurredAt, ledgerId: 'local', createdAt: new Date().toISOString(), dayKey: dateKey(new Date(occurredAt), valid.timezone), member: structuredClone(p.user), canDelete: true };
+      p.expenses.push(entry); return entry;
     }),
-    deleteExpense: async id => mutate(profile => { const entry = profile.expenses.find(e => e.id === id); if (!entry) throw new Error('这笔记录已经不存在。'); entry.deletedAt = new Date().toISOString(); return entry; }),
-    restoreExpense: async id => mutate(profile => { const entry = profile.expenses.find(e => e.id === id); if (!entry) throw new Error('无法恢复这笔记录。'); delete entry.deletedAt; return entry; }),
-    pairLedger: async code => mutate(profile => {
-      if (String(code).trim().toUpperCase() === profile.share.code) throw new Error('不能连接自己的共享码。');
-      profile.share.isPaired = true;
-      profile.share.partner = { id: 'u_partner', name: 'Liia', color: 'milk', avatar: 'bunny' };
-      const partnerMember = profile.settings.consumers.find(c => c.id === 'liia' || c.id === 'u_partner');
-      if (!partnerMember) profile.settings.consumers.push({ id: 'u_partner', name: 'Liia', color: 'milk', avatar: 'bunny' });
-      return visible(profile);
-    }),
-    unpairLedger: async () => mutate(profile => {
-      profile.share.isPaired = false;
-      profile.share.partner = null;
-      return visible(profile);
-    }),
-    updateUserProfile: async user => mutate(profile => {
-      profile.user = { ...profile.user, ...user };
-      const myMember = profile.settings.consumers?.[0];
-      if (myMember) {
-        myMember.name = user.name || myMember.name;
-        myMember.color = user.color || myMember.color;
-        myMember.avatar = user.avatar || myMember.avatar;
-      }
-      return visible(profile);
-    }),
-    loginWithGoogle: async credential => mutate(profile => {
-      profile.user.googleEmail = 'user@gmail.com';
-      return visible(profile);
-    }),
-    getLinkCode: async () => ({ code: 'SYNC88' }),
-    verifyLinkCode: async code => mutate(profile => {
-      profile.user.googleEmail = profile.user.googleEmail || 'linked@gmail.com';
-      return visible(profile);
-    }),
-    addFriend: async friendCode => mutate(profile => {
-      const code = String(friendCode).trim().toUpperCase();
-      if (!profile.social.friends.some(f => f.friendCode === code)) {
-        profile.social.friends.push({ id: `u_${code}`, name: `好友 ${code}`, avatar: 'chick', color: 'mint', friendCode: code });
-      }
-      return visible(profile);
-    }),
-    createCircle: async (name, friendIds) => mutate(profile => {
-      const circleId = `cir_${Date.now()}`;
-      const friends = profile.social.friends.filter(f => friendIds.includes(f.id));
-      const members = [{ id: profile.user.id, name: profile.user.name, avatar: profile.user.avatar, color: profile.user.color }, ...friends];
-      const newCircle = { id: circleId, name, ownerId: profile.user.id, isOwner: true, memberCount: members.length, members };
-      profile.social.circles.push(newCircle);
-      profile.social.activeCircleId = circleId;
-      profile.social.activeCircle = newCircle;
-      profile.settings.consumers = members;
-      return visible(profile);
-    }),
-    switchCircle: async circleId => mutate(profile => {
-      if (!circleId) {
-        profile.social.activeCircleId = null;
-        profile.social.activeCircle = null;
-      } else {
-        const c = profile.social.circles.find(x => x.id === circleId);
-        if (c) {
-          profile.social.activeCircleId = c.id;
-          profile.social.activeCircle = c;
-          profile.settings.consumers = c.members;
-        }
-      }
-      return visible(profile);
-    }),
-    leaveCircle: async circleId => mutate(profile => {
-      profile.social.circles = profile.social.circles.filter(c => c.id !== circleId);
-      if (profile.social.activeCircleId === circleId) {
-        profile.social.activeCircleId = null;
-        profile.social.activeCircle = null;
-      }
-      return visible(profile);
-    }),
+    updateEntryTime: async (id, value) => mutate(p => { const e = p.expenses.find(e => e.id === id && !e.deletedAt); if (!e) throw new Error('errorMissing'); Object.assign(e, validateEntryTime(value.occurredAt, value.timezone), { updatedAt: new Date().toISOString() }); return e; }),
+    deleteExpense: async id => mutate(p => { const e = p.expenses.find(e => e.id === id); if (!e) throw new Error('errorMissing'); e.deletedAt = new Date().toISOString(); return e; }),
+    restoreExpense: async id => mutate(p => { const e = p.expenses.find(e => e.id === id); if (!e) throw new Error('errorMissing'); delete e.deletedAt; return e; }),
   };
 }
-
-export function remoteService(telegram, sessionToken = null) {
-  let currentToken = sessionToken || (typeof localStorage !== 'undefined' ? localStorage.getItem(SESSION_KEY) : null);
+export function remoteService(telegram) {
+  let currentToken = localStorage.getItem(SESSION_KEY), ledgerId;
+  const track = p => { if (p?.ledgerId) ledgerId = p.ledgerId; return p; };
   async function request(route, method = 'GET', body) {
-    let response;
     const headers = { 'Content-Type': 'application/json' };
     if (telegram?.initData) headers['X-Telegram-Init-Data'] = telegram.initData;
-    if (currentToken) headers['Authorization'] = `Bearer ${currentToken}`;
-
-    try { response = await fetch(`/api${route}`, { method, headers, body: body ? JSON.stringify(body) : undefined, signal: AbortSignal.timeout(15000) }); }
-    catch { throw new Error('连接没成功，这次操作还未确认。请再试一次。'); }
+    if (currentToken) headers.Authorization = `Bearer ${currentToken}`;
+    let response;
+    try { response = await fetch(`/api${route}`, { method, headers, body: body === undefined ? undefined : JSON.stringify(body), signal: AbortSignal.timeout(15000) }); }
+    catch { throw new Error('errorNetwork'); }
     const data = await response.json();
-    if (!response.ok) throw new Error(response.status === 401 ? '请先登录以验证身份。' : data.error || '暂时没有保存成功，请再试一次。');
+    if (!response.ok) { const error = new Error(data.error || 'errorSave'); error.status = response.status; throw error; }
     return data;
   }
+  const profileAction = async (route, body, method = 'POST') => track(await request(route, method, body));
   return {
-    getProfile: () => request('/profile'),
-    saveSettings: settings => request('/settings', 'PUT', settings),
-    addExpense: payload => request('/expenses', 'POST', payload),
-    deleteExpense: id => request(`/expenses/${encodeURIComponent(id)}`, 'DELETE'),
-    restoreExpense: id => request(`/expenses/${encodeURIComponent(id)}/restore`, 'POST'),
-    pairLedger: code => request('/pair', 'POST', { code }),
-    unpairLedger: () => request('/unpair', 'POST'),
-    updateUserProfile: profile => request('/user-profile', 'PUT', profile),
-    loginWithGoogle: async credential => {
-      const res = await request('/auth/google', 'POST', typeof credential === 'string' ? { credential } : credential);
-      if (res?.sessionToken) {
-        currentToken = res.sessionToken;
-        try { localStorage.setItem(SESSION_KEY, res.sessionToken); } catch {}
-      }
-      return res.profile;
+    getProfile: async () => track(await request('/profile')),
+    saveSettings: ({ consumers, ...settings }) => profileAction('/settings', { ...settings, ledgerId }, 'PUT'),
+    updateUserProfile: p => profileAction('/user-profile', p, 'PUT'),
+    addExpense: payload => request('/expenses', 'POST', { ledgerId, ...payload }),
+    updateEntryTime: (id, value, scope = ledgerId) => request(`/expenses/${encodeURIComponent(id)}`, 'PUT', { ...value, ledgerId: scope }),
+    deleteExpense: (id, scope = ledgerId) => request(`/expenses/${encodeURIComponent(id)}?ledgerId=${encodeURIComponent(scope)}`, 'DELETE'),
+    restoreExpense: (id, scope = ledgerId) => request(`/expenses/${encodeURIComponent(id)}/restore`, 'POST', { ledgerId: scope }),
+    loginWithGoogle: async (credential, link = false, language) => {
+      const res = await request('/auth/google', 'POST', { credential, link, language });
+      if (res.sessionToken) { currentToken = res.sessionToken; localStorage.setItem(SESSION_KEY, currentToken); }
+      if (res.profile) track(res.profile);
+      return res;
     },
-    getLinkCode: () => request('/auth/link-code', 'POST'),
-    verifyLinkCode: async code => {
-      const res = await request('/auth/link-verify', 'POST', { code });
-      return res.profile;
-    },
-    addFriend: friendCode => request('/friends/add', 'POST', { friendCode }),
-    createCircle: (name, friendIds) => request('/circles/create', 'POST', { name, friendIds }),
-    switchCircle: circleId => request('/circles/switch', 'POST', { circleId }),
-    leaveCircle: circleId => request('/circles/leave', 'POST', { circleId }),
+    logout: async () => { await request('/auth/logout', 'POST', {}); currentToken = null; localStorage.removeItem(SESSION_KEY); },
+    getLinkCode: () => request('/auth/link-code', 'POST', {}),
+    previewLink: code => request('/auth/link-preview', 'POST', { code }),
+    verifyLink: async payload => track((await request('/auth/link-verify', 'POST', { ...payload, confirm: true })).profile),
+    createCircle: name => profileAction('/circles/create', { name }),
+    switchCircle: circleId => profileAction('/circles/switch', { circleId }),
+    getInvite: (circleId, renew = false) => request('/circles/invite', 'POST', { circleId, renew }),
+    previewCircle: code => request('/circles/preview', 'POST', { code }),
+    joinCircle: code => profileAction('/circles/join', { code, confirm: true }),
+    renameCircle: (circleId, name) => profileAction('/circles/rename', { circleId, name }),
+    setAdmin: (circleId, memberId, isAdmin) => profileAction('/circles/admin', { circleId, memberId, isAdmin }),
+    removeMember: (circleId, memberId) => profileAction('/circles/remove', { circleId, memberId, confirm: true }),
+    leaveCircle: circleId => profileAction('/circles/leave', { circleId, confirm: true }),
   };
 }

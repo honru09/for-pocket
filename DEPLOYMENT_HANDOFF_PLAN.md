@@ -1,236 +1,112 @@
-# for. Pocket 项目部署与接手计划书 (Deployment & Handoff Playbook)
+# for. Pocket 部署与交接 · v0.5.0
 
-> **致接手本项目的下一位 AI Agent / 工程师**：  
-> 本计划书包含 `for.` (for-pocket) 治愈系记账 Mini App 的**全局架构、GitHub 仓库流转、云端 Render 自动化部署、Telegram Bot 联调、Google 跨端连携、Life360 模式好友圈体系及常见排障避坑指南**。阅读本指南后，你可以无缝接盘、本地调试、迭代功能并完成生产发布。
+更新：2026-10-10。旧计划中的 React 19、固定 Liia/Xingrun、先加好友再建四人圈等说明已废弃。以当前实现与用户最新要求为准。
 
----
+## 发布状态与用户决定
 
-## 一、项目速览与技术架构
+**用户决定：保持 Render 免费实例，暂不部署。** 发布代码放在 `release/v0.5.0`，通过草稿 PR 审阅；不要合并到 `main`。Render 目前跟踪 `main` 并自动部署。
 
-### 1.1 项目基本信息
-- **项目名称**：`for.` (for-pocket)
-- **生产环境访问地址**：`https://for-pocket.onrender.com`
-- **Telegram Bot**：`@for_pocket_bot`（Web App 入口：`https://t.me/for_pocket_bot/app`）
-- **GitHub 仓库**：`https://github.com/honru09/for-pocket.git`
-- **默认生产分支**：`main`
+2026-10-10 通过 Render API 实际核对：
 
-### 1.2 技术选型一览
-- **前端视图**：React 19 配合 Telegram 官方 UI 库 `@telegram-apps/telegram-ui`。
-- **构建工具**：Vite 8（支持现代 ES Module 与超轻量打包，生产打包产物在 `dist/`）。
-- **后端服务**：Node.js 原生 HTTP 服务（`server.mjs`），无需笨重框架，集成了静态文件托管、RESTful API、安全校验与速率限制。
-- **存储机制**：轻量级持久化 JSON 存储（`store.mjs`），配备基于 Promise 的队列互斥写入锁与原子临时文件（`.tmp`）替换机制，保证高并发数据零丢失、防损坏。
-- **视觉风格**：极简日式纸质质感（底色 `#f8f7f1`、文字 `#333a30`、鼠尾草绿 `#e6ebd7`），Liia 按键温润奶白（`#fbf8f1`），手绘 SVG 图标，全站 450~850ms 缓慢高帧纸张物理缓动（`cubic-bezier(.22, 1, .36, 1)`）。
+| 项目 | 当前线上状态 |
+| --- | --- |
+| 服务 | `srv-db4i2cij9qps73clbbo0` / for-pocket |
+| 地址 | https://for-pocket.onrender.com |
+| 仓库 / 分支 | honru09/for-pocket / main |
+| 实例 | free，自动部署 yes |
+| 数据目录 | `./data`，没有持久盘 |
+| Telegram | BOT_TOKEN 已配置；菜单检查结果见 VERIFICATION.md |
+| Google | GOOGLE_CLIENT_ID 未配置 |
+| 应用版本 | 旧版；v0.5.0 尚未部署 |
 
----
+免费服务的临时文件系统会在重启、部署时清空。API 密钥不能使临时盘持久化。不要先部署再补备份；目前没有取得现有线上账单的完整备份。[Render 持久盘说明](https://render.com/docs/disks)
 
-## 二、GitHub 仓库与代码流转流程
+## 已完成的产品实现
 
-### 2.1 本地工作环境
-- **本地工作目录**：`c:\Users\wangxr\Documents\Codex\2026-10-09\wo-x\outputs\for-pocket`
-- **远程分支映射**：
-  ```bash
-  origin  https://github.com/honru09/for-pocket.git (fetch)
-  origin  https://github.com/honru09/for-pocket.git (push)
-  ```
+- 快速记账首页：大金额、用途、保存；账号与圈子放二级页。
+- React 18.3.1、Vite 8.3.4、TelegramUI 2.1.13，延续纸色、小黄云和短促柔和动效。
+- 默认 JPY，中、英、乌克兰语；支出和收入独立分类，分类可编辑。
+- 使用真实用户；个人账本默认本人，共享账本显示成员。昵称、头像、颜色可编辑。
+- 补记发生时间、修改旧账时间；历史归组与排序使用 occurredAt，保留 createdAt。
+- 清除输入框硬边聚焦方框；默认头像与账本 SVG 箭头已修正。
+- 官方 Google ID token 服务端验证、Telegram initData 校验、统一会话与退出撤销。
+- Google / Telegram 连携预览与确认；原子合并账单、分类、身份、圈子。
+- Life360 圈子关系：72 小时邀请码、预览接受、多圈、多管理员、退出交接、99 人上限。没有固定四人或先加好友限制。
+- 圈内作者可修改时间、删除自己的账；管理员可管理圈内账。个人与各圈账本隔离，退出后立即失去权限。
+- 原子 JSON 事务、旧版迁移、真实 PNG 图标、有效 manifest、按账本保留草稿、前台每 3 秒刷新。
 
-### 2.2 标准 Git 提交流程
-每次代码编写或修复后，严格按照如下步骤同步至云端：
+详见 [升级说明](docs/UPGRADE-v0.5.md) 与 [验证记录](VERIFICATION.md)。本产品对齐 Life360 的圈子组织；未添加定位、驾驶监控或订阅系统。
 
-```bash
-# 1. 运行自动化测试（必须全部通过）
-npm test
+## 本地启动与验证
 
-# 2. 运行前端构建校验（确保 Vite 打包无语法或依赖错误）
-npm run build
-
-# 3. 查看修改文件状态
-git status
-
-# 4. 暂存所有修改
-git add .
-
-# 5. 提交变更（按照 Conventional Commits 规范清晰描述）
-git commit -m "feat: [功能说明]"
-
-# 6. 推送至 GitHub main 分支（将自动触发 Render 云端部署）
-git push origin main
-```
-
-> [!WARNING]
-> **Windows 环境避坑提示**：
-> 在 Windows PowerShell 环境下执行命令时，**不要**编写超长多行的 heredoc 命令行字符串（会导致系统报 `The filename or extension is too long` 错误）。修改代码请优先使用精准的代码替换工具（如 `replace_file_content`）或小型脚本。
-
----
-
-## 三、云端部署（Render Cloud Deployment）全流程
-
-本项目后端与前端一体化部署在 **Render**（[https://render.com](https://render.com)）平台上。
-
-### 3.1 部署架构流程
-```mermaid
-flowchart LR
-    A[本地开发/修改] --> B[git push origin main]
-    B --> C[GitHub: honru09/for-pocket]
-    C -->|Webhook 自动触发| D[Render Web Service]
-    D --> E[npm run build: Vite 打包至 dist/]
-    E --> F[node server.mjs: 启动 HTTP 8787/PORT]
-    F --> G[生产地址: for-pocket.onrender.com]
-```
-
-### 3.2 Render 控制台新建与配置步骤（若是新建服务）
-若日后需要迁移或新建 Render 服务，请按以下参数创建：
-1. 登录 Render 控制台，点击 **New +** -> **Web Service**。
-2. 连接 GitHub 仓库：选择 `honru09/for-pocket`。
-3. **基本参数配置**：
-   - **Name**：`for-pocket`
-   - **Region**：`Singapore` 或 `Oregon`（推荐新加坡或离用户近的地区）
-   - **Branch**：`main`
-   - **Root Directory**：留空（即项目根目录）
-   - **Runtime**：`Node`
-   - **Build Command**：`npm install && npm run build`
-   - **Start Command**：`npm start`（对应执行 `node --env-file-if-exists=.env server.mjs`）
-   - **Plan Type**：`Free`（或选择 Starter 保证无休眠）
-
-### 3.3 关键环境变量表 (Environment Variables)
-在 Render 控制台的 **Environment** 标签页中，必须配置以下环境变量：
-
-| 环境变量名 | 示例值 / 说明 | 必填项 |
-| :--- | :--- | :---: |
-| `BOT_TOKEN` | `123456789:ABCdefGhIJKlmNoPQRsTUVwxyZ` (从 Telegram @BotFather 获取) | **是** |
-| `PUBLIC_URL` | `https://for-pocket.onrender.com` (外部访问的 HTTPS 域名) | **是** |
-| `DATA_DIR` | `./data` 或 `/var/data`（存储用户 JSON 数据文件的目录） | **是** |
-| `GOOGLE_CLIENT_ID` | `xxxx.apps.googleusercontent.com` (Google OAuth Web Client ID) | 否（开启Google登录时必填） |
-| `AUTH_MAX_AGE_SECONDS` | `86400`（Telegram initData 身份有效期，单位秒，默认24小时） | 否 |
-| `PORT` | Render 自动注入，通常为 `10000`（无需手动设置，服务自适应） | 系统自动 |
-
-### 3.4 数据持久盘（Persistent Disk）挂载推荐
-Render 免费实例在重启或重新构建时，容器文件系统是临时的（Ephemeral）。
-- **生产推荐配置**：在 Render Web Service 设置中添加一块 **Persistent Disk**（例如容量 1GB，挂载路径为 `/var/data`）。
-- 将环境变量 `DATA_DIR` 设置为 `/var/data`。
-- 这样即使代码重新部署、容器重启，所有账单、用户信息和好友圈数据也绝对安全保存在磁盘中。
-
----
-
-## 四、Telegram 机器人与 Mini App 接入配置
-
-### 4.1 在 @BotFather 中配置 Bot
-1. 打开 Telegram，搜索并进入 `@BotFather`。
-2. 若已有 Bot（如 `@for_pocket_bot`），获取 Token 填入 Render 的 `BOT_TOKEN` 环境变量。
-3. **配置 Mini App (Web App)**：
-   - 发送命令：`/newapp`
-   - 选择机器人的用户名：`@for_pocket_bot`
-   - 填写 Title（如：`for. 小账本`）与 Description。
-   - 上传 640x360 封面图。
-   - 输入 Web App URL：`https://for-pocket.onrender.com`
-   - 输入 Short name（如：`app`）。
-   - 完成后获得直接启动链接：`https://t.me/for_pocket_bot/app`
-
-### 4.2 配置聊天窗口外部菜单按键 (Menu Button)
-为了让用户打开与 `@for_pocket_bot` 的聊天窗口时，左下角直接出现“＋ 记一笔”快捷按钮：
-- **方式一（服务端启动自动配置）**：
-  只要 `PUBLIC_URL` 和 `BOT_TOKEN` 正确配置，`bot.mjs` 中的 `setChatMenuButton` 会自动将该菜单按钮指向 `PUBLIC_URL`。
-- **方式二（BotFather 手工配置）**：
-  在 `@BotFather` 发送 `/setmenubutton` -> 选择机器人 -> 输入 URL `https://for-pocket.onrender.com` -> 按钮文字输入 `＋ 记一笔`。
-
----
-
-## 五、Google 跨端登录与多设备账号连携体系
-
-### 5.1 Google Cloud 控制台配置
-若需要启用 Google 网页端一键登录：
-1. 访问 [Google Cloud Console](https://console.cloud.google.com/apis/credentials)。
-2. 创建 OAuth 2.0 Client ID（应用类型：**Web Application**）。
-3. **已获授权的 JavaScript 来源 (Authorized JavaScript origins)**：
-   - `https://for-pocket.onrender.com`
-   - `http://localhost:5173`（本地开发调试）
-4. 获取 Client ID 填入 Render 的 `GOOGLE_CLIENT_ID` 环境变量。
-
-### 5.2 双轨认证与 6 位多端连携机制
-```mermaid
-sequenceDiagram
-    participant User as 用户设备 (Web/手机)
-    participant Client as 前端 (App.jsx)
-    participant Server as 后端服务 (server.mjs)
-    participant DB as 数据存储 (store.mjs)
-
-    Note over User,DB: 场景：在网页用 Google 登录，与 Telegram 账号数据合并
-    User->>Client: 点击“生成设备连携码” (Telegram端)
-    Client->>Server: POST /api/auth/link-code
-    Server->>Client: 返回 6 位随机码 (例如 ABC123, 15分钟有效)
-    User->>Client: 在 Web 端输入 ABC123
-    Client->>Server: POST /api/auth/link-verify { code: "ABC123" }
-    Server->>DB: 将两端账号的 userId 统一指向目标用户，合并历史记录
-    Server->>Client: 返回合并后的全量账单与资料
-    Client->>User: 提示“连携成功！多端数据已全部共通”
-```
-
----
-
-## 六、核心业务模型与生命周期规范
-
-接手 Agent 在修改业务逻辑时，必须遵守以下核心约束：
-
-### 6.1 Life360 模式好友圈体系
-- **前置规则（必须先是好友）**：创建圈子或拉人入圈前，被邀请人**必须**已通过 6 位好友码添加为双向好友（后端接口 `/api/circles/create` 会强行校验 `myFriends.has(friendId)`）。
-- **人数硬性上限 4 人**：一个好友圈成员总数（创建者 + 邀请的好友）**绝对不能超过 4 人**（超额时后端返回 400，前端复选框禁用）。
-- **隔离与协同**：
-  - 激活圈子时，记账页面的消费人（`ConsumerPicker`）自动切换为圈内 4 位成员。
-  - 所有记账流水写入该圈子专用的隔离账本，圈内所有成员均可实时读取、添加与删除。
-  - 支持随时通过 `/api/circles/switch` 切回个人独立账本。
-
-### 6.2 出账与入账双模规范
-- 记录模型新增字段：`type: 'expense' | 'income'`（默认为 `expense`）。
-- **分类池隔离**：
-  - 出账分类：`settings.categories`（胃、学习、日常用品、兴趣、旅游、其他）。
-  - 入账分类：`settings.incomeCategories`（工资、奖金、红包、兼职、报销、其他入账）。
-- **金额与统计**：
-  - `todayExpenseTotal` 与 `todayIncomeTotal` 分别统计。
-  - 结余公式：`netBalance = totalIncome - totalExpense`。
-
-### 6.3 视觉美学铁律
-- **输入框防放大**：iOS WebKit 在输入框字体小于 16px 时会强制放大屏幕。全站移动端输入框必须保持 `font-size: 16px !important`，视口必须保持 `maximum-scale=1.0, user-scalable=no, viewport-fit=cover`。
-- **输入框去除橙色聚焦边框**：聚焦光圈采用纸质微暖光 `#bcc7a455`，绝不出现刺眼亮橙色。
-- **Liia 按钮底色**：必须保持温暖奶白色（`#fbf8f1`），微边框 `#dcd5c5`。
-- **记账大悬浮键 (Save FAB)**：保持屏幕右下角单键纯图标（勾选图标），大尺寸触控。
-
----
-
-## 七、本地运行、测试与构建验证命令
-
-下一任 Agent 在本地进行开发或排错时，可以直接在工作目录运行：
+Node.js 22.12+；CI 使用 Node.js 24。
 
 ```powershell
-# 进入项目目录
-cd c:\Users\wangxr\Documents\Codex\2026-10-09\wo-x\outputs\for-pocket
-
-# 安装依赖
-npm install
-
-# 运行全套自动化测试（包含 5 组端到端集成测试）
-npm test
-
-# 执行 Vite 生产打包（确保无语法与 Rollup 警告）
+npm ci
 npm run build
-
-# 本地启动后端服务（默认监听端口 8787 或 PORT）
-npm start
-
-# 或启动本地 Vite 前端热重载开发服务器
-npm run dev
+npm test
+npm run start:prod
 ```
 
----
+打开 http://127.0.0.1:8787/ 。`npm start` 会先构建；`start:prod` 使用已构建产物。运维测试校验真实构建资源，所以先构建再测试。
 
-## 八、常见故障与排查自检清单 (Troubleshooting)
+未登录的浏览器记录保存在当前设备。服务器登录后使用服务器账本；本机记录不会自动上传。Google 测试使用隔离 fixture，不能替代真实 OAuth 验收。
 
-| 异常现象 | 可能原因 | 解决办法 |
-| :--- | :--- | :--- |
-| **测试报“请选择有效的图标和颜色”** | `public/shared.mjs` 中的 `ICONS` 数组漏掉了新图标名 | 检查 `ICONS` 数组与 `src/icons.jsx` 的图标键名是否一致（如 `sprout`, `flower`, `star` 等均需收录）。 |
-| **Render 重新部署后数据丢失** | 未配置 Render Persistent Disk，数据写入了临时镜像层 | 在 Render 添加 1GB 磁盘，挂载到 `/var/data`，并配置环境变量 `DATA_DIR=/var/data`。 |
-| **Telegram 内打开提示“请从 Telegram bot 重新打开”** | 身份过期或 `BOT_TOKEN` 不匹配 | 检查 Render 环境变量中的 `BOT_TOKEN` 是否与当前机器人完全一致；或延长 `AUTH_MAX_AGE_SECONDS`。 |
-| **iOS 点击输入框屏幕突然变大** | 某个 input 的字体大小被误改回小于 16px | 检查 `src/styles.css`，确保所有移动端 input / textarea 的 `font-size` 均达到 `16px`。 |
-| **Git Push 之后线上没有更新** | Render 自动部署被暂停，或代码构建报错 | 登录 Render 控制台查看 **Events** 与 **Logs**；本地运行 `npm run build` 预先排查打包错误。 |
+## 已补齐的发布工具
 
----
+| 文件 / 命令 | 用途 |
+| --- | --- |
+| `.github/workflows/ci.yml` | Linux 和 Windows，Node 24，安装、构建、11 项测试；Actions 固定到 commit SHA |
+| `render.yaml` | 可选付费单实例 + 1GB 持久盘蓝图；当前未应用 |
+| `npm run render:inspect` | 只读核对仓库、分支、认证配置及 DATA_DIR 所在持久盘；不打印密钥 |
+| `npm run backup` | JSON 副本、SHA256 清单；不修改源数据 |
+| `npm run restore -- BACKUP_DIRECTORY EMPTY_DATA_DIRECTORY` | 校验所有备份文件后恢复；拒绝覆盖非空目录 |
+| `npm run bot:configure` | 只读检查 bot、菜单及 webhook；不启动轮询 |
+| `npm run bot:configure -- --apply` | 确认 bot 后设置“＋ 记一笔”菜单；不改 webhook、不发聊天消息 |
+| `npm run verify:deployment -- URL --version=0.5.0 --commit=SHA` | 检查实际版本、commit、JS/CSS、manifest、PNG 尺寸 |
 
-> 📝 **维护记录**：本文档已与 `v0.4.0` 代码库保持 100% 同步，测试套件通过率 100%。后续 Agent 请在此基准上安全迭代！
+备份含用户资料、账单和会话，只存私有目录。`.env`、`.env.*`、`data/`、`backups/`、日志不进入 GitHub 或 zip；`.env.example` 是空配置模板。
+
+## 将来正式部署的顺序
+
+在用户重新授权部署、确认存储方案后再执行：
+
+1. **先取得并验证当前线上数据备份。** 本机备份不能代替线上备份。免费 Render 没有 Shell/SSH，添加持久盘也会触发部署，不能指望升级后再读取旧容器数据。[Shell 支持范围](https://render.com/docs/ssh)
+2. 用户可选择付费持久盘，或先实现外部持久数据库。`render.yaml` 是准备好的付费方案，未开通、未购买。当前代码只有单进程 JSON 存储，不支持直接配置 PostgreSQL。
+3. 暂停自动部署，确保修改基础设施不会意外部署未保护的数据。备份恢复到持久目录后，设置 `DATA_DIR=/var/data`。
+4. 只在私有配置中设置 `BOT_TOKEN`、`PUBLIC_URL`，Google 登录需要 Web Client ID；保留已有 bot token。
+5. 运行 `render:inspect` 确认 DATA_DIR 实际在持久盘挂载路径下，单实例部署；不要将 API key 配置到前端。
+6. GitHub 两个平台 CI 通过后，审阅 PR；在部署重新获得授权后合并 main 或手动发布确切 commit。
+7. 用健康接口的 version/commit 验证实际产物，而非仅看 `{ok:true}`。
+8. Telegram 中真实登录、记账、修改时间、重开检查；第二位用户验证圈子权限。完成真实 Google 登录与连携后才能标记 OAuth 验收通过。
+9. 确认账单数量与备份一致，重启后仍保留；之后按需要配置自动部署。
+
+```powershell
+npm run verify:deployment -- https://for-pocket.onrender.com --version=0.5.0 --commit=RELEASE_SHA --require-telegram --require-google
+```
+
+没有 Google 配置时，不应声称其已上线可用；不要为了通过验收随意填入一个 Client ID。
+
+## Telegram 入口
+
+机器人 `@for_pocket_bot`；菜单目标为 https://for-pocket.onrender.com 。Web 服务器启动不自动设置菜单。`bot.mjs` 是单独的 `/start` 轮询进程，有 webhook 时会停止，避免覆盖现有服务。
+
+`https://t.me/for_pocket_bot/app` 仅在 BotFather 已创建对应 short name 时有效；API 菜单检查不能证明该直达链接已配置。需 bot 所有人在 BotFather 核对。[Telegram 官方接口](https://core.telegram.org/bots/api#setchatmenubutton)
+
+## Google 登录还需要的配置
+
+创建 OAuth **Web application** Client ID；授权 JavaScript origins：
+
+- `https://for-pocket.onrender.com`
+- `http://127.0.0.1:8787`（本机 API/静态站点）
+- `http://localhost:5173` 或实际使用的 Vite origin（如需开发登录）
+
+设置 `GOOGLE_CLIENT_ID`，无需向本产品提供 Google client secret。[Google 官方设置说明](https://developers.google.com/identity/gsi/web/guides/get-google-api-clientid)
+
+## 运维边界
+
+- 存储只支持单 Node 进程；多实例必须先换共享数据库。
+- v2 数据文件为 `_pocket-v2.json`，旧 JSON 保留；旧会话作废，需要重新登录。
+- 恢复时先停止应用，使用新空目录。中途 I/O 失败时不要启动部分恢复目录，应重新恢复到另一空目录。
+- 动效尊重减少动态效果设置；未测量或承诺所有设备达到 120fps。
+- 本轮 Windows Computer Use 因不能可靠识别浏览器 URL 而停止；后续发布准备通过 CLI/API 完成，没有自动化登录 Google Cloud。

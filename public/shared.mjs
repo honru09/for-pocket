@@ -6,13 +6,19 @@ export const CURRENCIES = {
 export const ICONS = ['bowl', 'book', 'bag', 'game', 'plane', 'spark', 'heart', 'coffee', 'wallet', 'coins', 'gift', 'receipt', 'piggy', 'card', 'transfer', 'users', 'google', 'sprout', 'flower', 'star'];
 export const COLORS = ['peach', 'blue', 'mint', 'pink', 'yellow', 'lavender'];
 export const LANGUAGES = ['zh', 'en', 'uk'];
-export const AVATARS = ['cat', 'bunny', 'bear', 'chick', 'fox', 'panda', 'coffee', 'flower', 'sprout', 'star'];
+export const AVATARS = ['cloud', 'cat', 'bunny', 'bear', 'chick', 'fox', 'panda', 'coffee', 'flower', 'sprout', 'star'];
 export const CONSUMER_COLORS = ['milk', 'blue', 'pink', 'mint', 'peach', 'yellow', 'lavender', 'sage'];
-export const DEFAULT_CONSUMERS = [
-  { id: 'xingrun', name: 'Xingrun', color: 'blue', avatar: 'cat' },
-  { id: 'liia', name: 'Liia', color: 'milk', avatar: 'bunny' },
-];
-export const CONSUMERS = { xingrun: 'Xingrun', liia: 'Liia' };
+export const DEFAULT_CONSUMERS = [];
+export const CONSUMERS = {};
+export const MAX_CIRCLE_MEMBERS = 99;
+export function validateUserProfile(value) {
+  const name = typeof value?.name === 'string' ? value.name.trim() : '';
+  if (!name || Array.from(name).length > 24) throw new Error('角色名称需为 1–24 个字。');
+  if (!CONSUMER_COLORS.includes(value.color)) throw new Error('请选择有效的图标和颜色。');
+  const avatar = value.avatar;
+  if (!AVATARS.includes(avatar) && !(typeof avatar === 'string' && avatar.length <= 2048 && /^https:\/\//.test(avatar))) throw new Error('请选择有效的图标和颜色。');
+  return { name, color: value.color, avatar };
+}
 export const DEFAULT_CATEGORIES = [
   { id: 'stomach', label: '胃', icon: 'bowl', color: 'peach' },
   { id: 'learning', label: '学习', icon: 'book', color: 'blue' },
@@ -33,7 +39,7 @@ export function resolveLanguage(code, fallback = 'zh') {
   if (!code || typeof code !== 'string') return fallback;
   const lower = code.toLowerCase().trim();
   if (lower.startsWith('zh')) return 'zh';
-  if (lower.startsWith('uk') || lower.startsWith('ru')) return 'uk';
+  if (lower.startsWith('uk')) return 'uk';
   if (lower.startsWith('en')) return 'en';
   return 'en';
 }
@@ -50,7 +56,7 @@ export function initialSettings(lang = 'zh') {
 }
 export function validateSettings(value) {
   if (value?.language !== undefined && !LANGUAGES.includes(value.language)) throw new Error('请选择有效的语言。');
-  if (!value || !CURRENCIES[value.currency] || !Array.isArray(value.categories)
+  if (!value || !Object.hasOwn(CURRENCIES, value.currency) || !Array.isArray(value.categories)
     || value.categories.length < 1 || value.categories.length > 18) throw new Error('请保留 1–18 个分类。');
   const ids = new Set();
   const labels = new Set();
@@ -65,6 +71,7 @@ export function validateSettings(value) {
   });
 
   const rawIncome = Array.isArray(value.incomeCategories) && value.incomeCategories.length > 0 ? value.incomeCategories : DEFAULT_INCOME_CATEGORIES;
+  if (rawIncome.length > 18) throw new Error('请保留 1–18 个分类。');
   const incomeIds = new Set();
   const incomeLabels = new Set();
   const incomeCategories = rawIncome.map(item => {
@@ -78,10 +85,10 @@ export function validateSettings(value) {
   });
 
   const rawConsumers = Array.isArray(value.consumers) && value.consumers.length > 0 ? value.consumers : DEFAULT_CONSUMERS;
-  if (rawConsumers.length < 1 || rawConsumers.length > 8) throw new Error('请保留 1–8 位成员角色。');
+  if (rawConsumers.length > MAX_CIRCLE_MEMBERS) throw new Error('圈子已满。');
   const consumerIds = new Set();
   const consumers = rawConsumers.map((item, index) => {
-    const id = item?.id && typeof item.id === 'string' && /^[a-zA-Z0-9_-]{1,32}$/.test(item.id) ? item.id : `c_${index + 1}`;
+    const id = item?.id && typeof item.id === 'string' && /^[a-zA-Z0-9_-]{1,128}$/.test(item.id) ? item.id : `c_${index + 1}`;
     if (consumerIds.has(id)) throw new Error('角色编号不能重复。');
     consumerIds.add(id);
     const name = typeof item?.name === 'string' ? item.name.trim() : '';
@@ -107,10 +114,11 @@ export function dateKey(date = new Date(), timezone = Intl.DateTimeFormat().reso
 }
 export function validateExpense(value, settings) {
   if (!value || typeof value.id !== 'string' || !/^[a-zA-Z0-9_-]{8,64}$/.test(value.id)) throw new Error('记录编号有误。');
-  if (!CURRENCIES[value.currency] || !Number.isSafeInteger(value.amountMinor) || value.amountMinor < 1
+  if (!Object.hasOwn(CURRENCIES, value.currency) || !Number.isSafeInteger(value.amountMinor) || value.amountMinor < 1
     || value.amountMinor > 10 ** (8 + CURRENCIES[value.currency].digits) - 1) throw new Error('请输入有效金额。');
-  const type = value.type === 'income' ? 'income' : 'expense';
-  const categoryPool = [...(settings.categories || []), ...(settings.incomeCategories || DEFAULT_INCOME_CATEGORIES)];
+  if (value.type !== undefined && !['expense', 'income'].includes(value.type)) throw new Error('记录类型有误。');
+  const type = value.type || 'expense';
+  const categoryPool = type === 'income' ? (settings.incomeCategories || DEFAULT_INCOME_CATEGORIES) : settings.categories;
   const category = categoryPool.find(x => x.id === value.categoryId);
   if (!category) throw new Error('请选择一个分类方向。');
   const allowedConsumers = new Set((settings.consumers || DEFAULT_CONSUMERS).map(c => c.id));
@@ -118,6 +126,14 @@ export function validateExpense(value, settings) {
   if (typeof value.note !== 'string' || value.note.length > 160) throw new Error('备注最多 160 个字符。');
   if (typeof value.timezone !== 'string' || value.timezone.length > 80) throw new Error('时区格式有误。');
   dateKey(new Date(), value.timezone);
-  return { id: value.id, type, amountMinor: value.amountMinor, currency: value.currency,
+  const occurredAt = value.occurredAt == null ? null : validateEntryTime(value.occurredAt, value.timezone).occurredAt;
+  return { id: value.id, type, amountMinor: value.amountMinor, currency: value.currency, occurredAt,
     categoryId: category.id, category: structuredClone(category), consumer: value.consumer, note: value.note.trim(), timezone: value.timezone };
+}
+export function validateEntryTime(value, timezone) {
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/.test(value)) throw new Error('errorEntryTime');
+  const time = new Date(value);
+  if (!Number.isFinite(time.getTime()) || time.getUTCFullYear() < 1970 || time.getUTCFullYear() > 2100 || time.toISOString().replace('.000Z', 'Z') !== value.replace('.000Z', 'Z')) throw new Error('errorEntryTime');
+  if (typeof timezone !== 'string' || timezone.length > 80) throw new Error('errorEntryTime');
+  try { return { occurredAt: time.toISOString(), timezone, dayKey: dateKey(time, timezone) }; } catch { throw new Error('errorEntryTime'); }
 }

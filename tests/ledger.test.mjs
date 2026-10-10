@@ -1,429 +1,179 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createHmac } from 'node:crypto';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, rm, writeFile, readFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { once } from 'node:events';
 import { createApp } from '../server.mjs';
 import { validateInitData } from '../auth.mjs';
-import { dateKey, resolveLanguage } from '../public/shared.mjs';
+import { initialSettings, MAX_CIRCLE_MEMBERS } from '../public/shared.mjs';
 
-const token = '123456789:test-only-not-a-real-bot-token';
-function signed(userId = 101, authDate = Math.floor(Date.now() / 1000), languageCode = 'zh') {
-  const fields = { auth_date: String(authDate), query_id: 'test-query', user: JSON.stringify({ id: userId, first_name: '测试用户', language_code: languageCode }) };
-  const check = Object.keys(fields).sort().map(k => `${k}=${fields[k]}`).join('\n');
+const token = '123456789:test-token', clientId = 'test-client.apps.googleusercontent.com';
+export function signed(id = 101, time = Date.now(), lang = 'zh') {
+  const fields = { auth_date: String(Math.floor(time / 1000)), user: JSON.stringify({ id, first_name: `User ${id}`, language_code: lang }) };
+  const text = Object.keys(fields).sort().map(k => `${k}=${fields[k]}`).join('\n');
   const secret = createHmac('sha256', 'WebAppData').update(token).digest();
-  return new URLSearchParams({ ...fields, hash: createHmac('sha256', secret).update(check).digest('hex') }).toString();
+  return new URLSearchParams({ ...fields, hash: createHmac('sha256', secret).update(text).digest('hex') }).toString();
 }
-test('Telegram identity rejects unsigned, tampered, expired and duplicate data', () => {
-  assert.equal(validateInitData(signed(), token).id, 101);
-  assert.throws(() => validateInitData('user=101', token));
-  const tampered = new URLSearchParams(signed()); tampered.set('user', JSON.stringify({ id: 202 }));
-  assert.throws(() => validateInitData(tampered.toString(), token));
-  assert.throws(() => validateInitData(signed(101, 1), token));
-  assert.throws(() => validateInitData(signed() + '&auth_date=1', token));
-  assert.throws(() => validateInitData(signed(), 'another-token'));
+async function fixture(t, options = {}) {
+  const dataDir = options.dataDir || await mkdtemp(path.join(os.tmpdir(), 'for-v05-test-'));
+  let time = Date.now(), server, base;
+  const start = async () => { server = createApp({ token, dataDir, googleClientId: clientId, now: () => time, verifyGoogle: async credential => { if (!/^verified-[ab]$/.test(credential)) throw new Error('Invalid signature fixture'); return { sub: credential, name: credential, email: `${credential}@example.test`, aud: clientId, iss: 'https://accounts.google.com', exp: Math.floor(time / 1000) + 3600 }; }, ...options }); server.listen(0, '127.0.0.1'); await once(server, 'listening'); base = `http://127.0.0.1:${server.address().port}`; };
+  await start();
+  t.after(async () => { await new Promise(r => server.close(r)); assert.equal(path.dirname(dataDir), path.resolve(os.tmpdir())); assert.ok(path.basename(dataDir).startsWith('for-v05-test-')); await rm(dataDir, { recursive:true, force:true }); });
+  return { dataDir, advance: n => { time += n; }, restart: async () => { await new Promise(r => server.close(r)); await start(); },
+    request: async (route, { user = 101, session, body, method = body ? 'POST' : 'GET', origin, headers = {} } = {}) => {
+      const response = await fetch(base + '/api' + route, { method, headers: { 'Content-Type':'application/json', ...(session ? { Authorization:`Bearer ${session}` } : user ? { 'X-Telegram-Init-Data':signed(user, time) } : {}), ...(origin ? { Origin:origin } : {}), ...headers }, body: body ? JSON.stringify(body) : undefined });
+      return { status:response.status, data:await response.json() };
+    },
+  };
+}
+const expense = (id, consumer, rest = {}) => ({ id, consumer, amountMinor:650, currency:'JPY', categoryId:'stomach', type:'expense', note:'拉面 🍜', timezone:'Asia/Tokyo', ...rest });
+test('Telegram rejects forged, missing, expired and duplicated authentication', () => {
+  assert.equal(validateInitData(signed(),token).id,101);
+  assert.throws(() => validateInitData('',token));
+  assert.throws(() => validateInitData(signed(101,1),token));
+  assert.throws(() => validateInitData(signed() + '&auth_date=1',token));
+  assert.throws(() => validateInitData(signed(), 'wrong'));
+  const tampered = new URLSearchParams(signed()); tampered.set('user','{"id":202}'); assert.throws(() => validateInitData(tampered.toString(),token));
 });
-test('ledger persists, isolates users, saves concurrent requests, deduplicates retry and restores deletion', async t => {
-  const dataDir = await mkdtemp(path.join(os.tmpdir(), 'for-pocket-test-'));
-  let server = createApp({ token, dataDir });
-  server.listen(0, '127.0.0.1'); await once(server, 'listening');
-  let base = `http://127.0.0.1:${server.address().port}`;
-  t.after(async () => {
-    await new Promise(resolve => server.close(resolve));
-    assert.equal(path.dirname(dataDir), path.resolve(os.tmpdir()));
-    assert.ok(path.basename(dataDir).startsWith('for-pocket-test-'));
-    await rm(dataDir, { recursive: true, force: true });
-  });
-  async function request(route, { user = 101, method = 'GET', body, auth = signed(user), origin, headers = {} } = {}) {
-    const response = await fetch(base + '/api' + route, { method, headers: { 'Content-Type': 'application/json', 'X-Telegram-Init-Data': auth, ...(origin ? { Origin: origin } : {}), ...headers }, body: body ? JSON.stringify(body) : undefined });
-    return { status: response.status, data: await response.json() };
-  }
-  assert.equal((await request('/profile', { auth: '' })).status, 401);
-  assert.equal((await request('/settings', { method: 'PUT', origin: 'https://untrusted.example', body: {} })).status, 403);
-  assert.equal((await request('/settings', { method: 'PUT', origin: 'https://web.telegram.org', body: { currency: 'JPY', language: 'zh', categories: [] } })).status, 400); // 400 due to empty categories, not 403 origin!
-  assert.equal((await request('/settings', { method: 'PUT', origin: 'null', body: { currency: 'JPY', language: 'zh', categories: [] } })).status, 400); // not 403!
-  assert.equal((await request('/settings', { method: 'PUT', origin: 'https://for-pocket.onrender.com', headers: { 'X-Forwarded-Host': 'for-pocket.onrender.com' }, body: { currency: 'JPY', language: 'zh', categories: [] } })).status, 400); // not 403!
-  const payload = { id: 'expense-test-001', amountMinor: 650, currency: 'JPY', categoryId: 'stomach', consumer: 'xingrun', note: '拉面 🍜', timezone: 'Asia/Tokyo' };
-  const first = await request('/expenses', { method: 'POST', body: payload });
-  assert.equal(first.status, 200); assert.equal(first.data.amountMinor, 650); assert.equal(first.data.note, '拉面 🍜');
-  assert.equal(first.data.dayKey, dateKey(new Date(), 'Asia/Tokyo'));
-  assert.equal(first.data.consumer, 'xingrun');
-  const duplicate = await request('/expenses', { method: 'POST', body: payload });
-  assert.equal(duplicate.data.createdAt, first.data.createdAt);
-  assert.equal((await request('/profile')).data.expenses.length, 1);
-  assert.equal((await request('/profile', { user: 202 })).data.expenses.length, 0);
-  assert.equal((await request('/expenses/expense-test-001', { user: 202, method: 'DELETE' })).status, 404);
-  assert.equal((await request('/expenses', { method: 'POST', body: { ...payload, id: 'expense-invalid-1', amountMinor: 1.5 } })).status, 400);
-  assert.equal((await request('/expenses', { method: 'POST', body: { ...payload, id: 'expense-invalid-2', consumer: undefined } })).status, 400);
-  assert.equal((await request('/expenses', { method: 'POST', body: { ...payload, id: 'expense-invalid-3', consumer: 'constructor' } })).status, 400);
-  await Promise.all(Array.from({ length: 8 }, (_, i) => request('/expenses', { method: 'POST', body: { ...payload, id: `expense-concurrent-${i}`, amountMinor: 100 + i } })));
-  let profile = (await request('/profile')).data;
-  assert.equal(profile.expenses.length, 9);
-  profile.settings.categories[0].label = '快乐吃饭';
-  profile.settings.language = 'uk';
-  assert.equal((await request('/settings', { method: 'PUT', body: profile.settings })).status, 200);
-  profile = (await request('/profile')).data;
-  assert.equal(profile.expenses[0].category.label, '胃', 'Old entries retain their original category');
-  assert.equal(profile.settings.categories[0].label, '快乐吃饭');
-  assert.equal(profile.settings.language, 'uk');
-  assert.equal((await request('/expenses/expense-test-001', { method: 'DELETE' })).status, 200);
-  assert.equal((await request('/profile')).data.expenses.length, 8);
-  assert.equal((await request('/expenses/expense-test-001/restore', { method: 'POST' })).data.note, '拉面 🍜');
-  assert.equal((await request('/profile')).data.expenses.find(e => e.id === 'expense-test-001').consumer, 'xingrun');
-  assert.equal((await request('/profile')).data.expenses.length, 9);
-  const max = await request('/expenses', { method: 'POST', body: { ...payload, id: 'expense-decimal-max', currency: 'CNY', amountMinor: 9999999999 } });
-  assert.equal(max.status, 200);
-  const liia = await request('/expenses', { method: 'POST', body: { ...payload, id: 'expense-liia-001', consumer: 'liia', amountMinor: 420 } });
-  assert.equal(liia.status, 200); assert.equal(liia.data.consumer, 'liia');
-  await new Promise(resolve => server.close(resolve));
-  server = createApp({ token, dataDir }); server.listen(0, '127.0.0.1'); await once(server, 'listening'); base = `http://127.0.0.1:${server.address().port}`;
-  const reopened = (await request('/profile')).data;
-  assert.equal(reopened.expenses.length, 11, 'Records survive a server restart');
-  assert.equal(reopened.settings.language, 'uk');
-  assert.equal(reopened.expenses.find(e => e.id === 'expense-liia-001').consumer, 'liia');
-  assert.equal((await request('/profile', { user: 202 })).data.expenses.length, 0);
+test('real identities, amount/type validation, concurrency, retry, deletion and restart', async t => {
+  const f = await fixture(t), r = f.request;
+  assert.equal((await r('/profile',{user:null})).status,401);
+  const p = (await r('/profile')).data;
+  assert.deepEqual(p.settings.consumers.map(c=>c.id), ['u_101']); assert.equal(p.account.hasTelegram,true);
+  assert.equal((await r('/expenses',{body:expense('invalid-consumer','liia')})).status,400);
+  assert.equal((await r('/expenses',{body:expense('invalid-type-001','u_101',{type:'nope'})})).status,400);
+  assert.equal((await r('/expenses',{body:expense('invalid-money-01','u_101',{currency:'constructor'})})).status,400);
+  assert.equal((await r('/expenses',{body:expense('wrong-pool-001','u_101',{type:'income'})})).status,400);
+  assert.equal((await r('/settings',{method:'PUT',body:p.settings,origin:'https://evil.test'})).status,403);
+  assert.equal((await r('/settings',{method:'PUT',body:p.settings,origin:'https://evil.test',headers:{'X-Forwarded-Host':'evil.test'}})).status,403);
+  const payload = expense('entry-test-0001','u_101');
+  const entry = await r('/expenses',{body:payload}); assert.equal(entry.status,200); assert.equal(entry.data.member.name,'User 101');
+  assert.equal((await r('/expenses',{body:payload})).data.createdAt,entry.data.createdAt);
+  const results = await Promise.all(Array.from({length:8},(_,i)=>r('/expenses',{body:expense(`concurrent-${i}`,'u_101')})));
+  assert.ok(results.every(x=>x.status===200));
+  assert.equal((await r('/profile',{user:202})).data.expenses.length,0);
+  assert.equal((await r('/expenses/entry-test-0001',{user:202,method:'DELETE'})).status,404);
+  assert.equal((await r('/expenses/entry-test-0001',{method:'DELETE'})).status,200);
+  assert.equal((await r('/expenses/entry-test-0001/restore',{body:{}})).status,200);
+  await r('/user-profile',{method:'PUT',body:{name:'New name',color:'mint',avatar:'fox'}});
+  const renamed = (await r('/profile')).data; assert.equal(renamed.user.name,'New name'); assert.equal(renamed.expenses[0].member.name,'User 101');
+  await r('/settings',{method:'PUT',body:{...renamed.settings,language:'uk',languageManual:true}});
+  await f.restart(); const reloaded = (await r('/profile')).data;
+  assert.equal(reloaded.expenses.length,9); assert.equal(reloaded.settings.language,'uk');
 });
 
-test('auto-detects Telegram language and preserves manual language choice', async t => {
-  assert.equal(resolveLanguage('zh-CN'), 'zh');
-  assert.equal(resolveLanguage('zh-Hans'), 'zh');
-  assert.equal(resolveLanguage('uk-UA'), 'uk');
-  assert.equal(resolveLanguage('ru'), 'uk');
-  assert.equal(resolveLanguage('en-US'), 'en');
-  assert.equal(resolveLanguage('ja'), 'en');
-
-  const dataDir = await mkdtemp(path.join(os.tmpdir(), 'for-pocket-lang-test-'));
-  const server = createApp({ token, dataDir });
-  server.listen(0, '127.0.0.1'); await once(server, 'listening');
-  const base = `http://127.0.0.1:${server.address().port}`;
-  t.after(async () => {
-    await new Promise(resolve => server.close(resolve));
-    await rm(dataDir, { recursive: true, force: true });
-  });
-
-  async function request(route, { user = 301, method = 'GET', body, lang = 'zh' } = {}) {
-    const response = await fetch(base + '/api' + route, {
-      method,
-      headers: { 'Content-Type': 'application/json', 'X-Telegram-Init-Data': signed(user, undefined, lang) },
-      body: body ? JSON.stringify(body) : undefined,
-    });
-    return { status: response.status, data: await response.json() };
-  }
-
-  // Ukrainian Telegram user defaults to Ukrainian
-  const ukUser = await request('/profile', { user: 401, lang: 'uk' });
-  assert.equal(ukUser.status, 200);
-  assert.equal(ukUser.data.settings.language, 'uk');
-
-  // English Telegram user defaults to English
-  const enUser = await request('/profile', { user: 402, lang: 'en' });
-  assert.equal(enUser.status, 200);
-  assert.equal(enUser.data.settings.language, 'en');
-
-  // Chinese Telegram user defaults to Chinese
-  const zhUser = await request('/profile', { user: 403, lang: 'zh-Hans' });
-  assert.equal(zhUser.status, 200);
-  assert.equal(zhUser.data.settings.language, 'zh');
-
-  // Manual language change takes precedence
-  const updated = await request('/settings', {
-    user: 403,
-    method: 'PUT',
-    lang: 'zh-Hans',
-    body: { ...zhUser.data.settings, language: 'en', languageManual: true },
-  });
-  assert.equal(updated.status, 200);
-  assert.equal(updated.data.settings.language, 'en');
-
-  // Re-opening still preserves manual choice
-  const reopenedZh = await request('/profile', { user: 403, lang: 'zh-Hans' });
-  assert.equal(reopenedZh.data.settings.language, 'en');
+test('entry time supports backdated entries and edits with timezone grouping and permissions', async t => {
+  const f=await fixture(t), r=f.request;
+  const occurredAt='2026-09-30T16:30:00.000Z';
+  const first=await r('/expenses',{body:expense('backdated-entry-1','u_101',{occurredAt})});
+  assert.equal(first.status,200); assert.equal(first.data.dayKey,'2026-10-01');
+  assert.equal(first.data.occurredAt,occurredAt); assert.notEqual(first.data.createdAt,occurredAt);
+  const edit=await r('/expenses/backdated-entry-1',{method:'PUT',body:{occurredAt:'2026-08-31T16:30:00.000Z',timezone:'Europe/Kyiv'}});
+  assert.equal(edit.status,200); assert.equal(edit.data.dayKey,'2026-08-31'); assert.equal(edit.data.createdAt,first.data.createdAt);
+  assert.equal((await r('/expenses/backdated-entry-1',{method:'PUT',body:{occurredAt:'2026-02-30T10:00:00Z',timezone:'Asia/Tokyo'}})).status,400);
+  assert.equal((await r('/expenses/backdated-entry-1',{method:'PUT',body:{occurredAt,timezone:'Invalid/Zone'}})).status,400);
+  assert.equal((await r('/expenses/backdated-entry-1',{user:202,method:'PUT',body:{occurredAt,timezone:'Asia/Tokyo'}})).status,404);
+  const created=(await r('/circles/create',{body:{name:'Time'}})).data;
+  const invite=(await r('/circles/invite',{body:{circleId:created.social.activeCircleId}})).data;
+  await r('/circles/join',{user:202,body:{code:invite.code,confirm:true}});
+  await r('/expenses',{body:expense('shared-time-001','u_101')});
+  assert.equal((await r('/expenses/shared-time-001',{user:202,method:'PUT',body:{occurredAt,timezone:'Asia/Tokyo'}})).status,403);
+  await r('/circles/switch',{body:{circleId:null}});
+  assert.equal((await r('/expenses/backdated-entry-1',{method:'PUT',body:{ledgerId:created.ledgerId,occurredAt,timezone:'Asia/Tokyo'}})).status,409);
+  await f.restart(); const saved=(await r('/profile')).data.expenses[0]; assert.equal(saved.dayKey,'2026-08-31'); assert.equal(saved.timezone,'Europe/Kyiv');
 });
-
-test('two-person shared ledger pairing, historical merge, real-time sync, and unpairing', async t => {
-  const dataDir = await mkdtemp(path.join(os.tmpdir(), 'for-pocket-share-test-'));
-  const server = createApp({ token, dataDir });
-  server.listen(0, '127.0.0.1'); await once(server, 'listening');
-  const base = `http://127.0.0.1:${server.address().port}`;
-  t.after(async () => {
-    await new Promise(resolve => server.close(resolve));
-    await rm(dataDir, { recursive: true, force: true });
-  });
-
-  async function request(route, { user = 501, method = 'GET', body } = {}) {
-    const response = await fetch(base + '/api' + route, {
-      method,
-      headers: { 'Content-Type': 'application/json', 'X-Telegram-Init-Data': signed(user) },
-      body: body ? JSON.stringify(body) : undefined,
-    });
-    return { status: response.status, data: await response.json() };
-  }
-
-  // User A and User B start with their own profiles
-  const profileA = (await request('/profile', { user: 501 })).data;
-  const profileB = (await request('/profile', { user: 502 })).data;
-
-  assert.ok(profileA.share.code && profileA.share.code.length === 6);
-  assert.ok(profileB.share.code && profileB.share.code.length === 6);
-  assert.notEqual(profileA.share.code, profileB.share.code);
-  assert.equal(profileA.share.isPaired, false);
-  assert.equal(profileB.share.isPaired, false);
-
-  // User A logs an expense
-  const expA = await request('/expenses', {
-    user: 501,
-    method: 'POST',
-    body: { id: 'exp-user-a-01', amountMinor: 1200, currency: 'JPY', categoryId: 'stomach', consumer: 'xingrun', note: 'A的拉面', timezone: 'Asia/Tokyo' }
-  });
-  assert.equal(expA.status, 200);
-
-  // User B logs an expense independently
-  const expB = await request('/expenses', {
-    user: 502,
-    method: 'POST',
-    body: { id: 'exp-user-b-01', amountMinor: 800, currency: 'JPY', categoryId: 'hobby', consumer: 'liia', note: 'B的游戏', timezone: 'Asia/Tokyo' }
-  });
-  assert.equal(expB.status, 200);
-
-  // User B fails to pair with non-existent code
-  const failInvalid = await request('/pair', { user: 502, method: 'POST', body: { code: 'NONEXIST' } });
-  assert.equal(failInvalid.status, 400); // not 6 chars
-
-  const failNotFound = await request('/pair', { user: 502, method: 'POST', body: { code: 'ZZZZZZ' } });
-  assert.equal(failNotFound.status, 404);
-
-  // User B fails to pair with own code
-  const failSelf = await request('/pair', { user: 502, method: 'POST', body: { code: profileB.share.code } });
-  assert.equal(failSelf.status, 400);
-
-  // User B pairs with User A's share code
-  const pairedResult = await request('/pair', { user: 502, method: 'POST', body: { code: profileA.share.code } });
-  assert.equal(pairedResult.status, 200);
-  assert.equal(pairedResult.data.share.isPaired, true);
-
-  // Both expenses are merged in the shared ledger!
-  assert.equal(pairedResult.data.expenses.length, 2);
-  const ids = pairedResult.data.expenses.map(e => e.id);
-  assert.ok(ids.includes('exp-user-a-01'));
-  assert.ok(ids.includes('exp-user-b-01'));
-
-  // User A now fetches their profile, sees paired status and both expenses
-  const freshA = (await request('/profile', { user: 501 })).data;
-  assert.equal(freshA.share.isPaired, true);
-  assert.equal(freshA.expenses.length, 2);
-
-  // User B logs a new expense to the shared ledger
-  const expB2 = await request('/expenses', {
-    user: 502,
-    method: 'POST',
-    body: { id: 'exp-user-b-02', amountMinor: 350, currency: 'JPY', categoryId: 'daily', consumer: 'u_502', note: '共同牙膏', timezone: 'Asia/Tokyo' }
-  });
-  assert.equal(expB2.status, 200);
-
-  // User A immediately sees User B's new expense
-  const refreshedA = (await request('/profile', { user: 501 })).data;
-  assert.equal(refreshedA.expenses.length, 3);
-  assert.ok(refreshedA.expenses.some(e => e.id === 'exp-user-b-02'));
-
-  // User B updates profile
-  const updatedUserB = await request('/user-profile', {
-    user: 502,
-    method: 'PUT',
-    body: { name: 'Liia 宝宝', color: 'milk', avatar: 'bunny' }
-  });
-  assert.equal(updatedUserB.status, 200);
-  assert.equal(updatedUserB.data.user.name, 'Liia 宝宝');
-
-  // User A checks profile, sees partner name updated
-  const freshA2 = (await request('/profile', { user: 501 })).data;
-  assert.equal(freshA2.share.partner.name, 'Liia 宝宝');
-
-  // User B unpairs
-  const unpairResult = await request('/unpair', { user: 502, method: 'POST' });
-  assert.equal(unpairResult.status, 200);
-  assert.equal(unpairResult.data.share.isPaired, false);
-  // User B still has all 3 expenses from the shared ledger (no data loss)
-  assert.equal(unpairResult.data.expenses.length, 3);
-
-  // User A is also unpaired now
-  const freshA3 = (await request('/profile', { user: 501 })).data;
-  assert.equal(freshA3.share.isPaired, false);
-  assert.equal(freshA3.expenses.length, 3);
-
-  // New expense by A is no longer seen by B
-  await request('/expenses', {
-    user: 501,
-    method: 'POST',
-    body: { id: 'exp-user-a-solo', amountMinor: 999, currency: 'JPY', categoryId: 'stomach', consumer: 'xingrun', note: '独立咖啡', timezone: 'Asia/Tokyo' }
-  });
-  const soloA = (await request('/profile', { user: 501 })).data;
-  const soloB = (await request('/profile', { user: 502 })).data;
-  assert.equal(soloA.expenses.length, 4);
-  assert.equal(soloB.expenses.length, 3);
+test('circle invitation requires acceptance; membership, admins, isolation, expiry and stale scope', async t => {
+  const f = await fixture(t), r = f.request;
+  const created = await r('/circles/create',{body:{name:'Home'}}); assert.equal(created.status,200);
+  const id = created.data.social.activeCircleId, scope = created.data.ledgerId;
+  assert.equal((await r('/circles/create',{body:{name:'Forced',friendIds:['u_202']}})).status,400);
+  const invite = (await r('/circles/invite',{body:{circleId:id}})).data;
+  assert.equal(invite.expiresAt > Date.now()+71*3600000,true);
+  const preview = await r('/circles/preview',{user:202,body:{code:invite.code}});
+  assert.equal(preview.data.circle.members.length,1);
+  assert.equal((await r('/profile',{user:202})).data.social.circles.length,0);
+  assert.equal((await r('/circles/join',{user:202,body:{code:invite.code}})).status,400);
+  await r('/circles/join',{user:202,body:{code:invite.code,confirm:true}});
+  await r('/circles/join',{user:202,body:{code:invite.code,confirm:true}});
+  assert.equal((await r('/profile')).data.social.activeCircle.members.length,2);
+  assert.equal((await r('/circles/rename',{user:202,body:{circleId:id,name:'No'}})).status,403);
+  assert.equal((await r('/circles/switch',{user:303,body:{circleId:id}})).status,403);
+  assert.equal((await r('/expenses',{body:expense('circle-income-01','u_202',{type:'income',categoryId:'wage',ledgerId:scope})})).status,200);
+  assert.equal((await r('/profile',{user:202})).data.expenses.length,1);
+  assert.equal((await r('/expenses/circle-income-01',{user:202,method:'DELETE'})).status,403);
+  const memberInvite = await r('/circles/invite',{user:202,body:{circleId:id}}); assert.equal(memberInvite.status,200);
+  await r('/circles/admin',{body:{circleId:id,memberId:'u_202',isAdmin:true}});
+  assert.equal((await r('/expenses/circle-income-01',{user:202,method:'DELETE'})).status,200);
+  await r('/circles/admin',{body:{circleId:id,memberId:'u_101',isAdmin:false}});
+  assert.equal((await r('/circles/admin',{user:202,body:{circleId:id,memberId:'u_202',isAdmin:false}})).status,400);
+  await r('/circles/switch',{body:{circleId:null}});
+  assert.equal((await r('/expenses',{body:expense('stale-scope-001','u_101',{ledgerId:scope})})).status,409);
+  assert.equal((await r('/profile')).data.expenses.length,0);
+  await r('/circles/leave',{user:202,body:{circleId:id,confirm:true}});
+  const owner = (await r('/profile')).data.social.circles[0]; assert.equal(owner.isAdmin,true); assert.equal(owner.members.length,1);
+  assert.equal((await r('/circles/switch',{user:202,body:{circleId:id}})).status,403);
+  const fresh = (await r('/circles/invite',{body:{circleId:id}})).data;
+  f.advance(73*3600000); assert.equal((await r('/circles/preview',{user:303,body:{code:fresh.code}})).status,404);
 });
-
-test('income entries, Google login, cross-device sync codes, friends and Life360 circles (max 4)', async t => {
-  const dataDir = await mkdtemp(path.join(os.tmpdir(), 'for-pocket-circle-test-'));
-  const server = createApp({ token, dataDir });
-  server.listen(0, '127.0.0.1'); await once(server, 'listening');
-  const base = `http://127.0.0.1:${server.address().port}`;
-
-  t.after(async () => {
-    await new Promise(resolve => server.close(resolve));
-    await rm(dataDir, { recursive: true, force: true });
-  });
-
-  async function request(route, { user = 601, method = 'GET', body, auth = signed(user), token: sessionToken, origin, headers = {} } = {}) {
-    const authHeaders = sessionToken ? { Authorization: `Bearer ${sessionToken}` } : { 'X-Telegram-Init-Data': auth };
-    const response = await fetch(base + '/api' + route, {
-      method,
-      headers: { 'Content-Type': 'application/json', ...authHeaders, ...(origin ? { Origin: origin } : {}), ...headers },
-      body: body ? JSON.stringify(body) : undefined,
-    });
-    return { status: response.status, data: await response.json() };
-  }
-
-  // 1. Record income entry
-  const incomeRes = await request('/expenses', {
-    user: 601,
-    method: 'POST',
-    body: {
-      id: 'inc-user-601-01',
-      type: 'income',
-      amountMinor: 300000,
-      currency: 'JPY',
-      categoryId: 'wage',
-      consumer: 'u_601',
-      note: '月薪入账',
-      timezone: 'Asia/Tokyo'
-    }
-  });
-  assert.equal(incomeRes.status, 200);
-  assert.equal(incomeRes.data.type, 'income');
-  assert.equal(incomeRes.data.amountMinor, 300000);
-
-  const profile601 = (await request('/profile', { user: 601 })).data;
-  assert.equal(profile601.expenses.length, 1);
-  assert.equal(profile601.expenses[0].type, 'income');
-
-  // 2. Google Login & Session
-  const googleRes = await request('/auth/google', {
-    auth: '',
-    method: 'POST',
-    body: { email: 'xingrun@example.com', sub: 'google-sub-601', name: 'Xingrun Google' }
-  });
-  assert.equal(googleRes.status, 200);
-  assert.ok(googleRes.data.sessionToken);
-  const googleToken = googleRes.data.sessionToken;
-
-  // Read profile using Google session token
-  const googleProfileRes = await request('/profile', { token: googleToken, auth: '' });
-  assert.equal(googleProfileRes.status, 200);
-  assert.equal(googleProfileRes.data.account.hasGoogle, true);
-
-  // 3. Link Code (merge Google user with Telegram user 601)
-  const linkCodeRes = await request('/auth/link-code', { user: 601, method: 'POST' });
-  assert.equal(linkCodeRes.status, 200);
-  assert.equal(linkCodeRes.data.code.length, 6);
-  const syncCode = linkCodeRes.data.code;
-
-  const verifyRes = await request('/auth/link-verify', {
-    token: googleToken,
-    auth: '',
-    method: 'POST',
-    body: { code: syncCode }
-  });
-  assert.equal(verifyRes.status, 200);
-  assert.equal(verifyRes.data.ok, true);
-
-  // After link, Google user sees the income recorded on Telegram!
-  const unifiedGoogleProfile = (await request('/profile', { token: googleToken, auth: '' })).data;
-  assert.equal(unifiedGoogleProfile.expenses.length, 1);
-  assert.equal(unifiedGoogleProfile.expenses[0].id, 'inc-user-601-01');
-
-  // 4. Friends & Circles (Life360 Model)
-  // Create users 701, 702, 703, 704, 705
-  const p701 = (await request('/profile', { user: 701 })).data;
-  const p702 = (await request('/profile', { user: 702 })).data;
-  const p703 = (await request('/profile', { user: 703 })).data;
-  const p704 = (await request('/profile', { user: 704 })).data;
-  const p705 = (await request('/profile', { user: 705 })).data;
-
-  // 701 attempts to create circle with 702 before becoming friends -> 400
-  const earlyCircle = await request('/circles/create', {
-    user: 701,
-    method: 'POST',
-    body: { name: '早退圈', friendIds: ['702'] }
-  });
-  assert.equal(earlyCircle.status, 400);
-
-  // 701 adds 702, 703, 704, 705 as friends via friend codes
-  assert.equal((await request('/friends/add', { user: 701, method: 'POST', body: { friendCode: p702.social.myFriendCode } })).status, 200);
-  assert.equal((await request('/friends/add', { user: 701, method: 'POST', body: { friendCode: p703.social.myFriendCode } })).status, 200);
-  assert.equal((await request('/friends/add', { user: 701, method: 'POST', body: { friendCode: p704.social.myFriendCode } })).status, 200);
-  assert.equal((await request('/friends/add', { user: 701, method: 'POST', body: { friendCode: p705.social.myFriendCode } })).status, 200);
-
-  // Mutual friend check: 702 now has 701 in friends list
-  const p702Friends = (await request('/profile', { user: 702 })).data;
-  assert.ok(p702Friends.social.friends.some(f => f.userId === '701' || f.id === 'u_701'));
-
-  // 701 tries to create circle with 4 friends (total 5 people) -> exceeds max 4
-  const exceedCircle = await request('/circles/create', {
-    user: 701,
-    method: 'POST',
-    body: { name: '超员圈', friendIds: ['702', '703', '704', '705'] }
-  });
-  assert.equal(exceedCircle.status, 400);
-
-  // 701 creates circle with 3 friends (total 4 people) -> success
-  const createCircleRes = await request('/circles/create', {
-    user: 701,
-    method: 'POST',
-    body: { name: '温馨四人小窝', friendIds: ['702', '703', '704'] }
-  });
-  assert.equal(createCircleRes.status, 200);
-  const circleId = createCircleRes.data.social.activeCircleId;
-  assert.ok(circleId);
-
-  // Active circle has 4 consumers
-  assert.equal(createCircleRes.data.settings.consumers.length, 4);
-
-  // 701 records an expense in the circle ledger
-  const circleExpense = await request('/expenses', {
-    user: 701,
-    method: 'POST',
-    body: {
-      id: 'cir-exp-01',
-      amountMinor: 12000,
-      currency: 'JPY',
-      categoryId: 'stomach',
-      consumer: 'u_701',
-      note: '四人家庭聚餐',
-      timezone: 'Asia/Tokyo'
-    }
-  });
-  assert.equal(circleExpense.status, 200);
-
-  // 702 switches to this circle and sees the expense!
-  const switch702 = await request('/circles/switch', {
-    user: 702,
-    method: 'POST',
-    body: { circleId }
-  });
-  assert.equal(switch702.status, 200);
-  assert.equal(switch702.data.expenses.length, 1);
-  assert.equal(switch702.data.expenses[0].id, 'cir-exp-01');
-
-  // 701 switches back to personal ledger -> circle expense not in personal ledger
-  const switchBack701 = await request('/circles/switch', {
-    user: 701,
-    method: 'POST',
-    body: { circleId: null }
-  });
-  assert.equal(switchBack701.status, 200);
-  assert.equal(switchBack701.data.social.activeCircleId, null);
-  assert.equal(switchBack701.data.expenses.length, 0);
+test('Google rejects unverifiable credentials and links both records and circle identities atomically', async t => {
+  const f = await fixture(t), r=f.request;
+  assert.equal((await r('/auth/google',{user:null,body:{email:'victim@test',sub:'123'}})).status,401);
+  assert.equal((await r('/auth/google',{user:null,body:{credential:'header.fake.signature'}})).status,401);
+  const login = await r('/auth/google',{user:null,body:{credential:'verified-a'}}); assert.equal(login.status,200);
+  const session=login.data.sessionToken, googleMember=login.data.profile.user.id;
+  const googleSettings = login.data.profile.settings;
+  googleSettings.categories.push({ id:'custom',label:'Coffee',icon:'coffee',color:'peach' });
+  await r('/settings',{session,method:'PUT',body:googleSettings});
+  await r('/expenses',{session,body:expense('google-expense-01',googleMember)});
+  await r('/expenses',{body:expense('telegram-exp-01','u_101')});
+  const googleCircle = (await r('/circles/create',{session,body:{name:'Travel'}})).data.social.activeCircleId;
+  const link = (await r('/auth/link-code',{body:{}})).data;
+  const preview = await r('/auth/link-preview',{session,body:{code:link.code}}); assert.equal(preview.data.target.id,'u_101');
+  assert.equal((await r('/auth/link-verify',{session,body:{code:link.code}})).status,400);
+  assert.equal((await r('/auth/link-verify',{session,body:{code:link.code,confirm:true}})).status,200);
+  const fromGoogle = (await r('/profile',{session})).data;
+  assert.equal(fromGoogle.user.id,'u_101'); assert.equal(fromGoogle.account.hasGoogle,true); assert.equal(fromGoogle.account.hasTelegram,true);
+  assert.equal(fromGoogle.social.circles[0].members[0].id,'u_101'); assert.equal(fromGoogle.social.circles[0].isAdmin,true);
+  await r('/circles/switch',{session,body:{circleId:null}});
+  const merged=(await r('/profile')).data; assert.equal(merged.expenses.length,2); assert.ok(merged.expenses.every(e=>e.consumer==='u_101'));
+  assert.ok(merged.settings.categories.some(c=>c.label==='Coffee'), 'custom categories survive account merge');
+  await r('/circles/switch',{session,body:{circleId:googleCircle}});
+  assert.equal((await r('/profile')).data.social.activeCircleId,googleCircle);
+  assert.equal((await r('/auth/link-verify',{session,body:{code:link.code,confirm:true}})).status,404);
+  const again=await r('/auth/google',{user:null,body:{credential:'verified-a'}}); assert.equal(again.data.profile.user.id,'u_101');
+  await r('/auth/logout',{session,body:{}}); assert.equal((await r('/profile',{session})).status,401);
+  await f.restart(); assert.equal((await r('/profile')).data.account.hasGoogle,true);
 });
-
+test('direct Google link needs confirmation and prevents conflicting provider merges', async t => {
+  const f=await fixture(t), r=f.request;
+  const link=await r('/auth/google',{body:{credential:'verified-a',link:true}}); assert.ok(link.data.linkTicket);
+  assert.equal((await r('/profile')).data.account.hasGoogle,false);
+  const merged=await r('/auth/link-verify',{body:{ticket:link.data.linkTicket,confirm:true}}); assert.equal(merged.status,200);
+  const another=await r('/auth/google',{body:{credential:'verified-b',link:true}});
+  assert.equal((await r('/auth/link-verify',{body:{ticket:another.data.linkTicket,confirm:true}})).status,409);
+  const code=(await r('/auth/link-code',{body:{}})).data.code;
+  f.advance(16*60000); assert.equal((await r('/auth/link-preview',{user:202,body:{code}})).status,404);
+});
+test('legacy files migrate without deleting entries or retaining fake default members/sessions', async t => {
+  const dataDir=await mkdtemp(path.join(os.tmpdir(),'for-v05-test-'));
+  const settings={...initialSettings(),consumers:[{id:'xingrun',name:'Xingrun',color:'blue',avatar:'cat'},{id:'liia',name:'Liia',color:'milk',avatar:'bunny'}]};
+  const legacy={settings,expenses:[{...expense('legacy-entry-01','liia'),category:settings.categories[0],createdAt:new Date().toISOString(),dayKey:'2026-10-10'}]};
+  await writeFile(path.join(dataDir,'101.json'),JSON.stringify(legacy));
+  await writeFile(path.join(dataDir,'_shares.json'),JSON.stringify({userProfiles:{101:{name:'Actual user',color:'blue',avatar:'cat'}},sessions:{unsafe:{userId:'101',expiresAt:Date.now()+100000}}}));
+  const f=await fixture(t,{dataDir}), p=(await f.request('/profile')).data;
+  assert.deepEqual(p.settings.consumers.map(c=>c.name),['Actual user']); assert.equal(p.expenses[0].member.name,'Liia');
+  assert.deepEqual(JSON.parse(await readFile(path.join(dataDir,'101.json'),'utf8')),legacy);
+  assert.equal(JSON.parse(await readFile(path.join(dataDir,'_pocket-v2.json'),'utf8')).version,2);
+  await f.restart(); assert.equal((await f.request('/profile')).data.expenses[0].member.name,'Liia');
+  assert.equal((await f.request('/profile',{session:'unsafe'})).status,401);
+});
+test('capacity uses distinct members and blocked attempts do not mutate membership', async t => {
+  const f=await fixture(t), r=f.request, created=(await r('/circles/create',{body:{name:'Capacity'}})).data;
+  const id=created.social.activeCircleId, invite=(await r('/circles/invite',{body:{circleId:id}})).data;
+  for(let i=0;i<MAX_CIRCLE_MEMBERS-1;i++) assert.equal((await r('/circles/join',{user:1000+i,body:{code:invite.code,confirm:true}})).status,200);
+  assert.equal((await r('/circles/join',{user:9999,body:{code:invite.code,confirm:true}})).status,409);
+  assert.equal((await r('/profile')).data.social.activeCircle.memberCount,MAX_CIRCLE_MEMBERS);
+});

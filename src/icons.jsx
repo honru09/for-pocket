@@ -14,7 +14,7 @@ const paths = {
   backspace: 'm9 5-7 7 7 7h11V5Zm3 4 6 6m0-6-6 6',
   globe: 'M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0ZM3 12h18M12 3c-5 6-5 12 0 18 5-6 5-12 0-18Z',
   face: 'M8 9v2m8-2v2m-7 4q3 3 6 0',
-  cat: 'M4 4l3 5h10l3-5-1 7a9 9 0 0 1-14 0ZM8 12v1m8-1v1m-6 3q2 2 4 0m-8-2H4m14 0h2',
+  cat: 'M5 10 4 4q0-1 1 0l4 3q3-1 6 0l4-3q1-1 1 0l-1 6q2 3 1 6c-1 4-15 4-16 0q-1-3 1-6ZM8 12v1m8-1v1m-5 2 1 1 1-1m-1 1v1m-6-2H3m15 0h3',
   bunny: 'M7 2c0 4 2 8 2 8m8-8c0 4-2 8-2 8M6 14a6 6 0 1 0 12 0 6 6 0 0 0-12 0ZM9 14v1m6-1v1m-5 3q2 1.5 4 0',
   bear: 'M5 4a3 3 0 0 0-1 5 8 8 0 0 0 16 0 3 3 0 0 0-1-5M8 12v1m8-1v1m-6 3q2 2 4 0',
   chick: 'M12 3a2 2 0 0 1 0 3 7 7 0 1 0 7 7M10 11v1m5-1v1m-4 3 2 1.5 2-1.5',
@@ -38,10 +38,16 @@ const paths = {
   plus: 'M12 5v14m-7-7h14',
   arrowUp: 'M12 19V5m0 0-5 5m5-5 5 5',
   arrowDown: 'M12 5v14m0 0-5-5m5 5 5-5',
+  chevronDown: 'm6 9 6 6 6-6',
+  arrowRight: 'M5 12h14m-5-5 5 5-5 5',
+  clock: 'M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0ZM12 7v5l3 2',
   google: 'M21.35 11.1h-9.17v2.98h5.27c-.23 1.25-.94 2.31-2 3.02v2.51h3.24c1.89-1.74 2.98-4.31 2.98-7.39 0-.52-.05-1.03-.12-1.51M12.18 21.64c2.68 0 4.93-.89 6.57-2.41l-3.24-2.51c-.89.6-2.03.95-3.33.95-2.56 0-4.73-1.73-5.51-4.06H3.32v2.59c1.64 3.25 5.01 5.44 8.86 5.44M6.67 13.61c-.2-.6-.31-1.24-.31-1.9s.11-1.3.31-1.9V7.22H3.32a9.7 9.7 0 0 0 0 8.98l3.35-2.59M12.18 5.68c1.46 0 2.77.5 3.8 1.49l2.85-2.85C17.1 2.73 14.86 1.73 12.18 1.73c-3.85 0-7.22 2.19-8.86 5.49l3.35 2.59c.78-2.33 2.95-4.13 5.51-4.13',
 };
 export const Icon = memo(function Icon({ name, ...props }) {
   return <svg className="for-icon" viewBox="0 0 24 24" aria-hidden="true" {...props}><path d={paths[name] || paths.spark} /></svg>;
+});
+export const CloudAvatar = memo(function CloudAvatar() {
+  return <svg className="cloud-avatar" viewBox="0 0 130 126" aria-hidden="true"><path fill="#f9c678" d="M24 53C16 18 48 7 68 18C86-1 121 23 107 52C130 74 113 107 87 101C70 128 38 116 35 98C4 105-5 68 24 53Z"/><path d="M45 58v7m28-10v7M50 78q10 10 20-3" fill="none" stroke="#635b3c" strokeWidth="5" strokeLinecap="round"/><ellipse cx="35" cy="74" rx="7" ry="4" fill="#ed885f"/><ellipse cx="88" cy="72" rx="7" ry="4" fill="#ed885f"/></svg>;
 });
 export const Mascot = memo(function Mascot({ mascotRef }) {
   return <svg ref={mascotRef} className="mascot" id="mascot" viewBox="0 0 130 126" aria-hidden="true"><path className="mascot-body" d="M24 53C16 18 48 7 68 18C86-1 121 23 107 52C130 74 113 107 87 101C70 128 38 116 35 98C4 105-5 68 24 53Z"/><path d="M45 58v7m28-10v7" className="face-eyes"/><path d="M50 78q10 10 20-3" className="face-mouth"/><ellipse cx="35" cy="74" rx="7" ry="4" fill="#ed885f"/><ellipse cx="88" cy="72" rx="7" ry="4" fill="#ed885f"/></svg>;

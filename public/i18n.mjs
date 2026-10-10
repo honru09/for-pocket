@@ -1,4 +1,5 @@
 import { DEFAULT_CATEGORIES } from './shared.mjs';
+import { ACCOUNT_COPY } from './account-i18n.mjs';
 
 export const LOCALES = { zh: 'zh-CN', en: 'en-US', uk: 'uk-UA' };
 export const MESSAGES = {
@@ -112,7 +113,7 @@ export const MESSAGES = {
   },
 };
 export function translate(language, key, values = {}) {
-  const message = MESSAGES[language]?.[key] ?? MESSAGES.zh[key];
+  const message = ACCOUNT_COPY[key]?.[{ zh: 0, en: 1, uk: 2 }[language] ?? 0] ?? MESSAGES[language]?.[key] ?? MESSAGES.zh[key];
   if (message === undefined) throw new Error(`Missing translation: ${key}`);
   return message.replace(/\{(\w+)\}/g, (_, field) => String(values[field] ?? ''));
 }
@@ -139,6 +140,7 @@ export function categoryLabel(category, language) {
 }
 export function translateError(message, language) {
   if (!message) return translate(language, 'errorSave');
+  if (ACCOUNT_COPY[message] || MESSAGES.zh[message]) return translate(language, message);
   const key = Object.keys(MESSAGES.zh).find(k => k.startsWith('error') && MESSAGES.zh[k] === message);
   const aliases = {
     '请从 Telegram bot 重新打开。': 'errorAuth',

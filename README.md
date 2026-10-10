@@ -1,102 +1,108 @@
 # for. · 花给生活
 
-一个有 Q 弹手感的 Telegram 记账 Mini App。默认 **日元 JPY**。
+一个打开就能记账的 Telegram Mini App。默认日元 JPY，支持中文、English、Українська。
 
-打开 → 大数字输入金额 → 选「胃 / 学习 / 日常用品 / 兴趣 / 旅游 / 其他」→ 选 Xingrun 或 Liia → 记下。
+**输入金额 → 选用途 → 保存。** 个人账本自动记给自己；圈子可选择真实成员。昵称、头像和颜色在设置中修改。
 
-## 界面预览
+## 界面与功能
 
-| 手机端主页 | 账本明细与汇总 | 分类编辑 |
-| :---: | :---: | :---: |
-| ![手机端主页](docs/screenshots/for-preview-mobile.png) | ![账本明细与汇总](docs/screenshots/for-preview-history.png) | ![分类编辑](docs/screenshots/for-preview-editor.png) |
+保留奶油纸色、鼠尾草绿、小黄云和轻压回弹。金额、分类、键盘是首页主体。顶部仅保留账本切换与头像入口；圈子、账号连携、语言和个人形象放在二级页面。
 
-| 宽屏桌面端适配 | 英文模式 | 乌克兰语模式 |
-| :---: | :---: | :---: |
-| ![宽屏桌面端适配](docs/screenshots/for-preview-desktop.png) | ![英文模式](docs/screenshots/for-preview-en.png) | ![乌克兰语模式](docs/screenshots/for-preview-uk-history.png) |
+| 快速记账 | 圈子管理 |
+| --- | --- |
+| ![快速记账](docs/screenshots/for-preview-mobile.png) | ![圈子管理](docs/screenshots/for-preview-circles.png) |
 
-## 已实现
+- 支出与收入各有独立的 1–18 个可编辑分类；流水显示正负金额、成员及分类快照，汇总显示收入、支出、结余。
+- 点击首页右侧日期可选择记账时间，默认使用保存时的现在；点击旧账单时间可修改日期和时间，流水和统计随之归组。
+- Google 与 Telegram 登录映射到统一账户；连携前预览、确认，合并个人记录、分类及圈子关系。
+- 圈子邀请码有效期 72 小时，先预览再接受，个人账本与各圈子独立。
+- 成员均可邀请；管理员可改名、移除成员、设置其他管理员；最后一位管理员退出会自动交接。每圈最多 99 名成员。
+- 固定 Liia / Xingrun 角色已移除；原账单中的历史名字保留。
+- 前台每 3 秒刷新共享账本，回到页面也会刷新。切换账本保留各自草稿；过期账本请求会被服务端拒绝。
+- 删除及撤销、键盘输入、Telegram 触感反馈和返回按钮、减少动态效果支持。
+- 小黄云图标、有效 Web App Manifest、180px iOS 主屏图标；没有离线写入同步队列。
 
-- React 18 + Vite + TelegramUI 真实组件，保留奶油色、鼠尾草绿与小表情主题。
-- 金额大屏、触摸数字键盘、轻压回弹、保存反馈。
-- 中文 / English / Українська 三语切换，语言偏好会保存。按钮、默认分类、账本、提示及日期 / 金额格式跟随语言；自定义分类名与备注保留原文。
-- 入账前必选消费者：蓝色 **Xingrun**、红色 **Liia**。账单显示对应姓名与颜色；每次保存后清除人选，旧记录显示「未标注」。
-- 界面只保留必要文字，移除装饰性英文小字和重复提示。
-- JPY 整数；CNY / USD 两位小数。金额用最小单位整数存储。
-- 自定义 1–18 个分类，每个名称最多 24 个字符，支持改名、选择图标和颜色、增删。历史记录保留记录时的分类名称。
-- 可选备注、今日总额、月度 / 全部账本、用途汇总、按币种查看。
-- 删除记录后可撤销；没有演示数据混进账本。
-- 手机 / 桌面布局，键盘输入，减少动态效果设置。
-- Telegram 触感反馈、展开窗口、返回按钮、有未保存输入时的关闭提示。
-- 服务端验证 Telegram initData，按用户分开存储，原子写入，保存重试不重复入账。
+详细差异见 [升级记录](docs/UPGRADE-v0.5.md)。
 
-## 本机体验
+## 本机运行
 
-需要 Node.js 22.12 或更新版本。首次安装依赖后启动；`npm start` 会先构建 React 页面。
+需要 Node.js 22.12+。
 
 ```powershell
-cd "这里填 for-pocket 文件夹的路径"
 npm ci
 npm start
 ```
 
-打开 <http://127.0.0.1:8787>。
+打开 http://127.0.0.1:8787/ 。`npm start` 自动构建页面。开发时保持 API 服务运行，再执行 `npm run dev` 使用 Vite 热更新。
 
-开发时先运行 `npm start` 提供 API，再在另一个终端运行 `npm run dev`，打开 Vite 提示的地址（默认 5173），可热更新组件与样式。
+未登录时可直接在浏览器中记账，记录仅保存在当前浏览器。登录后打开服务器账本；原本机记录仍保留，退出登录后可查看。连携合并的是已验证的 Google / Telegram 账户，不会自动上传浏览器预览记录。
 
-没有配置 BOT_TOKEN 时是 **本机预览模式**：记录仅存在当前浏览器 localStorage，界面底部会说明。换浏览器、清除站点数据后不会保留，也不会自动迁入 Telegram 账本。
+## Telegram 接入
 
-## 接到自己的 Telegram bot
+1. 在 [BotFather](https://t.me/BotFather) 创建 bot。
+2. 复制 `.env.example` 为 `.env`，设置 `BOT_TOKEN`、`PUBLIC_URL`。
+3. 在可提供 HTTPS 的 Node 服务上执行 `npm ci`、`npm start`。平台需要时设置 `HOST=0.0.0.0` 和 `PORT`。
+4. 单独运行 `npm run bot` 设置菜单入口并响应 `/start`。同一个 bot 只运行一个轮询进程。
 
-1. 在 [@BotFather](https://t.me/BotFather) 用 `/newbot` 创建自己的 bot，取得 token。
-2. 将 `.env.example` 复制为 `.env`，在本机填入 `BOT_TOKEN` 和 `PUBLIC_URL`。token 仅在服务端使用，不写进前端、不提交进 git。
-3. 将整个项目放到支持 Node.js 的服务器上，执行 `npm ci` 并让 `npm start` 持续运行。外部入口必须是可访问的 **HTTPS**，代理到服务的 8787 端口。使用容器或平台分配端口时设置 `HOST=0.0.0.0` 和平台要求的 `PORT`。
-4. 在另一个终端运行 `npm run bot`。它会为此 bot 设置菜单入口，并用 long polling 响应私聊 `/start` 和 `/help`。只运行一个 bot 轮询进程。
-5. 私聊 bot 发送 `/start`，点「打开小账本」。也可用聊天菜单「＋ 记一笔」打开。
+`bot.mjs` 检测到已有 webhook 会停止，避免覆盖已有服务。网页服务器启动时不会自动修改 Telegram 菜单。
 
-可选：在 BotFather 的 Bot Settings 中配置 Main Mini App，即可使用 bot 资料页入口。
+## Google 登录与连携
 
-`bot.mjs` 检测到已有 webhook 时会停止，防止覆盖这个 bot 的现有服务。新建一个专用 bot 最简单。
+在 Google Cloud 创建 **Web application** OAuth Client，将站点 origin（含协议与端口）添加到 Authorized JavaScript origins，在服务端配置 `GOOGLE_CLIENT_ID` 后重启。正式站点使用 HTTPS。
 
-### 数据与部署
+前端使用 Google Identity Services；服务端使用 `google-auth-library.verifyIdToken` 检查签名、audience、issuer、有效期，以 `sub` 识别账号。不会接受仅含 email / sub 的自报身份。会话令牌只在服务端保存哈希，退出会撤销当前会话。
 
-- 默认存储在 `data/<Telegram 用户 ID>.json`，服务端只允许访问已验证身份的个人账本。
-- `DATA_DIR` 可设置为持久磁盘目录。**部署到容器 / 平台时需挂载持久磁盘，并定期备份**。
-- 当前适用于个人小工具、单个服务进程。不要让多个服务副本同时写同一数据目录；规模扩大时应迁移到数据库。
-- 默认会话有效期 24 小时；过期后从 bot 重新打开。可通过 `AUTH_MAX_AGE_SECONDS` 修改。
-- 每个用户账本上限 10000 笔，包括软删除记录。删除通过标记实现，支持撤销。
-- 本地预览可独立体验；真实 Telegram 入口尚需你自己的 bot token 和 HTTPS 部署地址。
+Telegram 用户可直接连接 Google；也可在一端生成 15 分钟有效的连携码，在另一个已登录账号输入、预览并确认。只连接自己的账号。两个不同的同类身份会拒绝合并；同名分类采用目标配置，不同分类合并后超过 18 个会提示先精简。语言、币种及形象采用目标账号设置。
 
-## 验证
+## 数据与迁移
+
+- 新数据写入 `DATA_DIR/_pocket-v2.json`，包含用户、身份、会话、圈子及账本。事务以临时文件原子替换，合并与权限变更一起提交。
+- 首次运行读取旧用户 JSON、`_shares.json`，迁移实际用户、账单、圈子及双人账本；旧文件不修改，可用于恢复。旧会话作废，需要重新登录。
+- 旧双人账本变为共享圈子，原始个人记录保留。历史消费者与分类快照保留，不再作为固定角色选项。
+- 部署需为 `DATA_DIR` 挂载持久磁盘并做备份。适合**单个 Node 进程**；多个副本需先改用共享数据库及事务。
+- 每本账最多 10,000 条记录（含软删除）。金额按最小货币单位整数保存；JPY 整数，CNY / USD 两位小数。
+
+## 验证与动效
 
 ```powershell
+npm run build
 npm test
 ```
 
-测试包含身份伪造 / 过期拒绝、用户隔离、并发保存、重试去重、中文备注、分类历史保留、消费者必填验证、语言保存、删除撤销和服务重启持久化。
+[验证记录](VERIFICATION.md) 包含 API、浏览器多用户、三语、窄屏、草稿及连携检查。
 
-浏览器交互验证记录见 `VERIFICATION.md`。
+React 18 + Vite，实际使用 TelegramUI 的 AppRoot、Button、Input、Select、Cell、SegmentedControl、Snackbar、Placeholder、Tappable；基础样式在 `src/main.jsx` 引入，主题变量延续原配色。
 
-## 动效设计
+页面切换约 220ms，按压约 100ms、释放约 240ms。transform / opacity 与 Web Animations API 驱动，不通过 React 逐帧更新布局。减少动态效果时取消伸缩、滑入。实际帧率取决于设备和 Telegram WebView，未声称所有手机达到 120fps。
 
-TelegramUI 的 `AppRoot`、`SegmentedControl`、`Button`、`Input`、`Select`、`Cell`、`Snackbar`、`Placeholder`、`Tappable` 已用于实际页面，基础样式在 `src/main.jsx` 引入；用 `--tgui--*` 主题变量延续原配色。iOS / macOS 使用 iOS 平台样式，其他客户端使用基础样式。
+## 主要文件
 
-顶部滑动指示块约 200ms，页面短距离过渡 220ms，按压 100ms、释放 240ms。CSS transform / opacity 与 Web Animations API 承担动画，不依靠 React 逐帧更新布局。高频金额输入的伸缩幅度很小；键盘操作即时响应，系统开启减少动态效果时取消伸缩与滑入。
+- `src/App.jsx`：快速记账、流水、设置入口与草稿。
+- `src/AccountViews.jsx`：个人形象、账号连携、圈子及对话框。
+- `src/TimeEditor.jsx`：轻量日期时间编辑。
+- `src/services.mjs`：本机与服务器服务。
+- `src/styles.css`、`src/account-styles.css`：主题、布局与动效。
+- `domain.mjs`：圈子权限、账本与账户合并。
+- `store.mjs`：事务写入与数据迁移。
+- `server.mjs`、`auth.mjs`：静态服务、Google / Telegram 身份验证。
+- `public/shared.mjs`：共用验证；`public/i18n.mjs`、`public/account-i18n.mjs`：三语。
+- `bot.mjs`：Telegram 菜单及 `/start`。
 
-设计面向高刷新率屏幕，实际帧率取决于设备和 Telegram WebView；本次桌面验证不等于所有手机均已达到 120fps。
+官方资料：[TelegramUI](https://github.com/telegram-mini-apps-dev/TelegramUI)、[Telegram Mini Apps](https://core.telegram.org/bots/webapps)、[Google ID token 验证](https://developers.google.com/identity/gsi/web/guides/verify-google-id-token)。
 
-## 文件
+## 发布与备份
 
-- `src/App.jsx`：React 页面与 TelegramUI 组件。
-- `src/styles.css`：原主题与组件样式适配、动效、手机布局。
-- `src/services.mjs`：本地 / Telegram 服务端存储，兼容原账本数据。
-- `src/icons.jsx`：分类图标与小表情。
-- `index.html`、`vite.config.mjs`：React 构建入口和开发服务配置。
-- `dist/`：构建产物，由 `server.mjs` 提供预览与部署页面。
-- `public/shared.mjs`：前后端共用的金额、分类、消费者与验证规则。
-- `public/i18n.mjs`：中文、英文、乌克兰语文案；默认分类随语言显示。
-- `server.mjs`：网页服务和私人账本 API。
-- `auth.mjs`：Telegram 身份验证。
-- `bot.mjs`：Telegram 菜单和 `/start` 入口。
-- `tests/`：关键数据完整性测试。
+用户已决定保持 Render 免费实例、暂不部署。v0.5.0 发布代码同步到 `release/v0.5.0`，线上 `main` 仍为旧版。不要合并草稿 PR 触发部署：当前线上没有持久盘，部署会丢失服务器账单，Google Client ID 也未配置。
 
-官方文档：[TelegramUI](https://github.com/telegram-mini-apps-dev/TelegramUI)、[Telegram Mini Apps](https://core.telegram.org/bots/webapps)、[initData 验证](https://core.telegram.org/bots/webapps#validating-data-received-via-the-mini-app)、[Bot API](https://core.telegram.org/bots/api)。
+新增 Linux / Windows CI、Render 可选付费蓝图、只读配置审计、备份与校验恢复、bot 菜单检查和版本/资源验收工具。`render.yaml` 当前未应用，不会仅因提交文件就开通付费服务。
+
+```powershell
+npm run render:inspect
+npm run backup
+# 停止应用后，恢复到新空目录
+npm run restore -- BACKUP_DIRECTORY EMPTY_DATA_DIRECTORY
+npm run bot:configure
+npm run verify:deployment -- URL --version=0.5.0 --commit=SHA
+```
+
+详见 [部署与交接](DEPLOYMENT_HANDOFF_PLAN.md)。保留私有 `.env`；不要上传密钥、账单或备份。
