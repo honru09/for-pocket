@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { Tappable } from '@telegram-apps/telegram-ui';
 import { createPortal } from 'react-dom';
 
 const BODY = 'M24 53C16 18 48 7 68 18C86-1 121 23 107 52C130 74 113 107 87 101C70 128 38 116 35 98C4 105-5 68 24 53Z';
@@ -9,16 +10,15 @@ const MOUTHS = ['M50 78q10 10 20-3', 'M50 78q10 10 20-3', 'M56 79q5 5 10-1', 'M6
 function Cloud({ mood }) {
   return <svg className="mascot" id="mascot" viewBox="0 0 130 126" aria-hidden="true">
     <path className="mascot-body" d={BODY}/>
-    <path className="cloud-highlight" d="M27 47C29 28 45 19 61 21"/>
-    <ellipse className="cloud-glint" cx="32" cy="42" rx="4" ry="7" transform="rotate(28 32 42)"/>
-    <g className="cloud-face">
+    <g className="cloud-face-idle">
+      <g className="cloud-face">
       {mood >= 5 && <path className="cloud-brows" d={mood === 6 ? 'M39 48l15 8m30-10-16 9' : 'M40 51l13 5m29-7-12 5'}/>}
-      <path d={EYES[mood]} className="face-eyes"/>
+      <g className="cloud-eyes"><path d={EYES[mood]} className="face-eyes"/></g>
       <path d={MOUTHS[mood]} className={`face-mouth ${mood === 6 ? 'cloud-angry-mouth' : ''}`}/>
       <ellipse className="cloud-blush" cx="35" cy="74" rx={mood === 2 ? 11 : 7} ry={mood === 2 ? 6 : 4}/>
       <ellipse className="cloud-blush" cx="88" cy="72" rx={mood === 2 ? 11 : 7} ry={mood === 2 ? 6 : 4}/>
       {mood === 2 && <g className="cloud-blush-lines"><path d="m30 72 2 4m3-5 2 4m45-5 2 4m3-5 2 4"/></g>}
-      {mood === 2 && <g className="cloud-shy-sparkles"><path d="M24 56v7m-3.5-3.5h7m79-5v7m-3.5-3.5h7"/></g>}
+      </g>
     </g>
     {mood === 3 && <text className="cloud-question" x="101" y="32">?</text>}
     {mood === 4 && <><path className="cloud-sigh" d="M89 83q12-11 19-4q4 7-4 9q-8 1-9-3m11-12q8-2 9 5"/><path className="cloud-teardrop" d="M92 54q5 7 0 11q-5-4 0-11Z"/></>}
@@ -99,11 +99,11 @@ export default function PocketMascot({ mascotRef, t, onTap }) {
   const moodKey = step === 7 ? 'cloudPopped' : MOODS[step];
   const label = sign ? t(signTaps ? 'cloudRestoreAgain' : 'cloudRestore') : t('cloudTap', { mood:t(moodKey) });
   return <>
-    <button type="button" ref={buttonRef} className="mascot-toy" data-phase={phase} data-mood={Math.min(step,6)} data-sign-taps={signTaps} aria-label={label} aria-disabled={phase === 'burst' || phase === 'falling'} onClick={tap}>
-      {!sign && <span ref={node => { motionRef.current = node; if (mascotRef) mascotRef.current = node; }} className="cloud-motion"><span className="cloud-shell"><Cloud mood={Math.min(step,6)}/></span></span>}
+    <Tappable Component="button" type="button" interactiveAnimation="opacity" ref={buttonRef} className="mascot-toy" data-phase={phase} data-mood={Math.min(step,6)} data-sign-taps={signTaps} aria-label={label} aria-disabled={phase === 'burst' || phase === 'falling'} onClick={tap}>
+      {!sign && <span ref={node => { motionRef.current = node; if (mascotRef) mascotRef.current = node; }} className="cloud-motion"><span className="cloud-touch"><span className="cloud-shell"><Cloud mood={Math.min(step,6)}/></span></span></span>}
       {phase === 'burst' && <span className="cloud-pop" aria-hidden="true"><span className="cloud-pop-word">{t('cloudPopSound')}</span>{Array.from({length:6},(_,i) => <i key={i} style={{ '--puff-x':`${Math.cos(i * Math.PI / 3) * 32}px`, '--puff-y':`${Math.sin(i * Math.PI / 3) * 27}px` }}/>)}</span>}
       {sign && <span className="stop-sign-rest" data-hidden={phase === 'falling'}><StopSign/></span>}
-    </button>
+    </Tappable>
     <span className="cloud-announcement" role="status" aria-live="polite">{step ? t(moodKey) : ''}</span>
     {flight && phase === 'falling' && createPortal(<span ref={flightRef} className="cloud-sign-flight" style={flight}><StopSign/></span>,document.body)}
   </>;
