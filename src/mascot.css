@@ -62,8 +62,9 @@
 .mascot-toy[data-sign-taps="1"] .stop-sign-rest { transform:rotate(7deg); }
 .cloud-sign-flight { position:fixed; display:block; z-index:12; pointer-events:none; transform-origin:50% 95%; }
 .cloud-announcement { position:absolute; width:1px; height:1px; padding:0; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
-.for-root .mascot-stack { --cloud-size:108px; position:absolute; z-index:3; right:15px; bottom:25px; width:var(--cloud-size); height:var(--cloud-size); display:block; }
+.for-root .mascot-stack { --cloud-size:108px; position:absolute; z-index:3; right:15px; bottom:25px; width:var(--cloud-size); height:var(--cloud-size); display:block; pointer-events:none; }
 .for-root .mascot-stack .mascot-toy { position:relative; inset:auto; width:100%; height:100%; }
+.for-root .mascot-stack .mascot-toy,.for-root .mascot-stack .mascot-confirm { pointer-events:auto; }
 .for-root .mascot-confirm { position:absolute; z-index:4; right:-3px; bottom:-3px; width:29px; height:29px; min-width:29px; min-height:29px; padding:0; display:grid; place-items:center; border:2px solid var(--sage); border-radius:50%; background:var(--confirm,#f4c771); color:var(--ink); box-shadow:0 3px 9px #333a3024; font-size:17px; font-weight:900; line-height:1; animation:cloud-confirm-in 220ms var(--ease-out); }
 .for-root .mascot-confirm>h6 { display:flex; align-items:center; justify-content:center; margin:0; font-size:17px; line-height:1; }
 .for-root .mascot-confirm:not(:disabled):hover { transform:scale(1.08) rotate(-4deg); box-shadow:0 5px 12px #333a3030; }
