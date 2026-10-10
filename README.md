@@ -95,7 +95,9 @@ React 18 + Vite，实际使用 TelegramUI 的 AppRoot、Button、Input、Select�
 项目已完整迁到 **D:\Projects\Tools\for-pocket**。正式平台为 Google Cloud Run：
 [生产站点](https://for-pocket-698348906987.asia-northeast1.run.app)。线上 Google/Telegram 配置已存在，真实 OAuth 验收仍需实际账号。
 
-本次记账页的确认键改为底部 52×52px 小方格；今日支出和小账本移到金额上方。界面改动在本地验证完成，尚未更新云端。
+记账页按 Telegram 实际可用高度适配，一屏显示金额、用途、数字键和成员选择；确认键为 44×44px 小方格。“记一笔 / 小账本”固定在底部并预留安全区。较矮屏幕将分类和数字键并排排列。圈子名称可由管理员点击直接编辑；分类图标按钮展开图标与颜色选项。界面改动通过本地验证后，推送 main 会由 Cloud Build 自动发布到 Cloud Run。
+
+金额卡片的小云朵可点击：闭眼笑、害羞、疑惑、叹气、小生气、暴怒，再轻轻炸开；「止まれ」路牌从屏幕顶部落下。点路牌两次或第七次点击后等待七秒恢复。彩蛋始终播放完整动效。
 
 Dockerfile 提供生产构建；私有 .env、数据、备份、work 和 outputs 均不进入 Docker 镜像构建上下文或 Git。Render 工具已归档，不再参与发布。
 

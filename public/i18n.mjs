@@ -4,6 +4,7 @@ import { ACCOUNT_COPY } from './account-i18n.mjs';
 export const LOCALES = { zh: 'zh-CN', en: 'en-US', uk: 'uk-UA' };
 export const MESSAGES = {
   zh: {
+    cloudPopSound: '砰', cloudTap: '点击小云朵：{mood}', cloudHappy: '笑脸', cloudSmile: '闭眼笑', cloudShy: '害羞了', cloudQuestion: '怎么啦？', cloudSigh: '叹气，无奈', cloudGrumpy: '有点生气', cloudFurious: '气得要炸了', cloudPopped: '小云朵轻轻炸开了', cloudRestore: '止まれ路牌，点两下恢复云朵，或等待七秒', cloudRestoreAgain: '再点一下，云朵就回来',
     title: '花给生活', record: '记一笔', ledger: '小账本', recordTitle: '花给什么', historyTitle: '小账本', manageTitle: '我的分类',
     language: '语言', navigation: '页面导航', amountInput: '金额输入', amountLabel: '金额', currentAmount: '当前金额', currency: '币种',
     JPY: '日元', CNY: '人民币', USD: '美元', categories: '用途', editCategories: '编辑', keypad: '数字键盘', clear: '清空金额', decimal: '小数点', backspace: '删除最后一位',
@@ -40,6 +41,7 @@ export const MESSAGES = {
     errorNetwork: '连接没成功，这次操作还未确认。请再试一次。', errorAuth: '请从 Telegram bot 重新打开，以验证身份。', errorSave: '暂时没有保存成功，请再试一次。', errorConnect: '暂时连接不上，请刷新后再打开。', errorBot: 'bot 服务还没有配置完成，请先配置服务端。', errorCapacity: '账本已满，请备份后扩展存储。', errorOrigin: '请求来源不匹配。', errorDeleted: '这笔记录已移除，请重新输入。',
   },
   en: {
+    cloudPopSound: 'Pop', cloudTap: 'Tap the little cloud: {mood}', cloudHappy: 'Smiling', cloudSmile: 'Smiling with eyes closed', cloudShy: 'Feeling shy', cloudQuestion: 'A little confused', cloudSigh: 'A helpless sigh', cloudGrumpy: 'A little grumpy', cloudFurious: 'About to pop with anger', cloudPopped: 'The little cloud softly popped', cloudRestore: 'Stop sign. Tap twice to restore the cloud, or wait seven seconds', cloudRestoreAgain: 'One more tap brings the cloud back',
     title: 'Little spending', record: 'Add', ledger: 'Ledger', recordTitle: "What's it for", historyTitle: 'Your ledger', manageTitle: 'Your categories',
     language: 'Language', navigation: 'Navigation', amountInput: 'Amount input', amountLabel: 'Amount', currentAmount: 'Current amount', currency: 'Currency',
     JPY: 'Yen', CNY: 'Yuan', USD: 'Dollar', categories: 'Category', editCategories: 'Edit', keypad: 'Number pad', clear: 'Clear amount', decimal: 'Decimal point', backspace: 'Delete last digit',
@@ -76,6 +78,7 @@ export const MESSAGES = {
     errorNetwork: 'Connection failed. The result is unconfirmed; please retry.', errorAuth: 'Reopen the app from the Telegram bot to sign in.', errorSave: 'Unable to save. Please retry.', errorConnect: 'Unable to connect. Refresh and try again.', errorBot: 'The bot server has not been configured yet.', errorCapacity: 'The ledger is full. Back up your records and expand storage.', errorOrigin: 'The request origin does not match.', errorDeleted: 'This expense was removed. Enter it again.',
   },
   uk: {
+    cloudPopSound: 'Пуф', cloudTap: 'Торкніться хмаринки: {mood}', cloudHappy: 'Усміхається', cloudSmile: 'Усмішка із заплющеними очима', cloudShy: 'Соромиться', cloudQuestion: 'Трохи спантеличена', cloudSigh: 'Безпорадно зітхає', cloudGrumpy: 'Трохи сердиться', cloudFurious: 'Ось-ось лусне від злості', cloudPopped: 'Хмаринка тихенько луснула', cloudRestore: 'Знак стоп. Торкніться двічі, щоб повернути хмаринку, або зачекайте сім секунд', cloudRestoreAgain: 'Ще один дотик поверне хмаринку',
     title: 'Маленькі витрати', record: 'Додати', ledger: 'Витрати', recordTitle: 'На що витратили', historyTitle: 'Ваші витрати', manageTitle: 'Мої категорії',
     language: 'Мова', navigation: 'Навігація', amountInput: 'Введення суми', amountLabel: 'Сума', currentAmount: 'Поточна сума', currency: 'Валюта',
     JPY: 'Єна', CNY: 'Юань', USD: 'Долар', categories: 'Категорія', editCategories: 'Змінити', keypad: 'Цифрова клавіатура', clear: 'Очистити суму', decimal: 'Десятковий роздільник', backspace: 'Видалити останню цифру',

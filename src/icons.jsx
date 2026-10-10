@@ -1,6 +1,8 @@
 import React, { memo } from 'react';
 
 const paths = {
+  home: 'm3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1V10Z',
+  more: 'M5 12h.01M12 12h.01M19 12h.01',
   bowl: 'M3 12h18c-1 6-4 9-9 9s-8-3-9-9ZM6 21h12M7 3c-3 3 3 3 0 6m5-7c-3 3 3 3 0 6m5-5c-3 3 3 3 0 6',
   book: 'M12 5c-3-2-6-2-9-1v15c3-1 6-1 9 1 3-2 6-2 9-1V4c-3-1-6-1-9 1Zm0 0v15M6 8h3m6 0h3M6 12h3m6 0h3',
   bag: 'M5 8h14l2 13H3L5 8Zm3 0V6a4 4 0 0 1 8 0v2M9 13v1m6-1v1m-6 3q3 2 6 0',
