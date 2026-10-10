@@ -78,3 +78,6 @@
 .for-root .finish .save-confirm:focus-visible{box-shadow:0 0 0 3px var(--paper),0 0 0 5px #a8b48f}
 @media(max-width:600px){.for-root #record-view .today-strip{margin-bottom:12px}.for-root #record-view .today-strip div>span{font-size:10px}.storage-state{font-size:8px}.for-root .finish{padding-bottom:0}}
 @media(max-width:600px){.for-root #record-view{padding-bottom:calc(12px + env(safe-area-inset-bottom,0px))}.for-root #record-view .record-layout{gap:8px}.for-root #record-view .page-heading{margin-bottom:8px}.for-root #record-view .today-strip{margin-bottom:8px}.for-root #record-view .amount-bottom{display:none}.for-root #record-view .category{height:56px}}
+.for-root #record-view .page-heading h1{min-width:0;overflow-wrap:anywhere}
+.for-root #record-view .date-button{flex-shrink:0}
+@media(max-width:360px){.for-root #record-view .page-heading{gap:6px}.for-root #record-view .page-heading h1{font-size:22px}}
