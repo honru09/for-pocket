@@ -163,6 +163,7 @@
  /* The compact amount card is only 76px tall. Keep the cloud below the
     type/currency row so its face and confirm affordance never cover it. */
  html[data-pocket-compact=true] .for-root #record-view .mascot-stack { --cloud-size:48px; right:10px; bottom:0; }
+ html[data-pocket-compact=true] .for-root #record-view .mascot-confirm { bottom:0; }
  html[data-pocket-compact=true] .for-root #record-view .purposes { grid-column:1; grid-row:2; }
  html[data-pocket-compact=true] .for-root #record-view .keypad { grid-column:2; grid-row:2; }
  html[data-pocket-compact=true] .for-root #record-view .finish { grid-column:1 / -1; grid-row:3; }
@@ -174,4 +175,5 @@
    placement at that boundary without changing the surrounding grid. */
 @media(max-width:600px) and (max-height:580px) {
  html .for-root #record-view .mascot-stack { --cloud-size:48px; right:10px; bottom:0; }
+ html .for-root #record-view .mascot-confirm { bottom:0; }
 }
