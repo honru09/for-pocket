@@ -34,13 +34,13 @@ export async function verifyDeployment(base, { version, commit, requireGoogle=fa
     if (bytes.length < 24 || bytes.subarray(0,8).toString('hex') !== '89504e470d0a1a0a') throw new Error('An icon is not a PNG.');
     if (`${bytes.readUInt32BE(16)}x${bytes.readUInt32BE(20)}` !== icon.sizes) throw new Error('Icon dimensions differ from the manifest.');
   }
-  return { version:health.version, commit:health.commit, assets:assets.length, googleConfigured:Boolean(config.googleClientId), telegramConfigured:config.telegramEnabled === true };
+  return { version:health.version, commit:health.commit, revision:health.revision || null, assets:assets.length, googleConfigured:Boolean(config.googleClientId), telegramConfigured:config.telegramEnabled === true };
 }
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const args=process.argv.slice(2), root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
   const pkg=JSON.parse(await readFile(path.join(root,'package.json'),'utf8'));
   const value=key=>args.find(a=>a.startsWith(`--${key}=`))?.split('=').slice(1).join('=');
-  verifyDeployment(args.find(a=>!a.startsWith('--')) || 'https://for-pocket.onrender.com',{version:value('version') || pkg.version,commit:value('commit'),requireGoogle:args.includes('--require-google'),requireTelegram:args.includes('--require-telegram')})
+  verifyDeployment(args.find(a=>!a.startsWith('--')) || 'https://for-pocket-698348906987.asia-northeast1.run.app',{version:value('version') || pkg.version,commit:value('commit'),requireGoogle:args.includes('--require-google'),requireTelegram:args.includes('--require-telegram')})
     .then(result=>console.log('Deployment verified:',JSON.stringify(result)))
     .catch(error=>{console.error('Deployment verification failed:',error.message);process.exitCode=1});
 }

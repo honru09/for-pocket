@@ -42,7 +42,7 @@ Manifest 是有效 JSON；图标为实际 PNG，512×512 与 180×180，已检�
 - 实际构建 JS/CSS、manifest 和 PNG 尺寸验收；错误版本、错误 commit、未配置的 Google / Telegram 拒绝。
 - 服务器将 HTML 回退页面伪装成资产时验收失败。
 
-Render API 实查：free、main 自动部署、DATA_DIR=./data、没有持久盘；Telegram 凭据存在，Google 未配置。`render:inspect` 正确拒绝将此服务视为持久存储已确认。
+历史 Render API 实查（现已弃用）：free、main 自动部署、DATA_DIR=./data、没有持久盘；Telegram 凭据存在，Google 未配置。`render:inspect` 正确拒绝将此服务视为持久存储已确认。
 
 Telegram 菜单 API 审计暂因网络连接失败未完成。没有启动 bot 轮询、修改 webhook 或发送聊天消息。BotFather 的 /app 直达入口尚未核实。
 
@@ -50,8 +50,16 @@ GitHub 发布分支 `release/v0.5.0` 配置 Linux / Windows Node 24 CI；最终�
 
 ## 验证边界
 
-- Google 自动化使用服务端验证 fixture；生产路径使用官方 google-auth-library。当前本地没有 OAuth client 配置，未完成真实 Google OAuth 登录验收。
+- Google 自动化使用服务端验证 fixture；生产路径使用官方 google-auth-library。当前生产 Google Client ID 已配置，仍未完成真实 Google OAuth 登录验收。
 - 未进行真实 iPhone 添加主屏或所有 Telegram WebView 设备测试；未测量/保证 120fps。
 - 共享刷新使用可见页面每 3 秒轮询，并非 WebSocket。
-- 本地实现和构建已更新；代码同步到发布分支。用户决定保持免费、暂不部署，线上旧版与 main 保留。
+- 用户后续已部署到 Google Cloud Run。本次迁移和 UI 改动在 D 盘本地完成，没有触发云端更新。
 - JSON 存储只支持单 Node 进程，多实例部署需要共享数据库。
+
+## D 盘迁移与小方格确认 · 2026-10-10
+
+项目 3,879 个文件、原 work 35 个文件及交付资料迁移，逐文件 SHA256/长度校验通过。C 盘源文件已移除，原项目空目录因占用暂保留。Git 历史、私有配置与安装依赖完整；运行与打包改为 D 盘。
+
+迁移后构建及 11/11 测试通过。浏览器检查 320/390/600/768/1280px：确认键均 52×52px、纯图标，今日摘要位于金额之前，确认是最后的操作行；无横向溢出。保存、重载后保留、账本跳转、Enter 保存与 pageerror 检查通过。390×844 的确认键底边为约 838px。截图已更新 mobile / desktop。
+
+公开 Cloud Run API 检查 v0.5.0，Google/Telegram 均已配置；未操作真实用户或生产账单。本次 UI 变更尚未部署；Render 配置和审计工具已归档。

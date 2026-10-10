@@ -60,3 +60,21 @@
 .for-root .settings-row>h6,.for-root .picker-row>h6{display:flex;align-items:center;gap:16px;text-align:left;width:100%;min-width:0;font-size:14px}.settings-row>h6>span:last-child{margin-left:auto;color:var(--muted)}.picker-row>h6>span:nth-child(2){flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.for-root .picker-row{border-radius:12px;padding:12px}
 .for-root .save-button>h6{font-size:14px}.for-root .view-tabs .tab>h6{font-size:11px}.sheet-actions button>h6{font-size:12px}
 @media(max-width:600px){.for-root .ledger-switcher>h6{font-size:10px;gap:6px}.for-root .date-button>h6{font-size:9px}.for-root .settings-row>h6,.for-root .picker-row>h6{font-size:13px}.for-root .text-button>h6{font-size:10px}}
+
+/* Warm pocket paper; amount leads, a quiet summary sits above it, one final stamp below. */
+.for-root{--confirm:#f4c771}
+.for-root #record-view{padding-bottom:calc(20px + env(safe-area-inset-bottom,0px))}
+.for-root #record-view .today-strip{margin:0 0 16px;padding:0;border:0;gap:10px;min-height:32px}
+.for-root #record-view .today-strip>div{gap:8px}
+.for-root #record-view .today-icon{width:28px;height:28px;border-radius:10px}
+.for-root #record-view .today-strip strong{font-size:16px}
+.for-root .save-actions{display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:52px}
+.storage-state{display:flex;align-items:center;gap:8px;min-width:0;color:var(--muted);font-size:9px}
+.storage-state button{min-height:36px;font-size:11px}
+.for-root .finish .save-confirm{width:52px;min-width:52px;max-width:52px;height:52px;min-height:52px;padding:0;border-radius:16px;display:grid;place-items:center;flex:0 0 52px;background:var(--confirm);color:var(--ink);box-shadow:none}
+.for-root .save-confirm>h6{display:flex;align-items:center;justify-content:center;margin:0;line-height:1}
+.save-confirm .for-icon{width:24px;height:24px;stroke-width:1.8}
+.for-root .finish .save-confirm:disabled{background:var(--control);color:#a2a892}
+.for-root .finish .save-confirm:focus-visible{box-shadow:0 0 0 3px var(--paper),0 0 0 5px #a8b48f}
+@media(max-width:600px){.for-root #record-view .today-strip{margin-bottom:12px}.for-root #record-view .today-strip div>span{font-size:10px}.storage-state{font-size:8px}.for-root .finish{padding-bottom:0}}
+@media(max-width:600px){.for-root #record-view{padding-bottom:calc(12px + env(safe-area-inset-bottom,0px))}.for-root #record-view .record-layout{gap:8px}.for-root #record-view .page-heading{margin-bottom:8px}.for-root #record-view .today-strip{margin-bottom:8px}.for-root #record-view .amount-bottom{display:none}.for-root #record-view .category{height:56px}}

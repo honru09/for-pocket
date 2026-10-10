@@ -10,7 +10,7 @@ import { resolveLanguage } from './public/shared.mjs';
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 const { version } = JSON.parse(await readFile(path.join(root, 'package.json'), 'utf8'));
-const release = { version, commit: process.env.RENDER_GIT_COMMIT || process.env.APP_COMMIT || null };
+const release = { version, commit: process.env.APP_COMMIT || null, revision: process.env.K_REVISION || null };
 export function createApp({ token = process.env.BOT_TOKEN || '', dataDir = path.resolve(root, process.env.DATA_DIR || 'data'), publicUrl = process.env.PUBLIC_URL || '', maxAgeSeconds = Number(process.env.AUTH_MAX_AGE_SECONDS || 86400), googleClientId = process.env.GOOGLE_CLIENT_ID || '', verifyGoogle, now = () => Date.now() } = {}) {
   if (!Number.isSafeInteger(maxAgeSeconds) || maxAgeSeconds < 60) throw new Error('Invalid AUTH_MAX_AGE_SECONDS');
   const store = createStore(dataDir), google = new OAuth2Client(), attempts = new Map();

@@ -3,6 +3,8 @@
 !.env.example
 data/
 backups/
+work/
+outputs/
 node_modules/
 dist/
 *.log

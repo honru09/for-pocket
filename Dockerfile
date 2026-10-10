@@ -29,7 +29,11 @@ COPY --from=builder /app/dist ./dist
 COPY public ./public
 COPY auth.mjs bot.mjs domain.mjs store.mjs server.mjs ./
 
-# Create persistent data directory and assign permissions to non-root user
+# Operational scripts are available in the deployed container as well.
+COPY scripts ./scripts
+
+# /data is temporary unless external storage is explicitly configured.
+# Creating a directory does not provide persistence on Cloud Run.
 RUN mkdir -p /data && chown -R node:node /app /data
 
 USER node

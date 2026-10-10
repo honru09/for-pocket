@@ -90,19 +90,21 @@ React 18 + Vite，实际使用 TelegramUI 的 AppRoot、Button、Input、Select�
 
 官方资料：[TelegramUI](https://github.com/telegram-mini-apps-dev/TelegramUI)、[Telegram Mini Apps](https://core.telegram.org/bots/webapps)、[Google ID token 验证](https://developers.google.com/identity/gsi/web/guides/verify-google-id-token)。
 
-## 发布与备份
+## Google Cloud 与本地目录
 
-用户已决定保持 Render 免费实例、暂不部署。v0.5.0 发布代码同步到 `release/v0.5.0`，线上 `main` 仍为旧版。不要合并草稿 PR 触发部署：当前线上没有持久盘，部署会丢失服务器账单，Google Client ID 也未配置。
+项目已完整迁到 **D:\Projects\Tools\for-pocket**。正式平台为 Google Cloud Run：
+[生产站点](https://for-pocket-698348906987.asia-northeast1.run.app)。线上 Google/Telegram 配置已存在，真实 OAuth 验收仍需实际账号。
 
-新增 Linux / Windows CI、Render 可选付费蓝图、只读配置审计、备份与校验恢复、bot 菜单检查和版本/资源验收工具。`render.yaml` 当前未应用，不会仅因提交文件就开通付费服务。
+本次记账页的确认键改为底部 52×52px 小方格；今日支出和小账本移到金额上方。界面改动在本地验证完成，尚未更新云端。
+
+Dockerfile 提供生产构建；私有 .env、数据、备份、work 和 outputs 均不进入 Docker 镜像构建上下文或 Git。Render 工具已归档，不再参与发布。
 
 ```powershell
-npm run render:inspect
+cd D:\Projects\Tools\for-pocket
 npm run backup
-# 停止应用后，恢复到新空目录
 npm run restore -- BACKUP_DIRECTORY EMPTY_DATA_DIRECTORY
 npm run bot:configure
-npm run verify:deployment -- URL --version=0.5.0 --commit=SHA
+npm run verify:deployment -- --require-google --require-telegram
 ```
 
-详见 [部署与交接](DEPLOYMENT_HANDOFF_PLAN.md)。保留私有 `.env`；不要上传密钥、账单或备份。
+Cloud Run 的 /data 必须另行配置持久存储；单纯创建目录不会保留重启后的账单。详见 [当前交接说明](DEPLOYMENT_HANDOFF_PLAN.md)。
