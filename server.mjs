@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { OAuth2Client } from 'google-auth-library';
 import { validateInitData } from './auth.mjs';
 import { createStore } from './store.mjs';
-import { RequestError, fail, hash, ensureUser, googleLogin, handleDomain } from './domain.mjs';
+import { RequestError, fail, hash, ensureUser, issueSession, googleLogin, handleDomain } from './domain.mjs';
 import { resolveLanguage } from './public/shared.mjs';
 
 const root = path.dirname(fileURLToPath(import.meta.url));
@@ -21,16 +21,42 @@ export function createApp({ token = process.env.BOT_TOKEN || '', dataDir = path.
     if (attempts.size > 2000) for (const [k, v] of attempts) if (v.until <= at) attempts.delete(k);
   }
   function resolveAuth(db, req) {
+    const bearer = /^Bearer (.+)$/.exec(req.headers.authorization || '')?.[1];
+    const session = bearer && db.sessions[hash(bearer)];
     const raw = req.headers['x-telegram-init-data'];
     if (raw) {
-      let user; try { user = validateInitData(raw, token, { maxAgeSeconds, now: now() }); } catch { fail('errorAuth', 401); }
-      const uid = ensureUser(db, `telegram:${user.id}`, user);
-      if (!db.users[uid].settings.languageManual) db.users[uid].settings.language = resolveLanguage(user.language_code || 'en');
-      return uid;
+      const auth = resolveTelegram(db, raw, session, now());
+      if (auth.sessionToken) req.telegramSessionToken = auth.sessionToken;
+      return auth.uid;
     }
-    const bearer = /^Bearer (.+)$/.exec(req.headers.authorization || '')?.[1], session = bearer && db.sessions[hash(bearer)];
     if (!session || session.expiresAt <= now() || !db.users[session.userId]) fail('errorSignIn', 401);
     return session.userId;
+  }
+  function resolveTelegram(db, raw, session, at) {
+    let user, fresh = true;
+    try { user = validateInitData(raw, token, { maxAgeSeconds, now: at }); }
+    catch (error) {
+      // An expired payload is never an authentication grant. Its signature
+      // can still identify which Telegram account a valid bearer belongs to;
+      // this lets a refreshed page keep a matching 30-day session while
+      // refusing to let that bearer override a different Telegram account.
+      if (error.message !== 'Authentication expired') fail('errorAuth', 401);
+      try { user = validateInitData(raw, token, { now: at, enforceFresh: false }); fresh = false; }
+      catch { fail('errorAuth', 401); }
+    }
+    const identity = `telegram:${user.id}`;
+    // v2 migrations may contain a numeric Telegram user without an explicit
+    // identity index; the numeric record is still safe to match because
+    // Telegram IDs are never reused as Google UUIDs.
+    const knownUid = db.identities[identity] || (db.users[String(user.id)] ? String(user.id) : null);
+    if (!fresh) {
+      if (!session || session.expiresAt <= at || !db.users[session.userId] || !knownUid || knownUid !== session.userId) fail('errorAuth', 401);
+      return { uid: session.userId };
+    }
+    const uid = ensureUser(db, identity, user);
+    if (!db.users[uid].settings.languageManual) db.users[uid].settings.language = resolveLanguage(user.language_code || 'en');
+    if (session && session.expiresAt > at && db.users[session.userId] && session.userId === uid) return { uid };
+    return { uid, sessionToken: issueSession(db, uid, at) };
   }
   async function bodyOf(req) {
     if (!String(req.headers['content-type']).startsWith('application/json')) fail('errorJson', 415);
@@ -63,12 +89,34 @@ export function createApp({ token = process.env.BOT_TOKEN || '', dataDir = path.
           } catch { fail('errorGoogleCredential', 401); }
         }
         const result = await store.run(db => {
+          const route = url.pathname.slice(4);
+          // Logout is deliberately idempotent and does not authenticate via
+          // Telegram initData, so a stale payload cannot mint a replacement
+          // session while revoking the supplied bearer.
+          if (route === '/auth/logout' && req.method === 'POST') {
+            const bearer = /^Bearer (.+)$/.exec(req.headers.authorization || '')?.[1];
+            if (bearer) delete db.sessions[hash(bearer)];
+            return { ok: true };
+          }
+          if (route === '/auth/telegram' && req.method === 'POST') {
+            const raw = req.headers['x-telegram-init-data']; if (!raw) fail('errorAuth', 401);
+            const bearer = /^Bearer (.+)$/.exec(req.headers.authorization || '')?.[1];
+            const session = bearer && db.sessions[hash(bearer)];
+            const auth = resolveTelegram(db, raw, session, now());
+            const profile = handleDomain(db, auth.uid, '/profile', 'GET', {}, { now: now(), limit, ledgerQuery: null });
+            return { profile, ...(auth.sessionToken ? { sessionToken: auth.sessionToken } : {}) };
+          }
           if (googlePayload) return googleLogin(db, { ...googlePayload, locale: resolveLanguage(body.language || googlePayload.locale || 'en') }, { link: body.link === true, uid: body.link === true ? resolveAuth(db, req) : null, now: now() });
-          const uid = resolveAuth(db, req), route = url.pathname.slice(4);
-          if (route === '/auth/logout' && req.method === 'POST') { const bearer = /^Bearer (.+)$/.exec(req.headers.authorization || '')?.[1]; if (bearer) delete db.sessions[hash(bearer)]; return { ok: true }; }
+          const uid = resolveAuth(db, req);
           return handleDomain(db, uid, route, req.method, body, { now: now(), limit, ledgerQuery: url.searchParams.get('ledgerId') });
         });
-        send(res, 200, result); return;
+        // Return a shallow response envelope after the store commit. Never
+        // mutate an object returned from store.run: domain entries can still
+        // reference the committed database state.
+        const response = req.telegramSessionToken && result && typeof result === 'object' && !Array.isArray(result)
+          ? { ...result, sessionToken: req.telegramSessionToken }
+          : result;
+        send(res, 200, response); return;
       }
       if (['/health', '/healthz'].includes(url.pathname)) { send(res, 200, { ok: true, ...release }); return; }
       const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg', '.woff2': 'font/woff2', '.webmanifest': 'application/manifest+json' };

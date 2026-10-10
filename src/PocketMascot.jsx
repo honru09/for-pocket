@@ -38,7 +38,7 @@ function StopSign() {
   </svg>;
 }
 
-export default function PocketMascot({ mascotRef, t, onTap }) {
+export default function PocketMascot({ mascotRef, t, onTap, canConfirm = false, busy = false, confirmLabel, onConfirm }) {
   const [step, setStep] = useState(0), [phase, setPhase] = useState('cloud');
   const [signTaps, setSignTaps] = useState(0), [flight, setFlight] = useState(null);
   const stepRef = useRef(0), tapsRef = useRef(0), buttonRef = useRef(null), flightRef = useRef(null);
@@ -99,11 +99,14 @@ export default function PocketMascot({ mascotRef, t, onTap }) {
   const moodKey = step === 7 ? 'cloudPopped' : MOODS[step];
   const label = sign ? t(signTaps ? 'cloudRestoreAgain' : 'cloudRestore') : t('cloudTap', { mood:t(moodKey) });
   return <>
-    <Tappable Component="button" type="button" interactiveAnimation="opacity" ref={buttonRef} className="mascot-toy" data-phase={phase} data-mood={Math.min(step,6)} data-sign-taps={signTaps} aria-label={label} aria-disabled={phase === 'burst' || phase === 'falling'} onClick={tap}>
-      {!sign && <span ref={node => { motionRef.current = node; }} className="cloud-motion"><span ref={node => { if (mascotRef) mascotRef.current = node; }} className="cloud-touch"><span className="cloud-shell"><Cloud mood={Math.min(step,6)}/></span></span></span>}
-      {phase === 'burst' && <span className="cloud-pop" aria-hidden="true"><span className="cloud-pop-word">{t('cloudPopSound')}</span>{Array.from({length:6},(_,i) => <i key={i} style={{ '--puff-x':`${Math.cos(i * Math.PI / 3) * 32}px`, '--puff-y':`${Math.sin(i * Math.PI / 3) * 27}px` }}/>)}</span>}
-      {sign && <span className="stop-sign-rest" data-hidden={phase === 'falling'}><StopSign/></span>}
-    </Tappable>
+    <span className="mascot-stack">
+      <Tappable Component="button" type="button" interactiveAnimation="opacity" ref={buttonRef} className="mascot-toy" data-phase={phase} data-mood={Math.min(step,6)} data-sign-taps={signTaps} aria-label={label} aria-disabled={phase === 'burst' || phase === 'falling'} onClick={tap}>
+        {!sign && <span ref={node => { motionRef.current = node; }} className="cloud-motion"><span ref={node => { if (mascotRef) mascotRef.current = node; }} className="cloud-touch"><span className="cloud-shell"><Cloud mood={Math.min(step,6)}/></span></span></span>}
+        {phase === 'burst' && <span className="cloud-pop" aria-hidden="true"><span className="cloud-pop-word">{t('cloudPopSound')}</span>{Array.from({length:6},(_,i) => <i key={i} style={{ '--puff-x':`${Math.cos(i * Math.PI / 3) * 32}px`, '--puff-y':`${Math.sin(i * Math.PI / 3) * 27}px` }}/>)}</span>}
+        {sign && <span className="stop-sign-rest" data-hidden={phase === 'falling'}><StopSign/></span>}
+      </Tappable>
+      {canConfirm && <Tappable Component="button" type="button" interactiveAnimation="opacity" className="mascot-confirm" aria-label={confirmLabel || t('save')} title={confirmLabel || t('save')} aria-busy={busy} disabled={busy} onClick={event => { event.stopPropagation(); onConfirm?.(); }}><span aria-hidden="true">✓</span></Tappable>}
+    </span>
     <span className="cloud-announcement" role="status" aria-live="polite">{step ? t(moodKey) : ''}</span>
     {flight && phase === 'falling' && createPortal(<span ref={flightRef} className="cloud-sign-flight" style={flight}><StopSign/></span>,document.body)}
   </>;

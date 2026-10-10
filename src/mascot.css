@@ -7,7 +7,9 @@
   background:transparent; color:#635b3c; cursor:pointer;
   touch-action:manipulation; user-select:none; -webkit-user-select:none; -webkit-tap-highlight-color:transparent;
 }
-.for-root .mascot-toy:focus-visible { outline:2px solid #a8b48f; outline-offset:2px; box-shadow:none; }
+/* The cloud is a playful control, so its focus treatment must not read as a
+   persistent green selection frame around the illustration. */
+.for-root .mascot-toy:is(:focus,:focus-visible) { outline:none!important; outline-offset:0; box-shadow:none!important; }
 .for-root .amount-meta { z-index:4; }
 .cloud-motion,.cloud-touch,.cloud-shell,.stop-sign-rest { display:block; width:100%; height:100%; }
 .cloud-motion { transform:translate3d(0,0,0) rotate(-8deg); transform-origin:50% 80%; transition:transform 180ms var(--ease-out),opacity 180ms var(--ease-out); backface-visibility:hidden; }
@@ -60,6 +62,14 @@
 .mascot-toy[data-sign-taps="1"] .stop-sign-rest { transform:rotate(7deg); }
 .cloud-sign-flight { position:fixed; display:block; z-index:12; pointer-events:none; transform-origin:50% 95%; }
 .cloud-announcement { position:absolute; width:1px; height:1px; padding:0; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
+.for-root .mascot-stack { --cloud-size:108px; position:absolute; z-index:3; right:15px; bottom:25px; width:var(--cloud-size); height:var(--cloud-size); display:block; }
+.for-root .mascot-stack .mascot-toy { position:relative; inset:auto; width:100%; height:100%; }
+.for-root .mascot-confirm { position:absolute; z-index:4; right:-3px; bottom:-3px; width:29px; height:29px; min-width:29px; min-height:29px; padding:0; display:grid; place-items:center; border:2px solid var(--sage); border-radius:50%; background:var(--confirm,#f4c771); color:var(--ink); box-shadow:0 3px 9px #333a3024; font-size:17px; font-weight:900; line-height:1; animation:cloud-confirm-in 220ms var(--ease-out); }
+.for-root .mascot-confirm>h6 { display:flex; align-items:center; justify-content:center; margin:0; font-size:17px; line-height:1; }
+.for-root .mascot-confirm:not(:disabled):hover { transform:scale(1.08) rotate(-4deg); box-shadow:0 5px 12px #333a3030; }
+.for-root .mascot-confirm:not(:disabled):active { transform:scale(.88)!important; box-shadow:0 1px 4px #333a3018; }
+.for-root .mascot-confirm:disabled { opacity:.58; }
+@keyframes cloud-confirm-in { from { opacity:0; transform:scale(.68) rotate(-10deg); } 70% { opacity:1; transform:scale(1.08) rotate(3deg); } to { opacity:1; transform:scale(1) rotate(0); } }
 @keyframes cloud-fume { 0%,100% {transform:translate3d(0,0,0) rotate(0)} 16% {transform:translate3d(-1px,0,0) rotate(-1deg)} 34% {transform:translate3d(2px,-.5px,0) rotate(1.6deg)} 52% {transform:translate3d(-2px,.5px,0) rotate(-1.5deg)} 70% {transform:translate3d(1px,0,0) rotate(.9deg)} 86% {transform:translate3d(-.5px,0,0) rotate(-.4deg)} }
 @keyframes cloud-idle-breathe { 0%,100% { transform:translate3d(0,0,0) scale(1); } 42% { transform:translate3d(0,-1.5px,0) scale(1.012,.992); } 70% { transform:translate3d(0,-.5px,0) scale(1.006,.997); } }
 @keyframes cloud-idle-face { 0%,100% { transform:translate3d(0,0,0) rotate(0); } 42% { transform:translate3d(0,-.7px,0) rotate(-.7deg); } 70% { transform:translate3d(0,-.2px,0) rotate(.35deg); } }
@@ -73,7 +83,7 @@
  .for-root #amount-display[data-length] { font-size:min(100px,calc((100cqw - 146px) / (var(--amount-chars,1) * .64))); }
 }
 @media(max-width:600px) {
- .for-root .mascot-toy { --cloud-size:62px; right:12px; bottom:8px; }
+ .for-root .mascot-stack { --cloud-size:62px; right:12px; bottom:8px; }
  .for-root #record-view #amount-display[data-length] { font-size:min(clamp(40px,64cqh,82px),calc((100cqw - 94px) / (var(--amount-chars,1) * .64))); }
  @container (max-height:76px) {
   .for-root .mascot-toy { --cloud-size:44px; bottom:4px; }
