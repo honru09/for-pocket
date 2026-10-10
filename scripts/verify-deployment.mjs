@@ -12,7 +12,8 @@ export async function verifyDeployment(base, { version, commit, requireGoogle=fa
     if (!response.ok) throw new Error(`HTTP ${response.status} for ${route}`);
     return response;
   }
-  const health = await (await get('/healthz')).json();
+  // Cloud Run reserves some URLs ending in z before they reach the container.
+  const health = await (await get('/health')).json();
   if (health.ok !== true || version && health.version !== version) throw new Error(`Expected version ${version}; received ${health.version || 'unversioned'}.`);
   if (commit && health.commit !== commit) throw new Error('The live deployment does not match the expected commit.');
   const config = await (await get('/api/config')).json();

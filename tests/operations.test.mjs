@@ -47,7 +47,7 @@ test('deployment check verifies real assets and rejects missing configured provi
 });
 test('deployment check detects SPA fallbacks masquerading as built assets', async t => {
   const base = await listen(t,http.createServer((req,res) => {
-    if (['/healthz','/api/config'].includes(req.url)) { res.setHeader('Content-Type','application/json'); res.end(JSON.stringify({ok:true,version:'0.5.0',commit:null})); }
+    if (['/health','/api/config'].includes(req.url)) { res.setHeader('Content-Type','application/json'); res.end(JSON.stringify({ok:true,version:'0.5.0',commit:null})); }
     else { res.setHeader('Content-Type','text/html'); res.end('<script src="/assets/missing.js"></script><link href="/assets/missing.css">'); }
   }));
   await assert.rejects(verifyDeployment(base,{version:'0.5.0'}),/invalid content type/);

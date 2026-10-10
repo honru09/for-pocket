@@ -72,3 +72,4 @@ GitHub 发布分支 `release/v0.5.0` 配置 Linux / Windows Node 24 CI；最终�
 - 控制台已核实承载 100% 流量的 for-pocket-00003-p6v：源码 04de40f，DATA_DIR=/data、卷 0、实例上限 20。Cloud Build 触发器 2a41dcbd-51a4-4bff-a78e-e76bab349ba3 跟踪 ^main$。
 - 用户已明确同意现有云端账单可以丢弃，直接更新。该授权适用于本次发布，临时 JSON 存储仍不适合长期账单保存。
 - 发布完成后的实际版本、资源校验与线上显示结果另记于 outputs/RELEASE_RESULT.md；版本号相同不能作为更新完成的证据。
+- Cloud Run 的公开 /healthz 请求返回平台 404；/health 正常。发布验收改用 /health，应用保留两个本地路由。参考 [Cloud Run 保留路径](https://docs.cloud.google.com/run/docs/known-issues#reserved-url-paths)。
