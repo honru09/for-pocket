@@ -75,6 +75,7 @@ function mergeAccounts(db, source, target) {
   }
   for (const ledger of Object.values(db.ledgers)) for (const entry of ledger.expenses) {
     if (entry.consumer === memberId(source)) { entry.consumer = memberId(target); if (entry.member) entry.member.id = memberId(target); }
+    if (Array.isArray(entry.splitParticipants)) entry.splitParticipants = [...new Set(entry.splitParticipants.map(id => id === memberId(source) ? memberId(target) : id))];
     if (entry.createdBy === source) entry.createdBy = target;
   }
   for (const c of Object.values(db.circles)) {
@@ -168,6 +169,18 @@ export function handleDomain(db, uid, route, method, body, { now, limit, ledgerQ
       if (!c.members.length) delete db.circles[c.id]; // Historical ledger stays on disk.
     }
     return visible(db, uid);
+  }
+  if (route === '/expenses/import' && method === 'POST') {
+    checkLedger(db, uid, body.ledgerId);
+    if (!Array.isArray(body.entries) || !body.entries.length || body.entries.length > 50) fail('errorAiInput', 400);
+    const ids = body.entries.map(entry => entry?.id);
+    if (new Set(ids).size !== ids.length) fail('errorExpenseId', 400);
+    // The store commits the complete operation only after every row succeeds.
+    return { entries: body.entries.map(entry => {
+      if (!entry || typeof entry !== 'object' || Array.isArray(entry)) fail('errorAiInput', 400);
+      if (entry.ledgerId && entry.ledgerId !== body.ledgerId) fail('errorLedgerChanged', 409);
+      return handleDomain(db, uid, '/expenses', 'POST', { ...entry, ledgerId: body.ledgerId }, { now, limit, ledgerQuery });
+    }) };
   }
   if (route === '/expenses' && method === 'POST') {
     const { ledger, ledgerId, consumers } = checkLedger(db, uid, body.ledgerId), existing = ledger.expenses.find(e => e.id === body.id);

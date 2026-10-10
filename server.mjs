@@ -1,4 +1,5 @@
 import http from 'node:http';
+import { timingSafeEqual } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -6,14 +7,21 @@ import { OAuth2Client } from 'google-auth-library';
 import { validateInitData } from './auth.mjs';
 import { createStore } from './store.mjs';
 import { RequestError, fail, hash, ensureUser, issueSession, googleLogin, handleDomain } from './domain.mjs';
-import { resolveLanguage } from './public/shared.mjs';
+import { CURRENCIES, resolveLanguage } from './public/shared.mjs';
+import { AiError, createExpenseParser, createExpenseSummarizer } from './ai.mjs';
+import { summarizeExpenses } from './ai-summary.mjs';
+import { createTelegramHandler } from './telegram-ai.mjs';
+import { deriveTelegramWebhookSecret } from './telegram-config.mjs';
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 const { version } = JSON.parse(await readFile(path.join(root, 'package.json'), 'utf8'));
 const release = { version, commit: process.env.APP_COMMIT || null, revision: process.env.K_REVISION || null };
-export function createApp({ token = process.env.BOT_TOKEN || '', dataDir = path.resolve(root, process.env.DATA_DIR || 'data'), publicUrl = process.env.PUBLIC_URL || '', maxAgeSeconds = Number(process.env.AUTH_MAX_AGE_SECONDS || 86400), googleClientId = process.env.GOOGLE_CLIENT_ID || '', verifyGoogle, now = () => Date.now() } = {}) {
+export function createApp({ token = process.env.BOT_TOKEN || '', dataDir = path.resolve(root, process.env.DATA_DIR || 'data'), publicUrl = process.env.PUBLIC_URL || '', maxAgeSeconds = Number(process.env.AUTH_MAX_AGE_SECONDS || 86400), googleClientId = process.env.GOOGLE_CLIENT_ID || '', verifyGoogle, aiParser = createExpenseParser(), aiSummarizer = createExpenseSummarizer(), webhookSecret = process.env.TELEGRAM_WEBHOOK_SECRET || '', callTelegram, now = () => Date.now() } = {}) {
   if (!Number.isSafeInteger(maxAgeSeconds) || maxAgeSeconds < 60) throw new Error('Invalid AUTH_MAX_AGE_SECONDS');
+  const resolvedWebhookSecret = token ? deriveTelegramWebhookSecret(token, webhookSecret) : '';
   const store = createStore(dataDir), google = new OAuth2Client(), attempts = new Map();
+  const telegramHandler = createTelegramHandler({ store, token, publicUrl, now, limit, callTelegram,
+    aiParser: { ...aiParser, summarize: (input, profile) => summarizeExpenses(input, profile, aiSummarizer, now()) } });
   function limit(key, max = 12) {
     const at = now(), item = attempts.get(key);
     if (item && item.until > at) { if (item.count >= max) fail('errorRateLimit', 429); item.count++; }
@@ -58,11 +66,50 @@ export function createApp({ token = process.env.BOT_TOKEN || '', dataDir = path.
     if (session && session.expiresAt > at && db.users[session.userId] && session.userId === uid) return { uid };
     return { uid, sessionToken: issueSession(db, uid, at) };
   }
-  async function bodyOf(req) {
+  async function bodyOf(req, maxBytes = 32768) {
     if (!String(req.headers['content-type']).startsWith('application/json')) fail('errorJson', 415);
     const chunks = []; let length = 0;
-    for await (const chunk of req) { length += chunk.length; if (length > 32768) fail('errorTooLarge', 413); chunks.push(chunk); }
-    try { return JSON.parse(Buffer.concat(chunks).toString('utf8')); } catch { fail('errorJson'); }
+    for await (const chunk of req) { length += chunk.length; if (length > maxBytes) fail('errorTooLarge', 413); chunks.push(chunk); }
+    let body;
+    try { body = JSON.parse(Buffer.concat(chunks).toString('utf8')); } catch { fail('errorJson'); }
+    if (!body || typeof body !== 'object' || Array.isArray(body)) fail('errorJson');
+    return body;
+  }
+  async function rawBody(req, maxBytes) {
+    const chunks = []; let length = 0;
+    for await (const chunk of req) { length += chunk.length; if (length > maxBytes) fail('errorTooLarge', 413); chunks.push(chunk); }
+    return Buffer.concat(chunks);
+  }
+  function safeTokenEqual(actual, expected) {
+    if (typeof actual !== 'string' || typeof expected !== 'string' || !actual || !expected) return false;
+    const a = Buffer.from(actual), b = Buffer.from(expected);
+    return a.length === b.length && timingSafeEqual(a, b);
+  }
+  async function aiInput(req, queryLedgerId = '') {
+    const contentType = String(req.headers['content-type'] || '').split(';', 1)[0].toLowerCase();
+    const headerTimezone = String(req.headers['x-timezone'] || req.headers['x-ai-timezone'] || '').trim();
+    if (contentType === 'application/json') {
+      const body = await bodyOf(req, 12 * 1024 * 1024);
+      const text = typeof body?.text === 'string' ? body.text.trim().slice(0, 4000) : '';
+      const timezone = String(body?.timezone || headerTimezone || Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC').slice(0, 80);
+      const image = body?.image && typeof body.image === 'object' ? body.image : (body?.imageBase64 ? { data: body.imageBase64, mimeType: body.mimeType } : null);
+      if (image) {
+        if (typeof image.data !== 'string' || !/^image\/(jpeg|png|webp|gif)$/.test(String(image.mimeType || '').toLowerCase())) fail('errorAiInput', 400);
+        if (!/^[A-Za-z0-9+/]*={0,2}$/.test(image.data) || image.data.length > 11 * 1024 * 1024) fail('errorAiInput', 400);
+        const estimatedBytes = Math.floor(image.data.length * 3 / 4) - (image.data.endsWith('==') ? 2 : image.data.endsWith('=') ? 1 : 0);
+        if (estimatedBytes < 1 || estimatedBytes > 8 * 1024 * 1024) fail('errorTooLarge', 413);
+      }
+      if (!text && !image) fail('errorAiInput', 400);
+      return { text, image: image ? { data: image.data, mimeType: String(image.mimeType).toLowerCase() } : null, timezone, enhanced: Boolean(image && body.enhanced === true), now: now(),
+        ledgerId: typeof body?.ledgerId === 'string' ? body.ledgerId.trim() : String(queryLedgerId || '').trim(),
+        telegramUserId: typeof body?.telegramUserId === 'string' || typeof body?.telegramUserId === 'number' ? String(body.telegramUserId).trim() : '' };
+    }
+    if (!/^image\/(jpeg|png|webp|gif)$/.test(contentType)) fail('errorAiInput', 415);
+    const bytes = await rawBody(req, 8 * 1024 * 1024);
+    if (!bytes.length) fail('errorAiInput', 400);
+    const timezone = String(headerTimezone || Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC').slice(0, 80);
+    return { text: '', image: { data: bytes.toString('base64'), mimeType: contentType }, timezone, now: now(), ledgerId: String(queryLedgerId || '').trim(),
+      telegramUserId: String(req.headers['x-telegram-user-id'] || '').trim() };
   }
   function send(res, status, data) { res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' }); res.end(JSON.stringify(data)); }
   function checkOrigin(req) {
@@ -75,10 +122,71 @@ export function createApp({ token = process.env.BOT_TOKEN || '', dataDir = path.
   return http.createServer(async (req, res) => {
     try {
       const url = new URL(req.url, 'http://localhost');
-      if (url.pathname === '/api/config' && req.method === 'GET') { send(res, 200, { ...release, mode: token || googleClientId ? 'remote' : 'local', googleClientId, telegramEnabled: Boolean(token) }); return; }
+      if (url.pathname === '/api/config' && req.method === 'GET') { send(res, 200, { ...release, mode: token || googleClientId ? 'remote' : 'local', googleClientId, telegramEnabled: Boolean(token), aiEnabled: Boolean(aiParser?.enabled) }); return; }
       if (url.pathname.startsWith('/api/')) {
         checkOrigin(req);
-        const body = ['POST', 'PUT'].includes(req.method) ? await bodyOf(req) : {};
+        if (url.pathname === '/api/telegram/webhook' && req.method === 'POST') {
+          if (!token || !safeTokenEqual(req.headers['x-telegram-bot-api-secret-token'], resolvedWebhookSecret)) fail('errorAuth', 401);
+          const update = await bodyOf(req, 65536);
+          if (!Number.isSafeInteger(update?.update_id) || update.update_id < 0) fail('errorAiInput', 400);
+          const handled = await telegramHandler.handle(update);
+          if (handled?.retryable) { send(res, 503, { ok: false }); return; }
+          send(res, 200, { ok: true }); return;
+        }
+        const aiRoute = url.pathname === '/api/ai/parse-expense' && req.method === 'POST';
+        const telegramAiRoute = url.pathname === '/api/ai/telegram-parse' && req.method === 'POST';
+        const body = aiRoute || telegramAiRoute ? null : ['POST', 'PUT'].includes(req.method) ? await bodyOf(req, url.pathname === '/api/expenses/import' ? 131072 : 32768) : {};
+        if (aiRoute) {
+          limit(`ai-ip:${req.socket.remoteAddress}`, 60);
+          const uid = await store.run(db => resolveAuth(db, req));
+          limit(`ai-user:${uid}`, 12);
+          const input = await aiInput(req, url.searchParams.get('ledgerId'));
+          const context = await store.run(db => {
+            const profile = handleDomain(db, uid, '/profile', 'GET', {}, { now: now(), limit, ledgerQuery: null });
+            if (input.ledgerId && input.ledgerId !== profile.ledgerId) fail('errorLedgerChanged', 409);
+            return { profile };
+          });
+          const parsed = await aiParser.parse(input, context.profile.settings);
+          await store.run(db => { const p = handleDomain(db, uid, '/profile', 'GET', {}, { now: now(), limit }); if (p.ledgerId !== context.profile.ledgerId) fail('errorLedgerChanged', 409); });
+          const items = Array.isArray(parsed) ? parsed : parsed?.items && Array.isArray(parsed.items) ? parsed.items : [parsed];
+          const response = { items, ...(req.telegramSessionToken ? { sessionToken: req.telegramSessionToken } : {}) };
+          send(res, 200, response); return;
+        }
+        if (telegramAiRoute) {
+          if (!safeTokenEqual(req.headers['x-bot-token'], token)) fail('errorAuth', 401);
+          limit(`ai-bot:${req.socket.remoteAddress}`, 30);
+          const input = await aiInput(req, url.searchParams.get('ledgerId'));
+          const rawId = String(input.telegramUserId || '').trim();
+          if (!/^\d{1,20}$/.test(rawId) || BigInt(rawId) <= 0n) fail('errorAiInput', 400);
+          const context = await store.run(db => {
+            const uid = ensureUser(db, `telegram:${rawId}`, { first_name: `Telegram ${rawId}`, language_code: 'en' });
+            const profile = handleDomain(db, uid, '/profile', 'GET', {}, { now: now(), limit, ledgerQuery: null });
+            return { uid, profile };
+          });
+          const parsed = await aiParser.parse(input, context.profile.settings);
+          const items = Array.isArray(parsed) ? parsed : parsed?.items && Array.isArray(parsed.items) ? parsed.items : [parsed];
+          send(res, 200, { userId: `u_${context.uid}`, telegramUserId: rawId, items, saved: false }); return;
+        }
+        if (url.pathname === '/api/ai/summary' && req.method === 'POST') {
+          if (body.period !== undefined && !['week', 'month'].includes(body.period)) fail('errorAiInput');
+          if (body.currency !== undefined && (typeof body.currency !== 'string' || !Object.hasOwn(CURRENCIES, body.currency))) fail('errorAiInput');
+          if (body.question !== undefined && (typeof body.question !== 'string' || body.question.length > 500)) fail('errorAiInput');
+          if (body.ledgerId !== undefined && typeof body.ledgerId !== 'string') fail('errorAiInput');
+          if (body.timezone !== undefined) {
+            if (typeof body.timezone !== 'string' || !body.timezone || body.timezone.length > 80) fail('errorAiInput');
+            try { new Intl.DateTimeFormat('en', { timeZone: body.timezone }).format(); } catch { fail('errorAiInput'); }
+          }
+          const context = await store.run(db => {
+            const uid = resolveAuth(db, req);
+            const profile = handleDomain(db, uid, '/profile', 'GET', {}, { now: now(), limit });
+            if (body.ledgerId && body.ledgerId !== profile.ledgerId) fail('errorLedgerChanged', 409);
+            return { uid, profile };
+          });
+          limit(`ai-summary:${context.uid}`, 6);
+          const result = await summarizeExpenses(body, context.profile, aiSummarizer, now());
+          await store.run(db => { const p = handleDomain(db, context.uid, '/profile', 'GET', {}, { now: now(), limit }); if (p.ledgerId !== context.profile.ledgerId) fail('errorLedgerChanged', 409); });
+          send(res, 200, { ...result, ...(req.telegramSessionToken ? { sessionToken: req.telegramSessionToken } : {}) }); return;
+        }
         let googlePayload;
         if (url.pathname === '/api/auth/google' && req.method === 'POST') {
           limit(`google:${req.socket.remoteAddress}`, 30);
@@ -130,9 +238,10 @@ export function createApp({ token = process.env.BOT_TOKEN || '', dataDir = path.
       }
       fail('errorNotFound', 404);
     } catch (error) {
-      const validation = !(error instanceof RequestError) && (error.message === 'errorEntryTime' || /^(请|分类|收入分类|角色|记录|备注|时区)/.test(error.message));
-      if (!res.headersSent) send(res, error.status || (validation ? 400 : 500), { error: error instanceof RequestError || validation ? error.message : 'errorSave' }); else res.end();
-      if (!(error instanceof RequestError) && !validation) console.error('Request failed:', error.name, error.code || 'internal');
+      if (!req.complete) req.resume();
+      const validation = !(error instanceof RequestError) && (['errorEntryTime', 'errorSplit'].includes(error.message) || /^(请|分类|收入分类|角色|记录|备注|时区)/.test(error.message));
+      if (!res.headersSent) send(res, error.status || (validation ? 400 : 500), { error: error instanceof RequestError || error instanceof AiError || validation ? error.message : 'errorSave' }); else res.end();
+      if (!(error instanceof RequestError) && !(error instanceof AiError) && !validation) console.error('Request failed:', error.name, error.code || 'internal');
     }
   });
 }

@@ -35,6 +35,8 @@ export function localService(defaultLang = 'zh') {
     updateEntryTime: async (id, value) => mutate(p => { const e = p.expenses.find(e => e.id === id && !e.deletedAt); if (!e) throw new Error('errorMissing'); Object.assign(e, validateEntryTime(value.occurredAt, value.timezone), { updatedAt: new Date().toISOString() }); return e; }),
     deleteExpense: async id => mutate(p => { const e = p.expenses.find(e => e.id === id); if (!e) throw new Error('errorMissing'); e.deletedAt = new Date().toISOString(); return e; }),
     restoreExpense: async id => mutate(p => { const e = p.expenses.find(e => e.id === id); if (!e) throw new Error('errorMissing'); delete e.deletedAt; return e; }),
+    aiParseExpense: async () => { throw new Error('errorAiNeedLogin'); },
+    aiSummary: async () => { throw new Error('errorAiNeedLogin'); },
   };
 }
 export function remoteService(telegram) {
@@ -48,12 +50,12 @@ export function remoteService(telegram) {
     }
     return p;
   };
-  async function request(route, method = 'GET', body, { includeInitData = false } = {}) {
+  async function request(route, method = 'GET', body, { includeInitData = false, timeout = 15000 } = {}) {
     const headers = { 'Content-Type': 'application/json' };
     if (!telegramDisabled && telegram?.initData && (includeInitData || !currentToken)) headers['X-Telegram-Init-Data'] = telegram.initData;
     if (currentToken) headers.Authorization = `Bearer ${currentToken}`;
     let response;
-    try { response = await fetch(`/api${route}`, { method, headers, body: body === undefined ? undefined : JSON.stringify(body), signal: AbortSignal.timeout(15000) }); }
+    try { response = await fetch(`/api${route}`, { method, headers, body: body === undefined ? undefined : JSON.stringify(body), signal: AbortSignal.timeout(timeout) }); }
     catch { throw new Error('errorNetwork'); }
     const data = await response.json();
     if (!response.ok) { const error = new Error(data.error || 'errorSave'); error.status = response.status; throw error; }
@@ -65,15 +67,52 @@ export function remoteService(telegram) {
     await request('/auth/telegram', 'POST', {}, { includeInitData: true });
     lastInitData = raw;
   }
+  async function aiParseExpense({ text = '', file = null, enhanced = false, timezone = Intl.DateTimeFormat().resolvedOptions().timeZone, ledgerId: requestedLedgerId } = {}) {
+    await exchangeTelegram();
+    const ledger = requestedLedgerId || ledgerId;
+    const baseHeaders = {};
+    if (!telegramDisabled && telegram?.initData && !currentToken) baseHeaders['X-Telegram-Init-Data'] = telegram.initData;
+    if (currentToken) baseHeaders.Authorization = `Bearer ${currentToken}`;
+    let response;
+    try {
+      if (file) {
+        const mimeType = ['image/png', 'image/jpeg', 'image/webp'].includes(file.type) ? file.type : 'image/jpeg';
+        const bytes = new Uint8Array(await file.arrayBuffer());
+        const chunks = [];
+        for (let offset = 0; offset < bytes.length; offset += 0x8000) chunks.push(String.fromCharCode(...bytes.subarray(offset, Math.min(offset + 0x8000, bytes.length))));
+        const imageBase64 = btoa(chunks.join(''));
+        response = await fetch('/api/ai/parse-expense', {
+          method: 'POST',
+          headers: { ...baseHeaders, 'Content-Type': 'application/json', 'X-AI-Language': document.documentElement.lang || 'zh-CN' },
+          body: JSON.stringify({ text: String(text).slice(0, 4000), image: { data: imageBase64, mimeType }, enhanced: enhanced === true, timezone, language: document.documentElement.lang || 'zh-CN', ledgerId: ledger }),
+          signal: AbortSignal.timeout(60000),
+        });
+      } else {
+        response = await fetch('/api/ai/parse-expense', {
+          method: 'POST',
+          headers: { ...baseHeaders, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: String(text).slice(0, 4000), timezone, language: document.documentElement.lang || 'zh-CN', ledgerId: ledger }),
+          signal: AbortSignal.timeout(60000),
+        });
+      }
+    } catch { throw new Error('errorNetwork'); }
+    let data = {};
+    try { data = await response.json(); } catch { throw new Error('errorAiUnavailable'); }
+    if (!response.ok) { const error = new Error(data.error || 'errorAiUnavailable'); error.status = response.status; throw error; }
+    return remember(data);
+  }
   const profileAction = async (route, body, method = 'POST') => track(await request(route, method, body));
   return {
     getProfile: async () => { await exchangeTelegram(); return track(await request('/profile')); },
     saveSettings: ({ consumers, ...settings }) => profileAction('/settings', { ...settings, ledgerId }, 'PUT'),
     updateUserProfile: p => profileAction('/user-profile', p, 'PUT'),
     addExpense: payload => request('/expenses', 'POST', { ledgerId, ...payload }),
+    importExpenses: entries => request('/expenses/import', 'POST', { ledgerId: entries[0]?.ledgerId || ledgerId, entries }),
     updateEntryTime: (id, value, scope = ledgerId) => request(`/expenses/${encodeURIComponent(id)}`, 'PUT', { ...value, ledgerId: scope }),
     deleteExpense: (id, scope = ledgerId) => request(`/expenses/${encodeURIComponent(id)}?ledgerId=${encodeURIComponent(scope)}`, 'DELETE'),
     restoreExpense: (id, scope = ledgerId) => request(`/expenses/${encodeURIComponent(id)}/restore`, 'POST', { ledgerId: scope }),
+    aiParseExpense,
+    aiSummary: async input => { await exchangeTelegram(); return request('/ai/summary', 'POST', { ledgerId, ...input }, { timeout: 60000 }); },
     loginWithGoogle: async (credential, link = false, language) => {
       const res = await request('/auth/google', 'POST', { credential, link, language });
       if (res.sessionToken) { currentToken = res.sessionToken; localStorage.setItem(SESSION_KEY, currentToken); }

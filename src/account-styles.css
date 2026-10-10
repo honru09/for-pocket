@@ -78,6 +78,8 @@
 @media(max-width:600px){.for-root #record-view{padding-bottom:calc(12px + env(safe-area-inset-bottom,0px))}.for-root #record-view .record-layout{gap:8px}.for-root #record-view .page-heading{margin-bottom:8px}.for-root #record-view .today-strip{margin-bottom:8px}.for-root #record-view .amount-bottom{display:none}.for-root #record-view .category{height:56px}}
 .for-root #record-view .page-heading h1{min-width:0;overflow-wrap:anywhere}
 .for-root #record-view .date-button{flex-shrink:0}
+.for-root #record-view .ai-quick-trigger{width:32px;min-width:32px;height:32px;min-height:32px;padding:6px;border-radius:10px;color:#899475;background:transparent}
+.for-root #record-view .ai-quick-trigger .for-icon{width:16px;height:16px}
 @media(max-width:360px){.for-root #record-view .page-heading{gap:6px}.for-root #record-view .page-heading h1{font-size:22px}}
 
 /* Secondary surfaces stay aligned with the page heading on wide screens. A

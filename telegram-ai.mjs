@@ -1,0 +1,711 @@
+import { randomUUID } from 'node:crypto';
+import {
+  CURRENCIES,
+  DEFAULT_CATEGORIES,
+  DEFAULT_INCOME_CATEGORIES,
+  resolveLanguage,
+  validateExpense,
+} from './public/shared.mjs';
+import { ensureUser, handleDomain, RequestError, visible } from './domain.mjs';
+import { botLanguage, botText } from './bot-i18n.mjs';
+import { categoryLabel } from './public/i18n.mjs';
+
+const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
+const MAX_TEXT = 4000;
+const DRAFT_TTL = 15 * 60 * 1000;
+const UPDATE_TTL = 24 * 60 * 60 * 1000;
+const UPDATE_LEASE = 3 * 60 * 1000;
+const MAX_RETRY_CACHE_BYTES = 32 * 1024 * 1024;
+const MAX_PREVIEW_ITEMS = 50;
+const DEFAULT_TIMEZONE = process.env.APP_TIMEZONE || 'Asia/Tokyo';
+const TELEGRAM_ID = /^\d{1,20}$/;
+
+const atMillis = value => {
+  const result = typeof value === 'function' ? value() : value;
+  if (result instanceof Date) return result.getTime();
+  const numeric = Number(result);
+  return Number.isFinite(numeric) ? numeric : Date.now();
+};
+
+function validTimezone(value, fallback = DEFAULT_TIMEZONE) {
+  for (const candidate of [value, fallback, 'UTC']) {
+    if (typeof candidate !== 'string' || !candidate.trim()) continue;
+    try {
+      new Intl.DateTimeFormat('en', { timeZone: candidate }).format();
+      return candidate.trim().slice(0, 80);
+    } catch {}
+  }
+  return 'UTC';
+}
+
+function amountText(amountMinor, currency) {
+  const item = CURRENCIES[currency] || CURRENCIES.JPY;
+  const digits = item.digits;
+  const value = Number(amountMinor) / (10 ** digits);
+  return `${item.symbol}${value.toFixed(digits)}`;
+}
+
+function safeString(value, max = 160) {
+  return typeof value === 'string' ? value.trim().slice(0, max) : '';
+}
+
+function safeOccurredAt(value) {
+  if (typeof value !== 'string' || !value.trim()) return null;
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime()) || date.getUTCFullYear() < 1970 || date.getUTCFullYear() > 2100) return null;
+  return date.toISOString();
+}
+
+function amountMinorFromItem(item, currency) {
+  const digits = CURRENCIES[currency]?.digits ?? 0;
+  const maximum = 10 ** (8 + digits) - 1;
+  const known = Number(item?.amountMinor);
+  if (Number.isSafeInteger(known) && known > 0 && known <= maximum) return known;
+  const amount = Number(item?.amount);
+  const minor = Math.round(amount * (10 ** digits));
+  return Number.isSafeInteger(minor) && minor > 0 && minor <= maximum ? minor : 0;
+}
+
+function normaliseItems(raw) {
+  if (Array.isArray(raw)) return raw;
+  if (Array.isArray(raw?.items)) return raw.items;
+  return raw && typeof raw === 'object' ? [raw] : [];
+}
+
+function firstText(value) {
+  if (typeof value !== 'string') return '';
+  return value.trim().slice(0, MAX_TEXT);
+}
+
+function escapeTelegramText(value) {
+  // Preview messages use plain text. Strip controls that can make a Telegram
+  // client render an unexpectedly large or visually noisy message.
+  return String(value || '').replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+function splitTelegramText(text, maximum = 3800) {
+  const pages = [];
+  let page = '';
+  for (const line of String(text).split('\n')) {
+    let remaining = line;
+    if (page && page.length + remaining.length + 1 > maximum) { pages.push(page); page = ''; }
+    while (remaining.length > maximum) {
+      let end = maximum;
+      if (/[\uD800-\uDBFF]/.test(remaining[end - 1])) end--;
+      pages.push(remaining.slice(0, end)); remaining = remaining.slice(end);
+    }
+    page += (page ? '\n' : '') + remaining;
+  }
+  if (page) pages.push(page);
+  return pages;
+}
+
+function getTelegramId(user) {
+  const value = String(user?.id ?? '').trim();
+  return TELEGRAM_ID.test(value) && BigInt(value) > 0n ? value : null;
+}
+
+function userInfo(user) {
+  return {
+    first_name: safeString(user?.first_name, 24),
+    last_name: safeString(user?.last_name, 24),
+    username: safeString(user?.username, 64),
+    language_code: safeString(user?.language_code, 16),
+  };
+}
+
+function makeInternalTelegramCall(token) {
+  if (!token) return null;
+  return async (method, parameters = {}) => {
+    const response = await fetch(`https://api.telegram.org/bot${token}/${method}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(parameters),
+      signal: AbortSignal.timeout(60000),
+    });
+    const result = await response.json().catch(() => null);
+    if (!response.ok || !result?.ok) throw new Error(`Telegram ${method} failed`);
+    return result.result;
+  };
+}
+
+function chooseCategory(item, type, settings) {
+  const pool = type === 'income'
+    ? (settings.incomeCategories?.length ? settings.incomeCategories : DEFAULT_INCOME_CATEGORIES)
+    : (settings.categories?.length ? settings.categories : DEFAULT_CATEGORIES);
+  const id = safeString(item?.categoryId, 64);
+  const label = safeString(item?.categoryLabel, 80).toLocaleLowerCase();
+  return pool.find(category => category.id === id)
+    || pool.find(category => label && String(category.label).toLocaleLowerCase() === label)
+    || pool[0];
+}
+
+function defaultConsumer(profile, uid) {
+  const consumers = profile?.settings?.consumers;
+  return consumers?.find(member => member.id === `u_${uid}`)?.id || consumers?.[0]?.id || `u_${uid}`;
+}
+
+function ensureTelegramState(db) {
+  if (!db.telegram || typeof db.telegram !== 'object') db.telegram = {};
+  if (!db.telegram.updates || typeof db.telegram.updates !== 'object') db.telegram.updates = {};
+  if (!db.telegram.drafts || typeof db.telegram.drafts !== 'object') db.telegram.drafts = {};
+  return db.telegram;
+}
+
+function pruneTelegramState(state, at, maxDrafts) {
+  const updateAt = item => Number(typeof item === 'object' ? item?.at : item);
+  for (const [id, item] of Object.entries(state.updates)) {
+    const timestamp = updateAt(item);
+    if (!Number.isFinite(timestamp) || at - timestamp > UPDATE_TTL) delete state.updates[id];
+  }
+  for (const [id, draft] of Object.entries(state.drafts)) {
+    if (!draft || draft.expiresAt <= at) delete state.drafts[id];
+  }
+  const entries = Object.entries(state.drafts);
+  if (entries.length > maxDrafts) {
+    entries.sort((a, b) => Number(a[1]?.createdAt || 0) - Number(b[1]?.createdAt || 0));
+    for (const [id] of entries.slice(0, entries.length - maxDrafts)) delete state.drafts[id];
+  }
+  const updates = Object.entries(state.updates);
+  if (updates.length > 1024) {
+    updates.sort((a, b) => updateAt(a[1]) - updateAt(b[1]));
+    for (const [id] of updates.slice(0, updates.length - 1024)) delete state.updates[id];
+  }
+}
+
+function summaryQuestion(text) {
+  const value = String(text || '').toLocaleLowerCase();
+  if (/\d|[¥$₴]/.test(value)) return false;
+  return /(多少|汇总|[月周]报|小结|总结|谁.*(?:付|花|多)|主要.*(?:开销|在哪)|summary|how much|who.*(?:paid|spent).*more|where.*spend|скільки|підсум|хто.*більше|які.*витрат)/i.test(value);
+}
+
+function periodForText(text) {
+  return /(本周|这周|上周|week|тижд)/i.test(String(text || '')) ? 'week' : 'month';
+}
+
+/**
+ * Telegram update handler shared by polling and the Cloud Run webhook.
+ *
+ * `store` is the same transactional store used by the web server. `aiParser`
+ * exposes parse(input, settings), and may optionally expose
+ * summarize({ question, period, timezone }, profile). `callTelegram` is an
+ * injectable `(method, parameters) => Promise<result>` used by tests and by
+ * the polling entry point; when omitted, the Bot API is called with `token`.
+ */
+export function createTelegramHandler({
+  store,
+  aiParser,
+  token = '',
+  publicUrl = '',
+  now = () => Date.now(),
+  limit,
+  callTelegram,
+  downloadFile,
+  timezone = DEFAULT_TIMEZONE,
+  maxDrafts = 32,
+} = {}) {
+  if (!store || typeof store.run !== 'function') throw new TypeError('Telegram handler requires a store');
+  const telegram = callTelegram || makeInternalTelegramCall(token);
+  const botCall = async (method, parameters = {}) => {
+    if (!telegram) throw new Error('Telegram is not configured');
+    return telegram(method, parameters);
+  };
+  const inflight = new Map(), imageCache = new Map();
+  let cachedImageBytes = 0;
+
+  function deleteCachedImage(id) {
+    const item = imageCache.get(id);
+    if (!item) return;
+    clearTimeout(item.timer);
+    cachedImageBytes -= item.bytes;
+    imageCache.delete(id);
+  }
+
+  function getCachedImage(id) {
+    const item = imageCache.get(id);
+    if (item?.expiresAt <= atMillis(now)) { deleteCachedImage(id); return null; }
+    return item || null;
+  }
+
+  function cacheImage(context, chatId, input) {
+    for (const [id] of imageCache) getCachedImage(id);
+    const bytes = Buffer.byteLength(input.image.data);
+    while (imageCache.size && (cachedImageBytes + bytes > MAX_RETRY_CACHE_BYTES || imageCache.size >= 8)) {
+      deleteCachedImage(imageCache.keys().next().value);
+    }
+    const id = randomUUID();
+    const timer = setTimeout(() => deleteCachedImage(id), DRAFT_TTL);
+    timer.unref?.();
+    imageCache.set(id, { input, uid: context.uid, telegramId: context.telegramId, chatId: String(chatId), ledgerId: context.profile.ledgerId,
+      expiresAt: atMillis(now) + DRAFT_TTL, bytes, timer, used: false, draftId: null });
+    cachedImageBytes += bytes;
+    return id;
+  }
+
+  const retryMarkup = (retryId, language) => retryId && getCachedImage(retryId)
+    ? { reply_markup: { inline_keyboard: [[{ text: botText(language, 'enhance'), callback_data: `fp:retry:${retryId}` }]] } }
+    : {};
+
+  const invokeLimit = (key, max) => {
+    if (typeof limit === 'function') return limit(key, max);
+    return undefined;
+  };
+
+  async function acquireUpdate(updateId) {
+    const key = String(updateId);
+    const at = atMillis(now), lease = randomUUID();
+    return store.run(db => {
+      const state = ensureTelegramState(db);
+      pruneTelegramState(state, at, maxDrafts);
+      const previous = state.updates[key];
+      if (typeof previous === 'number' || previous?.status === 'done') return { duplicate: true };
+      if (previous?.status === 'processing' && previous.leaseUntil > at) return { busy: true };
+      state.updates[key] = { ...previous, at: previous?.at ?? at, status: 'processing', lease, leaseUntil: at + UPDATE_LEASE };
+      pruneTelegramState(state, at, maxDrafts);
+      return { key, lease, action: previous?.action || null };
+    });
+  }
+
+  async function updateOperation(operation, patch) {
+    if (!operation?.key) return;
+    await store.run(db => {
+      const item = ensureTelegramState(db).updates[operation.key];
+      if (item?.lease === operation.lease) Object.assign(item, patch);
+    });
+  }
+
+  async function contextFor(user, operation) {
+    const telegramId = getTelegramId(user);
+    if (!telegramId) return null;
+    const at = atMillis(now);
+    const info = userInfo(user);
+    return store.run(db => {
+      const uid = ensureUser(db, `telegram:${telegramId}`, info);
+      const profile = visible(db, uid);
+      const fallback = resolveLanguage(user?.language_code || 'zh', 'zh');
+      return { uid, telegramId, profile, language: botLanguage(profile.settings.language, fallback), at, operation };
+    });
+  }
+
+  async function sendMessage(chatId, text, extra = {}) {
+    return botCall('sendMessage', { chat_id: chatId, text, ...extra });
+  }
+
+  async function editMessage(chatId, messageId, text, extra = {}) {
+    if (chatId === undefined || messageId === undefined) return sendMessage(chatId, text, extra);
+    try {
+      return await botCall('editMessageText', { chat_id: chatId, message_id: messageId, text, ...extra });
+    } catch {
+      // Editing can fail when a user presses a stale button. A small follow-up
+      // keeps the ledger action visible without exposing the Bot API error.
+      return sendMessage(chatId, text, extra);
+    }
+  }
+
+  async function deliverReply(operation, action) {
+    await updateOperation(operation, { action });
+    if (action.type === 'edit') await editMessage(action.chatId, action.messageId, action.text, action.extra || {});
+    else await sendMessage(action.chatId, action.text, action.extra || {});
+    return action.result;
+  }
+
+  const reply = (context, chatId, key, result, extra = {}) => deliverReply(context.operation,
+    { type: 'reply', chatId, text: botText(context.language, key), extra, result });
+
+  async function downloadTelegramImage(fileId, mimeType = 'image/jpeg') {
+    if (typeof downloadFile === 'function') {
+      const result = await downloadFile(fileId, MAX_IMAGE_BYTES);
+      const bytes = Buffer.isBuffer(result) ? result : Buffer.from(result?.data || result || '');
+      if (!bytes.length || bytes.length > MAX_IMAGE_BYTES) throw new Error('imageTooLarge');
+      return { data: bytes.toString('base64'), mimeType: String(result?.mimeType || mimeType).toLowerCase() };
+    }
+    const file = await botCall('getFile', { file_id: fileId });
+    const filePath = file?.file_path || file?.result?.file_path;
+    if (!filePath || !token || !/^[a-zA-Z0-9_./-]+$/.test(filePath) || filePath.includes('..')) throw new Error('imageDownloadFailed');
+    const response = await fetch(`https://api.telegram.org/file/bot${token}/${filePath}`, { signal: AbortSignal.timeout(60000), redirect: 'error' });
+    if (!response.ok || !response.body) throw new Error('imageDownloadFailed');
+    const length = Number(response.headers.get('content-length') || 0);
+    if (length > MAX_IMAGE_BYTES) throw new Error('imageTooLarge');
+    const chunks = [];
+    let total = 0;
+    const reader = response.body.getReader();
+    while (true) {
+      const next = await reader.read();
+      if (next.done) break;
+      total += next.value.byteLength;
+      if (total > MAX_IMAGE_BYTES) {
+        try { await reader.cancel(); } catch {}
+        throw new Error('imageTooLarge');
+      }
+      chunks.push(Buffer.from(next.value));
+    }
+    if (!total) throw new Error('imageDownloadFailed');
+    return { data: Buffer.concat(chunks).toString('base64'), mimeType: String(mimeType).toLowerCase() };
+  }
+
+  function imageFromMessage(message) {
+    const photo = Array.isArray(message?.photo) && message.photo.length ? message.photo.at(-1) : null;
+    if (photo?.file_id) return { fileId: photo.file_id, mimeType: 'image/jpeg', fileSize: Number(photo.file_size) || 0 };
+    const document = message?.document;
+    if (!document?.file_id) return null;
+    const mime = String(document.mime_type || '').toLowerCase();
+    const name = String(document.file_name || '').toLowerCase();
+    const image = /^image\/(jpeg|png|webp|gif)$/.test(mime) || (!mime && /\.(?:jpe?g|png|webp|gif)$/.test(name));
+    const fromName = /\.png$/.test(name) ? 'image/png' : /\.webp$/.test(name) ? 'image/webp' : /\.gif$/.test(name) ? 'image/gif' : 'image/jpeg';
+    return image ? { fileId: document.file_id, mimeType: mime || fromName, fileSize: Number(document.file_size) || 0 } : null;
+  }
+
+  function toDraftItem(item, profile, uid, sourceTimezone) {
+    const type = item?.type === 'income' ? 'income' : 'expense';
+    const currency = Object.hasOwn(CURRENCIES, item?.currency) ? item.currency : (profile.settings.currency || 'JPY');
+    const category = chooseCategory(item, type, profile.settings);
+    const amountMinor = amountMinorFromItem(item, currency);
+    if (!category || !amountMinor) return null;
+    const itemTimezone = validTimezone(item?.timezone, sourceTimezone);
+    const merchant = safeString(item?.merchant, 120);
+    let note = safeString(item?.note, 160);
+    if (!note && merchant) note = merchant.slice(0, 160);
+    const members = profile.settings.consumers || [];
+    const allowedMembers = new Set(members.map(member => member.id));
+    const consumer = allowedMembers.has(item?.consumer) ? item.consumer : defaultConsumer(profile, uid);
+    const splitParticipants = Array.isArray(item?.splitParticipants)
+      ? [...new Set(item.splitParticipants.filter(id => allowedMembers.has(id)))] : [];
+    const splitMode = type === 'expense' && item?.splitMode === 'equal' && splitParticipants.length ? 'equal' : 'none';
+    const expense = {
+        id: randomUUID(),
+        type,
+        amountMinor,
+        currency,
+        occurredAt: safeOccurredAt(item?.occurredAt),
+        categoryId: category.id,
+        consumer,
+        note,
+        timezone: itemTimezone,
+        splitMode,
+        splitParticipants: splitMode === 'equal' ? splitParticipants : [],
+      };
+    try { validateExpense(expense, profile.settings); } catch { return null; }
+    return {
+      expense,
+      label: categoryLabel(category, profile.settings.language),
+      merchant,
+      payerName: members.find(member => member.id === consumer)?.name || '',
+      splitNames: splitMode === 'equal' ? members.filter(member => splitParticipants.includes(member.id)).map(member => member.name) : [],
+      confidence: Number.isFinite(Number(item?.confidence)) ? Math.max(0, Math.min(1, Number(item.confidence))) : null,
+    };
+  }
+
+  function previewText(draft, language) {
+    const lines = [botText(language, 'previewTitle')];
+    const items = draft.items || [];
+    for (const [index, item] of items.entries()) {
+      const expense = item.expense;
+      const kind = expense.type === 'income' ? botText(language, 'previewIncome') : botText(language, 'previewExpense');
+      const amount = amountText(expense.amountMinor, expense.currency);
+      const category = escapeTelegramText(item.label || expense.categoryId);
+      const merchant = item.merchant ? ` · ${escapeTelegramText(item.merchant)}` : '';
+      const locale = { zh: 'zh-CN', en: 'en-US', uk: 'uk-UA' }[language] || 'en-US';
+      const time = expense.occurredAt ? new Date(expense.occurredAt).toLocaleString(locale, { timeZone: expense.timezone, dateStyle: 'short', timeStyle: 'short' }) : botText(language, 'timeMissing');
+      lines.push(`${index + 1}. ${kind} ${expense.currency} ${amount} · ${category}${merchant}\n   ${botText(language, 'previewTime')}: ${time}`);
+      if (item.payerName) lines.push(`   ${botText(language, 'previewPayer')}: ${escapeTelegramText(item.payerName)}`);
+      if (item.splitNames?.length) lines.push(`   ${botText(language, 'previewSplit')}: ${item.splitNames.map(escapeTelegramText).join(' / ')}`);
+      if (expense.note && expense.note !== item.merchant) lines.push(`   ${botText(language, 'previewNote')}: ${escapeTelegramText(expense.note)}`);
+    }
+    lines.push('', botText(language, 'previewHint'));
+    if (draft.needsTime) lines.push(botText(language, 'timeMissingHint'));
+    return lines.join('\n');
+  }
+
+  async function saveDraft(context, chatId, parsed, { retryId = null, replaceDraftId = null } = {}) {
+    const sourceTimezone = validTimezone(parsed?.timezone, timezone);
+    const raw = normaliseItems(parsed);
+    if (!raw.length || raw.length > MAX_PREVIEW_ITEMS) return null;
+    const items = raw.map(item => toDraftItem(item, context.profile, context.uid, sourceTimezone));
+    if (items.some(item => !item)) return null;
+    const id = randomUUID();
+    const at = atMillis(now);
+    const draft = {
+      id,
+      uid: context.uid,
+      telegramId: context.telegramId,
+      chatId: String(chatId),
+      ledgerId: context.profile.ledgerId,
+      language: context.language,
+      createdAt: at,
+      expiresAt: at + DRAFT_TTL,
+      status: 'pending',
+      needsTime: items.some(item => !item.expense.occurredAt),
+      items,
+      retryId,
+      previewSent: 0,
+      previewComplete: false,
+    };
+    const saved = await store.run(db => {
+      const state = ensureTelegramState(db);
+      pruneTelegramState(state, at, maxDrafts);
+      if (replaceDraftId && (state.drafts[replaceDraftId]?.uid !== context.uid || state.drafts[replaceDraftId]?.status !== 'refining')) return false;
+      state.drafts[id] = draft;
+      if (replaceDraftId && state.drafts[replaceDraftId]?.uid === context.uid) state.drafts[replaceDraftId].status = 'replaced';
+      const operation = context.operation;
+      if (state.updates[operation?.key]?.lease === operation?.lease) state.updates[operation.key].action = { type: 'draft', draftId: id };
+      pruneTelegramState(state, at, maxDrafts);
+      return true;
+    });
+    return saved ? draft : null;
+  }
+
+  async function deliverDraft(draft) {
+    const language = draft.language;
+    const pages = splitTelegramText(previewText(draft, language));
+    for (let index = draft.previewSent || 0; index < pages.length; index++) {
+      const last = index === pages.length - 1;
+      const inline_keyboard = [[
+        { text: botText(language, draft.needsTime ? 'confirmNow' : 'confirm'), callback_data: `fp:${draft.needsTime ? 'now' : 'confirm'}:${draft.id}` },
+        { text: botText(language, 'cancel'), callback_data: `fp:cancel:${draft.id}` },
+      ]];
+      if (draft.retryId && getCachedImage(draft.retryId)) inline_keyboard.push([{ text: botText(language, 'enhance'), callback_data: `fp:retry:${draft.retryId}` }]);
+      await sendMessage(draft.chatId, pages[index], last ? { reply_markup: { inline_keyboard } } : {});
+      await store.run(db => {
+        const stored = ensureTelegramState(db).drafts[draft.id];
+        if (stored) { stored.previewSent = index + 1; stored.previewComplete = last; }
+      });
+    }
+    return { ok: true, kind: 'draft', draftId: draft.id, count: draft.items.length };
+  }
+
+  async function parseMessage(context, message, image, { enhanced = false, replaceDraftId = null } = {}) {
+    if (!aiParser || typeof aiParser.parse !== 'function') {
+      return reply(context, message.chat.id, 'unavailable', { ok: false, reason: 'unavailable' });
+    }
+    const text = firstText(message.text || message.caption || '');
+    if (!text && !image) {
+      return reply(context, message.chat.id, 'noInput', { ok: false, reason: 'no-input' });
+    }
+    invokeLimit(`telegram-ai:${context.telegramId}`, 12);
+    const input = { text, image, timezone: validTimezone(timezone), telegramUserId: context.telegramId, enhanced, now: context.at };
+    const retryId = image && !enhanced ? cacheImage(context, message.chat.id, input) : null;
+    let parsed;
+    try {
+      parsed = await aiParser.parse(input, { ...context.profile.settings, currentConsumer: context.profile.user.id });
+    } catch (error) {
+      const key = enhanced ? 'enhanceFailed' : error?.message === 'errorAiResult' ? 'noResult' : 'unavailable';
+      return reply(context, message.chat.id, key, { ok: false, reason: key }, retryMarkup(retryId, context.language));
+    }
+    const draft = await saveDraft(context, message.chat.id, parsed, { retryId, replaceDraftId });
+    if (!draft) {
+      return reply(context, message.chat.id, enhanced ? 'enhanceFailed' : 'noResult', { ok: false, reason: 'no-result' }, retryMarkup(retryId, context.language));
+    }
+    if (retryId) { const cached = getCachedImage(retryId); if (cached) cached.draftId = draft.id; }
+    return deliverDraft(draft);
+  }
+
+  async function summaryFor(context, message, text) {
+    const period = periodForText(text);
+    const currentTimezone = validTimezone(timezone);
+    invokeLimit(`telegram-summary:${context.telegramId}`, 6);
+    let output = null;
+    try {
+      if (typeof aiParser?.summarize === 'function') {
+        const result = await aiParser.summarize({ question: firstText(text), period, timezone: currentTimezone }, context.profile);
+        output = typeof result === 'string' ? result : result?.text;
+      }
+    } catch {}
+    if (!output?.trim()) return reply(context, message.chat.id, 'summaryUnavailable', { ok: false, reason: 'summary-unavailable' });
+    return deliverReply(context.operation, { type: 'reply', chatId: message.chat.id, text: output.trim().slice(0, 3900), result: { ok: true, kind: 'summary', ai: true } });
+  }
+
+  async function cancelDrafts(context, chatId) {
+    const count = await store.run(db => {
+      const state = ensureTelegramState(db);
+      let changed = 0;
+      for (const draft of Object.values(state.drafts)) {
+        if (draft.uid === context.uid && ['pending', 'refining'].includes(draft.status)) { draft.status = 'cancelled'; changed++; }
+      }
+      return changed;
+    });
+    for (const [id, cached] of imageCache) if (cached.uid === context.uid) deleteCachedImage(id);
+    await sendMessage(chatId, botText(context.language, 'cancelled'));
+    return { ok: true, kind: 'cancel', count };
+  }
+
+  async function retryImage(context, query, retryId) {
+    const cached = getCachedImage(retryId);
+    const chatId = query.message.chat.id;
+    if (!cached || cached.uid !== context.uid || cached.telegramId !== context.telegramId || cached.chatId !== String(chatId)) {
+      return reply(context, chatId, 'retryExpired', { ok: false, reason: 'retry-expired' });
+    }
+    if (cached.used) return reply(context, chatId, 'enhancing', { ok: true, kind: 'already-retrying' });
+    if (cached.ledgerId !== context.profile.ledgerId) return reply(context, chatId, 'ledgerChanged', { ok: false, reason: 'ledger-changed' });
+    cached.used = true;
+    if (cached.draftId) {
+      const available = await store.run(db => {
+        const draft = ensureTelegramState(db).drafts[cached.draftId];
+        if (!draft || draft.uid !== context.uid || draft.status !== 'pending') return false;
+        draft.status = 'refining'; return true;
+      });
+      if (!available) {
+        deleteCachedImage(retryId);
+        return reply(context, chatId, 'expired', { ok: false, reason: 'retry-unavailable' });
+      }
+    }
+    try {
+      return await parseMessage(context, { chat: query.message.chat, text: cached.input.text }, cached.input.image, { enhanced: true, replaceDraftId: cached.draftId });
+    } finally {
+      if (cached.draftId) await store.run(db => {
+        const draft = ensureTelegramState(db).drafts[cached.draftId];
+        if (draft?.status === 'refining') draft.status = 'pending';
+      });
+      deleteCachedImage(retryId);
+    }
+  }
+
+  async function callbackUpdate(update, operation) {
+    const query = update.callback_query;
+    if (query?.message?.chat?.type !== 'private') return { ok: true, kind: 'ignored' };
+    const from = query?.from;
+    const context = await contextFor(from, operation);
+    if (!context) return { ok: false, reason: 'invalid-user' };
+    const match = /^fp:(confirm|now|cancel|retry):([a-zA-Z0-9_-]{8,64})$/.exec(String(query.data || ''));
+    if (!match) {
+      try { await botCall('answerCallbackQuery', { callback_query_id: query.id }); } catch {}
+      return { ok: false, reason: 'invalid-callback' };
+    }
+    try { await botCall('answerCallbackQuery', { callback_query_id: query.id }); } catch {}
+    const action = match[1], draftId = match[2], at = atMillis(now);
+    if (action === 'retry') return retryImage(context, query, draftId);
+    let outcome;
+    try {
+      outcome = await store.run(db => {
+        const state = ensureTelegramState(db);
+        pruneTelegramState(state, at, maxDrafts);
+        const draft = state.drafts[draftId];
+        if (!draft || draft.uid !== context.uid || String(draft.chatId) !== String(query.message?.chat?.id ?? '')) return { kind: 'missing' };
+        if (draft.expiresAt <= at || draft.status === 'expired') { draft.status = 'expired'; return { kind: 'expired' }; }
+        if (action === 'cancel') {
+          if (draft.status === 'confirmed') return { kind: 'already' };
+          draft.status = 'cancelled'; return { kind: 'cancelled' };
+        }
+        if (draft.status === 'confirmed') return { kind: 'already', count: draft.savedIds?.length || draft.items.length };
+        if (draft.status === 'refining') return { kind: 'refining' };
+        if (draft.status !== 'pending') return { kind: 'cancelled' };
+        if (!draft.previewComplete) return { kind: 'preview-incomplete' };
+        if (draft.needsTime && action !== 'now') return { kind: 'needs-time' };
+        const profile = visible(db, context.uid);
+        const savedIds = [];
+        for (const item of draft.items || []) {
+          const expense = { ...item.expense, ...(action === 'now' && !item.expense.occurredAt ? { occurredAt: new Date(at).toISOString() } : {}), ledgerId: draft.ledgerId };
+          const result = handleDomain(db, context.uid, '/expenses', 'POST', expense, { now: at, limit, ledgerQuery: null });
+          savedIds.push(result.id);
+        }
+        draft.status = 'confirmed';
+        draft.savedIds = savedIds;
+        draft.confirmedAt = at;
+        draft.ledgerId = profile.ledgerId;
+        return { kind: 'confirmed', count: savedIds.length, retryId: draft.retryId };
+      });
+    } catch (error) {
+      outcome = { kind: error instanceof RequestError ? error.message : 'failed' };
+    }
+    const language = context.language;
+    const chatId = query.message?.chat?.id;
+    const messageId = query.message?.message_id;
+    if (outcome.retryId) deleteCachedImage(outcome.retryId);
+    if (['cancelled', 'already'].includes(outcome.kind)) for (const [id, cached] of imageCache) if (cached.draftId === draftId) deleteCachedImage(id);
+    const key = ({ confirmed: 'confirmed', already: 'alreadyConfirmed', cancelled: 'cancelled', missing: 'expired', expired: 'expired',
+      'needs-time': 'timeMissingHint', 'preview-incomplete': 'previewIncomplete', refining: 'enhancing', errorLedgerChanged: 'ledgerChanged' })[outcome.kind] || 'failed';
+    const result = { ok: ['confirmed', 'already', 'cancelled'].includes(outcome.kind), ...outcome };
+    const keepButtons = ['needs-time', 'preview-incomplete', 'refining'].includes(outcome.kind);
+    return deliverReply(operation, { type: keepButtons || outcome.kind === 'missing' ? 'reply' : 'edit', chatId, messageId,
+      text: botText(language, key, { n: outcome.count }), extra: keepButtons ? {} : { reply_markup: { inline_keyboard: [] } }, result });
+  }
+
+  async function messageUpdate(update, operation) {
+    const message = update.message;
+    if (!message?.chat || message.chat.type !== 'private') return { ok: true, kind: 'ignored' };
+    const context = await contextFor(message.from, operation);
+    if (!context) return { ok: false, reason: 'invalid-user' };
+    const text = firstText(message.text || '');
+    const command = /^\/(start|help|cancel|month|week)(?:@[^\s]+)?(?:\s+([\s\S]*))?$/i.exec(text);
+    if (command) {
+      const name = command[1].toLowerCase();
+      if (name === 'start') {
+        await sendMessage(message.chat.id, botText(context.language, 'welcome'), publicUrl ? { reply_markup: { inline_keyboard: [[{ text: botText(context.language, 'open'), web_app: { url: publicUrl } }]] } } : {});
+        return { ok: true, kind: 'start' };
+      }
+      if (name === 'help') { await sendMessage(message.chat.id, botText(context.language, 'help')); return { ok: true, kind: 'help' }; }
+      if (name === 'cancel') return cancelDrafts(context, message.chat.id);
+      return summaryFor(context, message, name === 'week' ? '/week' : '/month');
+    }
+    if (summaryQuestion(text)) return summaryFor(context, message, text);
+    const imageInfo = imageFromMessage(message);
+    if (message.document && !imageInfo) {
+      await sendMessage(message.chat.id, botText(context.language, 'invalidPhoto'));
+      return { ok: false, reason: 'invalid-image' };
+    }
+    if (!text && !imageInfo) {
+      await sendMessage(message.chat.id, botText(context.language, 'noInput'));
+      return { ok: false, reason: 'no-input' };
+    }
+    let image = null;
+    if (imageInfo) {
+      invokeLimit(`telegram-image:${context.telegramId}`, 12);
+      if (imageInfo.fileSize > MAX_IMAGE_BYTES) {
+        await sendMessage(message.chat.id, botText(context.language, 'invalidPhoto'));
+        return { ok: false, reason: 'image-too-large' };
+      }
+      try { image = await downloadTelegramImage(imageInfo.fileId, imageInfo.mimeType); }
+      catch {
+        await sendMessage(message.chat.id, botText(context.language, 'invalidPhoto'));
+        return { ok: false, reason: 'image-download' };
+      }
+    }
+    return parseMessage(context, message, image);
+  }
+
+  async function processUpdate(update) {
+    const operation = await acquireUpdate(update.update_id);
+    if (operation.duplicate) return { ok: true, duplicate: true };
+    if (operation.busy) return { ok: false, retryable: true, reason: 'processing' };
+    try {
+      let result;
+      if (operation.action?.type === 'draft') {
+        const draft = await store.run(db => structuredClone(ensureTelegramState(db).drafts[operation.action.draftId] || null));
+        if (draft && draft.expiresAt > atMillis(now)) result = await deliverDraft(draft);
+        else {
+          const source = update.message || update.callback_query?.message;
+          const context = await contextFor(update.message?.from || update.callback_query?.from, operation);
+          result = context && source?.chat?.id ? await reply(context, source.chat.id, 'expired', { ok: false, reason: 'expired' }) : { ok: false, reason: 'expired' };
+        }
+      } else if (operation.action) {
+        result = await deliverReply(operation, operation.action);
+      } else if (update.callback_query) result = await callbackUpdate(update, operation);
+      else if (update.message) result = await messageUpdate(update, operation);
+      else result = { ok: true, kind: 'ignored' };
+      await updateOperation(operation, { status: 'done', leaseUntil: 0, action: null });
+      return result;
+    } catch (error) {
+      // Keep the durable draft/reply checkpoint so a delivery retry never
+      // invokes the model or writes the same records a second time. Telegram
+      // itself cannot make a timed-out sendMessage exactly-once, so any
+      // repeated message still uses the same draft and expense IDs.
+      await updateOperation(operation, { status: 'pending', leaseUntil: 0 });
+      return { ok: false, retryable: true, reason: error?.status === 429 || error?.message === 'errorRateLimit' ? 'rate-limit' : 'handler-failed' };
+    }
+  }
+
+  async function handle(update) {
+    if (!update || typeof update !== 'object' || !Number.isSafeInteger(update.update_id) || update.update_id < 0) return { ok: true, kind: 'ignored' };
+    const key = String(update.update_id);
+    if (inflight.has(key)) {
+      const result = await inflight.get(key);
+      return result.retryable ? result : { ok: true, duplicate: true };
+    }
+    const promise = processUpdate(update);
+    inflight.set(key, promise);
+    try { return await promise; } finally { inflight.delete(key); }
+  }
+
+  return { handle, close: () => { for (const id of imageCache.keys()) deleteCachedImage(id); }, constants: { maxImageBytes: MAX_IMAGE_BYTES, draftTtl: DRAFT_TTL } };
+}
+
+export { MAX_IMAGE_BYTES, DRAFT_TTL };

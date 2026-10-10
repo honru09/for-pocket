@@ -85,6 +85,94 @@ test('entry time supports backdated entries and edits with timezone grouping and
   assert.equal((await r('/expenses/backdated-entry-1',{method:'PUT',body:{ledgerId:created.ledgerId,occurredAt,timezone:'Asia/Tokyo'}})).status,409);
   await f.restart(); const saved=(await r('/profile')).data.expenses[0]; assert.equal(saved.dayKey,'2026-08-31'); assert.equal(saved.timezone,'Europe/Kyiv');
 });
+test('equal splits persist across retries and restarts and only accept current circle members', async t => {
+  const f = await fixture(t), r = f.request;
+  const created = (await r('/circles/create', { body: { name: 'Shared meals' } })).data;
+  const circleId = created.social.activeCircleId;
+  const invite = (await r('/circles/invite', { body: { circleId } })).data;
+  assert.equal((await r('/circles/join', { user: 202, body: { code: invite.code, confirm: true } })).status, 200);
+  const participants = ['u_101', 'u_202'];
+  const payload = expense('split-meal-0001', 'u_101', { splitMode: 'equal', splitParticipants: participants });
+  const saved = await r('/expenses', { body: payload });
+  assert.equal(saved.status, 200);
+  assert.equal(saved.data.splitMode, 'equal');
+  assert.deepEqual(saved.data.splitParticipants, participants);
+  assert.equal(saved.data.amountMinor, 650, 'splitting retains the full expense amount');
+  const repeated = await r('/expenses', { body: payload });
+  assert.equal(repeated.status, 200);
+  assert.equal(repeated.data.id, saved.data.id);
+  assert.equal(repeated.data.createdAt, saved.data.createdAt, 'retry returns the same expense');
+  assert.deepEqual(repeated.data.splitParticipants, participants);
+
+  const invalid = [
+    { splitMode: 'weighted', splitParticipants: participants },
+    { splitMode: 'equal' },
+    { splitMode: 'equal', splitParticipants: [] },
+    { splitMode: 'equal', splitParticipants: 'u_101' },
+    { splitMode: 'equal', splitParticipants: ['u_101', 'u_101'] },
+    { splitMode: 'equal', splitParticipants: ['u_101', 'u_303'] },
+    { splitMode: 'none', splitParticipants: participants },
+    { splitMode: 'equal', splitParticipants: participants, type: 'income', categoryId: 'wage' },
+  ];
+  for (const [index, fields] of invalid.entries()) {
+    assert.equal((await r('/expenses', { body: expense(`bad-split-${index}`, 'u_101', fields) })).status, 400,
+      `invalid split must be rejected: ${JSON.stringify(fields)}`);
+  }
+  const plain = await r('/expenses', { body: expense('no-split-0001', 'u_101') });
+  assert.equal(plain.status, 200);
+  assert.equal(plain.data.splitMode, 'none');
+  assert.deepEqual(plain.data.splitParticipants, []);
+  const single = await r('/expenses', { body: expense('solo-split-0001', 'u_101', { splitMode: 'equal', splitParticipants: ['u_101'] }) });
+  assert.equal(single.status, 200);
+
+  await r('/circles/leave', { user: 202, body: { circleId, confirm: true } });
+  assert.equal((await r('/expenses', { body: { ...payload, id: 'departed-split-1' } })).status, 400,
+    'a departed member cannot be selected for a new split');
+  await f.restart();
+  const reloaded = (await r('/profile')).data.expenses;
+  assert.equal(reloaded.length, 3, 'rejected and retried requests must not add records');
+  assert.deepEqual(reloaded.find(entry => entry.id === payload.id).splitParticipants, participants,
+    'historical splits retain their participants when a member leaves');
+  assert.equal(reloaded.find(entry => entry.id === payload.id).splitMode, 'equal');
+});
+
+test('linking accounts remaps split participants in every ledger without duplicate shares', async t => {
+  const f = await fixture(t), r = f.request;
+  const login = await r('/auth/google', { user: null, body: { credential: 'verified-a' } });
+  assert.equal(login.status, 200);
+  const session = login.data.sessionToken, googleMember = login.data.profile.user.id;
+  const personal = await r('/expenses', { session, body: expense('google-split-01', googleMember, {
+    splitMode: 'equal', splitParticipants: [googleMember],
+  }) });
+  assert.equal(personal.status, 200);
+  const circleId = (await r('/circles/create', { session, body: { name: 'Linked shares' } })).data.social.activeCircleId;
+  const invite = (await r('/circles/invite', { session, body: { circleId } })).data;
+  for (const user of [101, 202]) {
+    assert.equal((await r('/circles/join', { user, body: { code: invite.code, confirm: true } })).status, 200);
+  }
+  const shared = await r('/expenses', { session, body: expense('merged-split-01', googleMember, {
+    splitMode: 'equal', splitParticipants: [googleMember, 'u_101', 'u_202'],
+  }) });
+  assert.equal(shared.status, 200);
+  const code = (await r('/auth/link-code', { body: {} })).data.code;
+  assert.equal((await r('/auth/link-verify', { session, body: { code, confirm: true } })).status, 200);
+
+  await f.restart();
+  const circle = (await r('/profile', { session })).data;
+  assert.equal(circle.user.id, 'u_101');
+  assert.equal(circle.social.activeCircle.memberCount, 2);
+  assert.equal(circle.expenses[0].consumer, 'u_101');
+  assert.equal(circle.expenses[0].splitMode, 'equal');
+  assert.deepEqual(circle.expenses[0].splitParticipants, ['u_101', 'u_202'],
+    'the same person linked through two providers must receive only one share');
+  await r('/circles/switch', { session, body: { circleId: null } });
+  const mergedPersonal = (await r('/profile', { session })).data.expenses;
+  assert.equal(mergedPersonal.length, 1);
+  assert.equal(mergedPersonal[0].id, 'google-split-01');
+  assert.equal(mergedPersonal[0].consumer, 'u_101');
+  assert.deepEqual(mergedPersonal[0].splitParticipants, ['u_101']);
+});
+
 test('circle invitation requires acceptance; membership, admins, isolation, expiry and stale scope', async t => {
   const f = await fixture(t), r = f.request;
   const created = await r('/circles/create',{body:{name:'Home'}}); assert.equal(created.status,200);

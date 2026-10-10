@@ -123,12 +123,20 @@ export function validateExpense(value, settings) {
   if (!category) throw new Error('请选择一个分类方向。');
   const allowedConsumers = new Set((settings.consumers || DEFAULT_CONSUMERS).map(c => c.id));
   if (!allowedConsumers.has(value.consumer)) throw new Error('请选择有效的记账角色。');
+  const splitMode = value.splitMode === undefined ? 'none' : value.splitMode;
+  if (!['none', 'equal'].includes(splitMode) || type === 'income' && splitMode !== 'none') throw new Error('errorSplit');
+  const splitParticipants = value.splitParticipants === undefined ? [] : value.splitParticipants;
+  if (!Array.isArray(splitParticipants) || splitParticipants.length > MAX_CIRCLE_MEMBERS
+    || splitMode === 'none' && splitParticipants.length || splitMode === 'equal' && !splitParticipants.length
+    || splitParticipants.some(id => typeof id !== 'string' || !allowedConsumers.has(id))
+    || new Set(splitParticipants).size !== splitParticipants.length) throw new Error('errorSplit');
   if (typeof value.note !== 'string' || value.note.length > 160) throw new Error('备注最多 160 个字符。');
   if (typeof value.timezone !== 'string' || value.timezone.length > 80) throw new Error('时区格式有误。');
   dateKey(new Date(), value.timezone);
   const occurredAt = value.occurredAt == null ? null : validateEntryTime(value.occurredAt, value.timezone).occurredAt;
   return { id: value.id, type, amountMinor: value.amountMinor, currency: value.currency, occurredAt,
-    categoryId: category.id, category: structuredClone(category), consumer: value.consumer, note: value.note.trim(), timezone: value.timezone };
+    categoryId: category.id, category: structuredClone(category), consumer: value.consumer, note: value.note.trim(), timezone: value.timezone,
+    splitMode, splitParticipants: [...splitParticipants] };
 }
 export function validateEntryTime(value, timezone) {
   if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/.test(value)) throw new Error('errorEntryTime');
