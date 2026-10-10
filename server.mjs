@@ -89,7 +89,7 @@ export function createApp({ token = process.env.BOT_TOKEN || '', dataDir = path.
   });
 }
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  const port = Number(process.env.PORT || 8787), host = process.env.HOST || (process.env.RENDER ? '0.0.0.0' : '127.0.0.1');
+  const port = Number(process.env.PORT || 8787), host = process.env.HOST || (process.env.RENDER || process.env.K_SERVICE || process.env.NODE_ENV === 'production' ? '0.0.0.0' : '127.0.0.1');
   const app = createApp(); app.listen(port, host, () => console.log(`for. ready at http://${host}:${port}`));
   process.on('SIGINT', () => app.close(() => process.exit(0)));
   process.on('SIGTERM', () => app.close(() => process.exit(0)));
