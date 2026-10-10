@@ -9,6 +9,8 @@ const MOUTHS = ['M50 78q10 10 20-3', 'M50 78q10 10 20-3', 'M56 79q5 5 10-1', 'M6
 function Cloud({ mood }) {
   return <svg className="mascot" id="mascot" viewBox="0 0 130 126" aria-hidden="true">
     <path className="mascot-body" d={BODY}/>
+    <path className="cloud-highlight" d="M27 47C29 28 45 19 61 21"/>
+    <ellipse className="cloud-glint" cx="32" cy="42" rx="4" ry="7" transform="rotate(28 32 42)"/>
     <g className="cloud-face">
       {mood >= 5 && <path className="cloud-brows" d={mood === 6 ? 'M39 48l15 8m30-10-16 9' : 'M40 51l13 5m29-7-12 5'}/>}
       <path d={EYES[mood]} className="face-eyes"/>
@@ -16,11 +18,12 @@ function Cloud({ mood }) {
       <ellipse className="cloud-blush" cx="35" cy="74" rx={mood === 2 ? 11 : 7} ry={mood === 2 ? 6 : 4}/>
       <ellipse className="cloud-blush" cx="88" cy="72" rx={mood === 2 ? 11 : 7} ry={mood === 2 ? 6 : 4}/>
       {mood === 2 && <g className="cloud-blush-lines"><path d="m30 72 2 4m3-5 2 4m45-5 2 4m3-5 2 4"/></g>}
+      {mood === 2 && <g className="cloud-shy-sparkles"><path d="M24 56v7m-3.5-3.5h7m79-5v7m-3.5-3.5h7"/></g>}
     </g>
     {mood === 3 && <text className="cloud-question" x="101" y="32">?</text>}
-    {mood === 4 && <path className="cloud-sigh" d="M89 83q12-11 19-4q4 7-4 9q-8 1-9-3m11-12q8-2 9 5"/>}
+    {mood === 4 && <><path className="cloud-sigh" d="M89 83q12-11 19-4q4 7-4 9q-8 1-9-3m11-12q8-2 9 5"/><path className="cloud-teardrop" d="M92 54q5 7 0 11q-5-4 0-11Z"/></>}
     {mood >= 5 && <path className="cloud-vein" d="M94 34v5h-5m9-1v6h6"/>}
-    {mood === 6 && <g className="cloud-steam"><path d="M24 33q-9-6-4-12m79 3q10-6 6-13"/></g>}
+    {mood === 6 && <g className="cloud-steam"><path d="M24 33q-9-6-4-12m79 3q10-6 6-13"/><path className="cloud-spark" d="m20 47 3 2m-1-5-1 4m91 5 3-2m-1 5-1-4"/></g>}
   </svg>;
 }
 
