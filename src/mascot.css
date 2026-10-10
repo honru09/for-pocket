@@ -5,7 +5,7 @@
   width:var(--cloud-size); aspect-ratio:130 / 126; min-height:44px;
   display:block; padding:0; border:0; border-radius:20px;
   background:transparent; color:#635b3c; cursor:pointer;
-  touch-action:manipulation; user-select:none; -webkit-user-select:none;
+  touch-action:manipulation; user-select:none; -webkit-user-select:none; -webkit-tap-highlight-color:transparent;
 }
 .for-root .mascot-toy:focus-visible { outline:2px solid #a8b48f; outline-offset:2px; box-shadow:none; }
 .for-root .amount-meta { z-index:4; }
@@ -49,7 +49,7 @@
 .mascot-toy[data-phase="cloud"] .cloud-eyes { animation:cloud-blink 6.4s linear infinite; }
 .mascot-toy:active .cloud-touch { animation:none; transform:translate3d(0,1px,0) scale(.965,.95); transition-duration:100ms; }
 .mascot-toy[data-phase="cloud"][data-mood="1"] .cloud-shell,.mascot-toy[data-phase="cloud"][data-mood="2"] .cloud-shell,.mascot-toy[data-phase="cloud"][data-mood="3"] .cloud-shell,.mascot-toy[data-phase="cloud"][data-mood="4"] .cloud-shell,.mascot-toy[data-phase="cloud"][data-mood="5"] .cloud-shell { animation:cloud-state-pop 220ms var(--ease-out); }
-.mascot-toy[data-phase="cloud"][data-mood="6"] .cloud-shell { animation:cloud-fume 90ms linear 8; }
+.mascot-toy[data-phase="cloud"][data-mood="6"] .cloud-shell { animation:cloud-fume 360ms var(--ease-out) 1; }
 .mascot-toy[data-phase="burst"] .cloud-motion { animation:cloud-soft-pop 260ms var(--ease-out) forwards; }
 .cloud-pop { position:absolute; inset:0; pointer-events:none; }
 .cloud-pop-word { position:absolute; left:50%; top:48%; font-size:16px; font-weight:900; color:#887654; transform:translate(-50%,-50%) rotate(-8deg); animation:cloud-pop-word 280ms var(--ease-out) forwards; }
@@ -60,7 +60,7 @@
 .mascot-toy[data-sign-taps="1"] .stop-sign-rest { transform:rotate(7deg); }
 .cloud-sign-flight { position:fixed; display:block; z-index:12; pointer-events:none; transform-origin:50% 95%; }
 .cloud-announcement { position:absolute; width:1px; height:1px; padding:0; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
-@keyframes cloud-fume { 0%,100% {transform:translateX(0) rotate(0)} 25% {transform:translateX(-1.5px) rotate(-2deg)} 75% {transform:translateX(1.5px) rotate(2deg)} }
+@keyframes cloud-fume { 0%,100% {transform:translate3d(0,0,0) rotate(0)} 16% {transform:translate3d(-1px,0,0) rotate(-1deg)} 34% {transform:translate3d(2px,-.5px,0) rotate(1.6deg)} 52% {transform:translate3d(-2px,.5px,0) rotate(-1.5deg)} 70% {transform:translate3d(1px,0,0) rotate(.9deg)} 86% {transform:translate3d(-.5px,0,0) rotate(-.4deg)} }
 @keyframes cloud-idle-breathe { 0%,100% { transform:translate3d(0,0,0) scale(1); } 42% { transform:translate3d(0,-1.5px,0) scale(1.012,.992); } 70% { transform:translate3d(0,-.5px,0) scale(1.006,.997); } }
 @keyframes cloud-idle-face { 0%,100% { transform:translate3d(0,0,0) rotate(0); } 42% { transform:translate3d(0,-.7px,0) rotate(-.7deg); } 70% { transform:translate3d(0,-.2px,0) rotate(.35deg); } }
 @keyframes cloud-blink { 0%,89%,100% { transform:scaleY(1); } 90.2% { transform:scaleY(.18); } 91.5% { transform:scaleY(1); } 92.8% { transform:scaleY(.22); } 94.1% { transform:scaleY(1); } }
