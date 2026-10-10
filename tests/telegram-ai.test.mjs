@@ -3,9 +3,10 @@ import assert from 'node:assert/strict';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
+import * as XLSX from 'xlsx';
 import { createStore } from '../store.mjs';
 import { ensureUser, handleDomain } from '../domain.mjs';
-import { createTelegramHandler, DRAFT_TTL, MAX_IMAGE_BYTES } from '../telegram-ai.mjs';
+import { createTelegramHandler, DRAFT_TTL, MAX_AUDIO_SECONDS, MAX_IMAGE_BYTES } from '../telegram-ai.mjs';
 import { configureTelegramBot } from '../scripts/configure-bot.mjs';
 import { deriveTelegramWebhookSecret, ensureTelegramWebhook } from '../telegram-config.mjs';
 
@@ -110,6 +111,78 @@ test('photo and document images are downloaded within bounds and forwarded as pr
   assert.equal((await f.handler.handle(invalid)).reason, 'invalid-image');
   assert.equal(downloads.length, 2);
   assert.ok(!JSON.stringify(await f.database()).includes(Buffer.from('fixture-image').toString('base64')));
+});
+
+test('supported Telegram document formats are bounded and normalized before parsing', async t => {
+  const downloads = [];
+  const f = await fixture(t, {
+    downloadFile: async fileId => {
+      downloads.push(fileId);
+      if (fileId === 'csv') return Buffer.from('date,merchant,amount\n2026-10-10,Ramen,188\n', 'utf8');
+      if (fileId === 'txt') return Buffer.from('books 2400 JPY', 'utf8');
+      if (fileId === 'xlsx') {
+        const book = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(book, XLSX.utils.aoa_to_sheet([['merchant', 'amount'], ['Cafe', 500]]), 'October');
+        return Buffer.from(XLSX.write(book, { type: 'buffer', bookType: 'xlsx' }));
+      }
+      return Buffer.from('%PDF-1.4 fixture', 'ascii');
+    },
+  });
+  const csv = message(44, ''); csv.message.document = { file_id: 'csv', file_name: 'spend.csv', mime_type: 'text/csv', file_size: 45 };
+  assert.equal((await f.handler.handle(csv)).kind, 'draft');
+  assert.match(f.aiCalls.at(-1).input.text, /Ramen/);
+  assert.equal(f.aiCalls.at(-1).input.file, null);
+  const txt = message(45, ''); txt.message.document = { file_id: 'txt', file_name: 'note.txt', mime_type: 'text/plain', file_size: 14 };
+  assert.equal((await f.handler.handle(txt)).kind, 'draft');
+  assert.match(f.aiCalls.at(-1).input.text, /books 2400/);
+  const xlsx = message(46, ''); xlsx.message.document = { file_id: 'xlsx', file_name: 'ledger.xlsx', mime_type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', file_size: 100 };
+  assert.equal((await f.handler.handle(xlsx)).kind, 'draft');
+  assert.match(f.aiCalls.at(-1).input.text, /Cafe/);
+  const pdf = message(47, 'Receipt'); pdf.message.document = { file_id: 'pdf', file_name: 'receipt.pdf', mime_type: 'application/pdf', file_size: 18 };
+  assert.equal((await f.handler.handle(pdf)).kind, 'draft');
+  assert.equal(f.aiCalls.at(-1).input.file.mimeType, 'application/pdf');
+  assert.equal(f.aiCalls.at(-1).input.file.name, 'receipt.pdf');
+  assert.equal(f.aiCalls.at(-1).input.text, 'Receipt');
+  assert.deepEqual(downloads, ['csv', 'txt', 'xlsx', 'pdf']);
+});
+
+test('unsupported Telegram documents and oversized files are rejected before parsing', async t => {
+  const f = await fixture(t, { downloadFile: async () => Buffer.from('untrusted') });
+  const unsupported = message(48, ''); unsupported.message.document = { file_id: 'exe', file_name: 'run.exe', mime_type: 'application/octet-stream', file_size: 10 };
+  assert.equal((await f.handler.handle(unsupported)).reason, 'invalid-image');
+  const oversized = message(49, ''); oversized.message.document = { file_id: 'huge-pdf', file_name: 'huge.pdf', mime_type: 'application/pdf', file_size: MAX_IMAGE_BYTES + 1 };
+  assert.equal((await f.handler.handle(oversized)).reason, 'file-too-large');
+  assert.equal(f.aiCalls.length, 0);
+});
+
+test('voice and audio messages use the same review flow with duration and size limits', async t => {
+  const downloads = [];
+  const f = await fixture(t, {
+    downloadFile: async fileId => { downloads.push(fileId); return Buffer.from('spoken expense note'); },
+  });
+  const voice = message(53, '');
+  voice.message.caption = '今天午饭';
+  voice.message.voice = { file_id: 'voice-ok', mime_type: 'audio/ogg', duration: 12, file_size: 128 };
+  const draft = await f.handler.handle(voice);
+  assert.equal(draft.kind, 'draft');
+  assert.equal(f.aiCalls.at(-1).input.file.mimeType, 'audio/ogg');
+  assert.equal(f.aiCalls.at(-1).input.text, '今天午饭');
+  assert.equal(f.aiCalls.at(-1).input.image, null);
+  const audio = message(54, '');
+  audio.message.caption = 'coffee';
+  audio.message.audio = { file_id: 'audio-ok', mime_type: 'audio/mpeg', duration: 4, file_size: 256, file_name: 'memo.mp3' };
+  assert.equal((await f.handler.handle(audio)).kind, 'draft');
+  assert.equal(f.aiCalls.at(-1).input.file.mimeType, 'audio/mpeg');
+  assert.equal(f.aiCalls.at(-1).input.file.name, 'memo.mp3');
+  const tooLong = message(55, '');
+  tooLong.message.text = '';
+  tooLong.message.voice = { file_id: 'voice-long', mime_type: 'audio/ogg', duration: MAX_AUDIO_SECONDS + 1, file_size: 128 };
+  assert.equal((await f.handler.handle(tooLong)).reason, 'audio-too-long');
+  const tooLarge = message(56, '');
+  tooLarge.message.text = '';
+  tooLarge.message.voice = { file_id: 'voice-large', mime_type: 'audio/ogg', duration: 10, file_size: MAX_IMAGE_BYTES + 1 };
+  assert.equal((await f.handler.handle(tooLarge)).reason, 'audio-too-large');
+  assert.deepEqual(downloads, ['voice-ok', 'audio-ok']);
 });
 
 test('summary commands use the shared AI summarizer and bot copy follows the account language', async t => {

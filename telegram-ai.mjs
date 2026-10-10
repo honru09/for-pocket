@@ -9,9 +9,15 @@ import {
 import { ensureUser, handleDomain, RequestError, visible } from './domain.mjs';
 import { botLanguage, botText } from './bot-i18n.mjs';
 import { categoryLabel } from './public/i18n.mjs';
+import * as XLSX from 'xlsx';
+import mammoth from 'mammoth';
 
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
-const MAX_TEXT = 4000;
+const MAX_IMPORT_FILE_BYTES = MAX_IMAGE_BYTES;
+const MAX_AUDIO_BYTES = MAX_IMPORT_FILE_BYTES;
+const MAX_AUDIO_SECONDS = 60;
+const MAX_IMPORT_TEXT = 12000;
+const MAX_TEXT = MAX_IMPORT_TEXT;
 const DRAFT_TTL = 15 * 60 * 1000;
 const UPDATE_TTL = 24 * 60 * 60 * 1000;
 const UPDATE_LEASE = 3 * 60 * 1000;
@@ -76,6 +82,70 @@ function normaliseItems(raw) {
 function firstText(value) {
   if (typeof value !== 'string') return '';
   return value.trim().slice(0, MAX_TEXT);
+}
+
+const IMPORT_MIME_TYPES = new Set([
+  'image/jpeg', 'image/png', 'image/webp', 'image/gif', 'application/pdf', 'text/csv', 'text/plain',
+  'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'audio/ogg', 'audio/mpeg', 'audio/mp3', 'audio/mp4', 'audio/wav', 'audio/x-wav', 'audio/webm', 'audio/aac', 'audio/flac',
+]);
+const IMAGE_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
+const AUDIO_MIME_TYPES = new Set(['audio/ogg', 'audio/mpeg', 'audio/mp3', 'audio/mp4', 'audio/wav', 'audio/x-wav', 'audio/webm', 'audio/aac', 'audio/flac']);
+const EXTENSION_MIME = {
+  jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp', gif: 'image/gif',
+  pdf: 'application/pdf', csv: 'text/csv', txt: 'text/plain',
+  xls: 'application/vnd.ms-excel', xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  doc: 'application/msword', docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+};
+
+function importMime(document) {
+  const mime = String(document?.mime_type || '').toLowerCase().split(';', 1)[0];
+  if (IMPORT_MIME_TYPES.has(mime)) return mime;
+  // Do not trust a filename extension when Telegram supplied a conflicting
+  // MIME type (for example SVG content renamed to .png).
+  if (mime) return '';
+  const name = String(document?.file_name || '').toLowerCase();
+  const extension = name.includes('.') ? name.slice(name.lastIndexOf('.') + 1) : '';
+  return EXTENSION_MIME[extension] || '';
+}
+
+function importKind(mime) {
+  if (IMAGE_MIME_TYPES.has(mime)) return 'image';
+  if (mime === 'application/pdf') return 'pdf';
+  if (mime === 'text/csv' || mime === 'text/plain') return 'text';
+  if (AUDIO_MIME_TYPES.has(mime)) return 'audio';
+  if (mime.includes('spreadsheet') || mime === 'application/vnd.ms-excel') return 'spreadsheet';
+  if (mime.includes('word')) return 'word';
+  return '';
+}
+
+function asImportText(bytes, mime) {
+  if (mime === 'text/plain' || mime === 'text/csv') return bytes.toString('utf8').slice(0, MAX_IMPORT_TEXT);
+  if (mime === 'application/vnd.ms-excel' || mime === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet') {
+    const workbook = XLSX.read(bytes, { type: 'buffer', cellDates: true, cellNF: false, cellText: true });
+    return workbook.SheetNames.slice(0, 20).map(name => `## ${name}\n${XLSX.utils.sheet_to_csv(workbook.Sheets[name], { blankrows: false })}`).join('\n').slice(0, MAX_IMPORT_TEXT);
+  }
+  if (mime === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+    // mammoth is async; this branch is handled by prepareImportAttachment.
+    return '';
+  }
+  return '';
+}
+
+function audioFromMessage(message) {
+  const source = message?.voice || message?.audio;
+  if (!source?.file_id) return null;
+  const mimeType = String(source.mime_type || (message.voice ? 'audio/ogg' : '')).toLowerCase().split(';', 1)[0];
+  if (!AUDIO_MIME_TYPES.has(mimeType)) return { fileId: source.file_id, mimeType: '', fileSize: Number(source.file_size) || 0, duration: Number(source.duration) || 0, name: '', kind: '' };
+  return {
+    fileId: source.file_id,
+    mimeType,
+    fileSize: Number(source.file_size) || 0,
+    duration: Number(source.duration) || 0,
+    name: safeString(source.file_name, 160) || (message.voice ? 'telegram-voice.ogg' : 'telegram-audio'),
+    kind: 'audio',
+  };
 }
 
 function escapeTelegramText(value) {
@@ -232,7 +302,8 @@ export function createTelegramHandler({
 
   function cacheImage(context, chatId, input) {
     for (const [id] of imageCache) getCachedImage(id);
-    const bytes = Buffer.byteLength(input.image.data);
+    const attachment = input.image || input.file;
+    const bytes = Buffer.byteLength(attachment?.data || '', 'base64');
     while (imageCache.size && (cachedImageBytes + bytes > MAX_RETRY_CACHE_BYTES || imageCache.size >= 8)) {
       deleteCachedImage(imageCache.keys().next().value);
     }
@@ -317,20 +388,21 @@ export function createTelegramHandler({
   const reply = (context, chatId, key, result, extra = {}) => deliverReply(context.operation,
     { type: 'reply', chatId, text: botText(context.language, key), extra, result });
 
-  async function downloadTelegramImage(fileId, mimeType = 'image/jpeg') {
+  async function downloadTelegramFile(fileId, maximum = MAX_IMAGE_BYTES) {
     if (typeof downloadFile === 'function') {
-      const result = await downloadFile(fileId, MAX_IMAGE_BYTES);
+      const result = await downloadFile(fileId, maximum);
       const bytes = Buffer.isBuffer(result) ? result : Buffer.from(result?.data || result || '');
-      if (!bytes.length || bytes.length > MAX_IMAGE_BYTES) throw new Error('imageTooLarge');
-      return { data: bytes.toString('base64'), mimeType: String(result?.mimeType || mimeType).toLowerCase() };
+      if (!bytes.length) throw new Error('fileDownloadFailed');
+      if (bytes.length > maximum) throw new Error('errorImportFileTooLarge');
+      return bytes;
     }
     const file = await botCall('getFile', { file_id: fileId });
     const filePath = file?.file_path || file?.result?.file_path;
-    if (!filePath || !token || !/^[a-zA-Z0-9_./-]+$/.test(filePath) || filePath.includes('..')) throw new Error('imageDownloadFailed');
+    if (!filePath || !token || !/^[a-zA-Z0-9_./-]+$/.test(filePath) || filePath.includes('..')) throw new Error('fileDownloadFailed');
     const response = await fetch(`https://api.telegram.org/file/bot${token}/${filePath}`, { signal: AbortSignal.timeout(60000), redirect: 'error' });
-    if (!response.ok || !response.body) throw new Error('imageDownloadFailed');
+    if (!response.ok || !response.body) throw new Error('fileDownloadFailed');
     const length = Number(response.headers.get('content-length') || 0);
-    if (length > MAX_IMAGE_BYTES) throw new Error('imageTooLarge');
+    if (length > maximum) throw new Error('errorImportFileTooLarge');
     const chunks = [];
     let total = 0;
     const reader = response.body.getReader();
@@ -338,26 +410,43 @@ export function createTelegramHandler({
       const next = await reader.read();
       if (next.done) break;
       total += next.value.byteLength;
-      if (total > MAX_IMAGE_BYTES) {
+      if (total > maximum) {
         try { await reader.cancel(); } catch {}
-        throw new Error('imageTooLarge');
+        throw new Error('errorImportFileTooLarge');
       }
       chunks.push(Buffer.from(next.value));
     }
-    if (!total) throw new Error('imageDownloadFailed');
-    return { data: Buffer.concat(chunks).toString('base64'), mimeType: String(mimeType).toLowerCase() };
+    if (!total) throw new Error('fileDownloadFailed');
+    return Buffer.concat(chunks);
   }
 
-  function imageFromMessage(message) {
+  async function prepareImportAttachment(bytes, fileInfo, caption = '') {
+    const mimeType = String(fileInfo?.mimeType || '').toLowerCase();
+    const kind = importKind(mimeType);
+    if (!kind || bytes.length > MAX_IMPORT_FILE_BYTES) throw new Error('errorImportFileTooLarge');
+    const name = safeString(fileInfo?.name, 160);
+    if (kind === 'text' || kind === 'spreadsheet') {
+      let text;
+      try { text = asImportText(bytes, mimeType); } catch { throw new Error('errorFileRead'); }
+      return { text: [caption, text].filter(Boolean).join('\n\n').slice(0, MAX_IMPORT_TEXT), image: null, file: null };
+    }
+    if (kind === 'word' && mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+      let text;
+      try { text = (await mammoth.extractRawText({ buffer: bytes })).value.trim().slice(0, MAX_IMPORT_TEXT); } catch { throw new Error('errorFileRead'); }
+      return { text: [caption, text].filter(Boolean).join('\n\n').slice(0, MAX_IMPORT_TEXT), image: null, file: null };
+    }
+    const data = bytes.toString('base64');
+    const file = { data, mimeType, name };
+    return { text: caption, image: kind === 'image' ? file : null, file: kind === 'image' ? null : file };
+  }
+
+  function importFromMessage(message) {
     const photo = Array.isArray(message?.photo) && message.photo.length ? message.photo.at(-1) : null;
-    if (photo?.file_id) return { fileId: photo.file_id, mimeType: 'image/jpeg', fileSize: Number(photo.file_size) || 0 };
+    if (photo?.file_id) return { fileId: photo.file_id, mimeType: 'image/jpeg', fileSize: Number(photo.file_size) || 0, name: 'telegram-photo.jpg', kind: 'image' };
     const document = message?.document;
     if (!document?.file_id) return null;
-    const mime = String(document.mime_type || '').toLowerCase();
-    const name = String(document.file_name || '').toLowerCase();
-    const image = /^image\/(jpeg|png|webp|gif)$/.test(mime) || (!mime && /\.(?:jpe?g|png|webp|gif)$/.test(name));
-    const fromName = /\.png$/.test(name) ? 'image/png' : /\.webp$/.test(name) ? 'image/webp' : /\.gif$/.test(name) ? 'image/gif' : 'image/jpeg';
-    return image ? { fileId: document.file_id, mimeType: mime || fromName, fileSize: Number(document.file_size) || 0 } : null;
+    const mimeType = importMime(document);
+    return mimeType ? { fileId: document.file_id, mimeType, fileSize: Number(document.file_size) || 0, name: safeString(document.file_name, 160), kind: importKind(mimeType) } : { fileId: document.file_id, mimeType: '', fileSize: Number(document.file_size) || 0, name: safeString(document.file_name, 160), kind: '' };
   }
 
   function toDraftItem(item, profile, uid, sourceTimezone) {
@@ -478,17 +567,19 @@ export function createTelegramHandler({
     return { ok: true, kind: 'draft', draftId: draft.id, count: draft.items.length };
   }
 
-  async function parseMessage(context, message, image, { enhanced = false, replaceDraftId = null } = {}) {
+  async function parseMessage(context, message, attachment, { enhanced = false, replaceDraftId = null } = {}) {
     if (!aiParser || typeof aiParser.parse !== 'function') {
       return reply(context, message.chat.id, 'unavailable', { ok: false, reason: 'unavailable' });
     }
-    const text = firstText(message.text || message.caption || '');
-    if (!text && !image) {
+    const image = attachment?.image || null;
+    const file = attachment?.file || null;
+    const text = firstText(attachment?.text !== undefined ? attachment.text : (message.text || message.caption || ''));
+    if (!text && !image && !file) {
       return reply(context, message.chat.id, 'noInput', { ok: false, reason: 'no-input' });
     }
     invokeLimit(`telegram-ai:${context.telegramId}`, 12);
-    const input = { text, image, timezone: validTimezone(timezone), telegramUserId: context.telegramId, enhanced, now: context.at };
-    const retryId = image && !enhanced ? cacheImage(context, message.chat.id, input) : null;
+    const input = { text, image, file, timezone: validTimezone(timezone), telegramUserId: context.telegramId, enhanced, now: context.at };
+    const retryId = (image || file) && !enhanced ? cacheImage(context, message.chat.id, input) : null;
     let parsed;
     try {
       parsed = await aiParser.parse(input, { ...context.profile.settings, currentConsumer: context.profile.user.id });
@@ -595,7 +686,11 @@ export function createTelegramHandler({
       }
     }
     try {
-      return await parseMessage(context, { chat: query.message.chat, text: cached.input.text }, cached.input.image, { enhanced: true, replaceDraftId: cached.draftId });
+      return await parseMessage(context, { chat: query.message.chat, text: cached.input.text }, {
+        text: cached.input.text,
+        image: cached.input.image || null,
+        file: cached.input.file || null,
+      }, { enhanced: true, replaceDraftId: cached.draftId });
     } finally {
       if (cached.draftId) await store.run(db => {
         const draft = ensureTelegramState(db).drafts[cached.draftId];
@@ -685,29 +780,53 @@ export function createTelegramHandler({
       return summaryFor(context, message, name === 'week' ? '/week' : '/month');
     }
     if (summaryQuestion(text)) return summaryFor(context, message, text);
-    const imageInfo = imageFromMessage(message);
-    if (message.document && !imageInfo) {
+    const audioInfo = audioFromMessage(message);
+    const fileInfo = importFromMessage(message);
+    if ((message.voice || message.audio) && !audioInfo?.kind) {
+      await sendMessage(message.chat.id, botText(context.language, 'invalidAudio'));
+      return { ok: false, reason: 'invalid-audio' };
+    }
+    if (message.document && !fileInfo?.kind) {
       await sendMessage(message.chat.id, botText(context.language, 'invalidPhoto'));
       return { ok: false, reason: 'invalid-image' };
     }
-    if (!text && !imageInfo) {
+    if (!text && !fileInfo && !audioInfo) {
       await sendMessage(message.chat.id, botText(context.language, 'noInput'));
       return { ok: false, reason: 'no-input' };
     }
-    let image = null;
-    if (imageInfo) {
-      invokeLimit(`telegram-image:${context.telegramId}`, 12);
-      if (imageInfo.fileSize > MAX_IMAGE_BYTES) {
-        await sendMessage(message.chat.id, botText(context.language, 'invalidPhoto'));
-        return { ok: false, reason: 'image-too-large' };
+    let attachment = { text, image: null, file: null };
+    if (audioInfo) {
+      invokeLimit(`telegram-audio:${context.telegramId}`, 12);
+      if (audioInfo.duration > MAX_AUDIO_SECONDS) {
+        await sendMessage(message.chat.id, botText(context.language, 'audioTooLong'));
+        return { ok: false, reason: 'audio-too-long' };
       }
-      try { image = await downloadTelegramImage(imageInfo.fileId, imageInfo.mimeType); }
-      catch {
+      if (audioInfo.fileSize > MAX_AUDIO_BYTES) {
+        await sendMessage(message.chat.id, botText(context.language, 'audioTooLarge'));
+        return { ok: false, reason: 'audio-too-large' };
+      }
+      try {
+        const bytes = await downloadTelegramFile(audioInfo.fileId, MAX_AUDIO_BYTES);
+        attachment = await prepareImportAttachment(bytes, audioInfo, text || message.caption || '');
+      } catch (error) {
+        await sendMessage(message.chat.id, botText(context.language, 'audioReadFailed'));
+        return { ok: false, reason: error?.message === 'errorImportFileTooLarge' ? 'audio-too-large' : 'audio-download' };
+      }
+    } else if (fileInfo) {
+      invokeLimit(`telegram-image:${context.telegramId}`, 12);
+      if (fileInfo.fileSize > MAX_IMPORT_FILE_BYTES) {
         await sendMessage(message.chat.id, botText(context.language, 'invalidPhoto'));
-        return { ok: false, reason: 'image-download' };
+        return { ok: false, reason: fileInfo.kind === 'image' ? 'image-too-large' : 'file-too-large' };
+      }
+      try {
+        const bytes = await downloadTelegramFile(fileInfo.fileId, MAX_IMPORT_FILE_BYTES);
+        attachment = await prepareImportAttachment(bytes, fileInfo, text || message.caption || '');
+      } catch (error) {
+        await sendMessage(message.chat.id, botText(context.language, 'invalidPhoto'));
+        return { ok: false, reason: error?.message === 'errorImportFileTooLarge' ? 'file-too-large' : 'file-download' };
       }
     }
-    return parseMessage(context, message, image);
+    return parseMessage(context, message, attachment);
   }
 
   async function processUpdate(update) {
@@ -753,7 +872,7 @@ export function createTelegramHandler({
     try { return await promise; } finally { inflight.delete(key); }
   }
 
-  return { handle, close: () => { for (const id of imageCache.keys()) deleteCachedImage(id); }, constants: { maxImageBytes: MAX_IMAGE_BYTES, draftTtl: DRAFT_TTL } };
+  return { handle, close: () => { for (const id of imageCache.keys()) deleteCachedImage(id); }, constants: { maxImageBytes: MAX_IMAGE_BYTES, maxImportFileBytes: MAX_IMPORT_FILE_BYTES, maxImportText: MAX_IMPORT_TEXT, maxAudioBytes: MAX_AUDIO_BYTES, maxAudioSeconds: MAX_AUDIO_SECONDS, draftTtl: DRAFT_TTL } };
 }
 
-export { MAX_IMAGE_BYTES, DRAFT_TTL };
+export { MAX_IMAGE_BYTES, MAX_IMPORT_FILE_BYTES, MAX_IMPORT_TEXT, MAX_AUDIO_BYTES, MAX_AUDIO_SECONDS, DRAFT_TTL };
