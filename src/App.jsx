@@ -155,7 +155,7 @@ export default function App() {
       const p = currentProfile.current; const expenses = p.expenses.some(e => e.id === entry.id) ? p.expenses : [...p.expenses, entry];
       const next = { ...p, expenses }; currentProfile.current = next; setProfile(next);
       setDraft({ ...blankDraft(), consumer: p.user.id, type: d.type }); pending.current = null; notify('savedShort'); haptic('success');
-      if (!keyboard.current) mascotRef.current?.animate([{ transform: 'scale(1.06,.95)' }, { transform: 'scale(1)' }], { duration: 260, easing: 'cubic-bezier(.23,1,.32,1)' });
+      if (!keyboard.current) mascotRef.current?.animate([{ transform: 'scale(1.06,.95)' }, { transform: 'scale(1)' }], { duration: 260, easing: 'cubic-bezier(.23,1,.32,1)', composite: 'add' });
     }
   }, [run, notify]);
   useEffect(() => {
