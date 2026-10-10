@@ -71,7 +71,7 @@
 .for-root .save-actions{display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:52px}
 .storage-state{display:flex;align-items:center;gap:8px;min-width:0;color:var(--muted);font-size:9px}
 .storage-state button{min-height:36px;font-size:11px}
-.for-root .finish .save-confirm{width:52px;min-width:52px;max-width:52px;height:52px;min-height:52px;padding:0;border-radius:16px;display:grid;place-items:center;flex:0 0 52px;background:var(--confirm);color:var(--ink);box-shadow:none}
+.for-root .finish .save-confirm{width:52px;min-width:52px;max-width:52px;height:52px;min-height:52px;padding:0;border-radius:16px;display:grid;place-items:center;justify-content:center;flex:0 0 52px;background:var(--confirm);color:var(--ink);box-shadow:none}
 .for-root .save-confirm>h6{display:flex;align-items:center;justify-content:center;margin:0;line-height:1}
 .save-confirm .for-icon{width:24px;height:24px;stroke-width:1.8}
 .for-root .finish .save-confirm:disabled{background:var(--control);color:#a2a892}
