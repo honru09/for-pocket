@@ -1,0 +1,168 @@
+/* Compact pocket layout. Telegram supplies the usable viewport height. */
+.for-root { --pocket-nav-height:54px; --pocket-bottom:max(env(safe-area-inset-bottom,0px),var(--tg-content-safe-area-inset-bottom,0px)); }
+.for-root .for-icon { width:24px; height:24px; flex-shrink:0; }
+.for-root .brand { width:44px; height:44px; justify-content:center; border-radius:14px; color:#879077; }
+.for-root .brand .for-icon { width:20px; height:20px; }
+.for-root .app-shell { padding-bottom:calc(var(--pocket-nav-height) + var(--pocket-bottom) + 16px); }
+.bottom-nav { position:fixed; z-index:10; top:calc(var(--pocket-height,100dvh) - var(--pocket-nav-height) - var(--pocket-bottom)); left:0; right:0; height:calc(var(--pocket-nav-height) + var(--pocket-bottom)); padding:6px 16px calc(6px + var(--pocket-bottom)); background:var(--paper); border-top:1px solid var(--soft-line); display:flex; justify-content:center; }
+.for-root .bottom-nav .view-tabs { width:min(360px,100%); height:42px; margin:0; padding:3px; }
+.for-root .bottom-nav .tab { min-height:36px; }
+.for-root .bottom-nav .tab :is(h6,span) { font-size:13px; }
+.for-root .notice { bottom:calc(var(--pocket-nav-height) + var(--pocket-bottom) + 8px); }
+.for-root .entry-actions { display:flex; align-items:center; gap:8px; min-width:0; }
+.consumer-buttons { display:flex; gap:6px; min-width:0; flex:1; overflow-x:auto; scrollbar-width:none; padding:2px; }
+.consumer-buttons::-webkit-scrollbar { display:none; }
+.consumer-chip { border:1px solid transparent; border-radius:14px; background:var(--control); color:var(--owner-ink); height:44px; min-width:80px; flex:1 0 80px; display:flex; align-items:center; justify-content:center; gap:5px; padding:4px 7px; font-size:12px; font-weight:800; }
+.consumer-chip[aria-pressed=true] { background:var(--owner-tint); border-color:var(--owner-line); }
+.consumer-chip>span:last-child { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.consumer-chip .person-avatar { width:24px; height:24px; border-radius:9px; }
+.consumer-chip .person-avatar :is(svg,.cloud-avatar) { width:23px; height:23px; }
+.for-root .note-trigger { height:44px; min-height:44px; width:40px; min-width:40px; padding:8px; flex:none; color:var(--muted); background:transparent; border-radius:14px; }
+.for-root .note-trigger.has-note { background:var(--peach); color:#a84f2f; }
+.for-root .note-trigger .for-icon { width:18px; height:18px; }
+.for-root .save-actions { min-height:44px; flex:none; gap:8px; margin-left:auto; }
+.for-root .entry-actions .storage-state { display:none; }
+.for-root .finish .save-confirm { width:44px; min-width:44px; max-width:44px; height:44px; min-height:44px; flex-basis:44px; border-radius:14px; }
+.for-root .save-confirm .for-icon { width:22px; height:22px; }
+.for-root .save-button:not(.save-confirm),.for-root .compact-save { width:auto; min-width:44px; min-height:44px; height:44px; border-radius:14px; padding:8px 18px; justify-content:center; }
+.for-root .editor-actions .save-button { min-width:88px; }
+.for-root .note-form { display:flex; align-items:center; gap:12px; }
+.note-form>div { flex:1; min-width:0; }
+.for-root .note-form .compact-save { width:44px; padding:0; }
+/* FormInput draws focus on its label, not on the input itself. */
+.for-root label,.for-root label:focus-within,.for-root div:has(>label):focus-within { outline:none!important; box-shadow:none!important; }
+.for-root :is(input,select,textarea):is(:focus,:focus-visible) { outline:none!important; box-shadow:none!important; }
+.for-root .editor-row:focus-within { transform:none; }
+.for-root .settings-form { max-width:480px; }
+.for-root .settings-form>div:has(>.settings-input) { margin:12px 0; }
+.for-root .profile-preview { padding:0 0 12px; gap:12px; }
+.for-root .profile-preview .person-avatar { width:44px; height:44px; border-radius:16px; }
+.for-root .profile-preview .person-avatar :is(svg,.cloud-avatar) { width:38px; height:38px; }
+.for-root .profile-preview strong { font-size:18px; }
+.for-root :is(.avatar-picker,.color-picker) { gap:4px; margin:16px 0; }
+.for-root :is(.avatar-picker,.color-picker) legend { margin-bottom:6px; }
+.for-root .settings-form .panel-primary { margin-top:8px; }
+.for-root .picker-row { min-height:48px; padding:6px 10px; border-radius:12px; text-align:left; }
+.for-root .picker-row>h6,.for-root .picker-row>span:not([aria-hidden]) { width:100%; min-width:0; }
+.for-root .picker-row .picker-content,.picker-content { display:flex; width:100%; min-width:0; align-items:center; gap:10px; font-size:13px; font-weight:700; text-align:left; }
+.for-root .picker-content>.picker-name { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.for-root .picker-content>small { color:var(--muted); font-size:11px; }
+.for-root .picker-content>.for-icon { width:22px; height:22px; }
+.for-root .circle-stack { max-width:70px; }
+.for-root .circle-stack .person-avatar { width:24px; height:24px; border-radius:9px; }
+.for-root .circle-stack svg { width:22px; height:22px; }
+.for-root .circle-list,.circle-picker-list,.member-action-list { display:flex; flex-direction:column; gap:4px; }
+.for-root .circle-picker-list { margin-bottom:8px; }
+.for-root .circle-detail { margin-top:16px; padding-top:12px; }
+.for-root .circle-detail .section-heading { margin-bottom:4px; }
+.circle-title { font:800 18px var(--tgui--font-family); border:0; border-radius:10px; background:transparent; padding:6px 0; text-align:left; overflow-wrap:anywhere; cursor:pointer; min-height:44px; min-width:0; }
+.circle-rename { flex:1; margin:0!important; min-width:0; }
+.for-root .circle-rename .settings-input { padding:6px 10px; min-height:44px; }
+.for-root .member-list { margin:0 0 8px; }
+.for-root .member-row { padding:6px 0; gap:10px; min-height:48px; }
+.for-root .member-row>.person-avatar { width:30px; height:30px; border-radius:11px; }
+.for-root .member-actions-trigger { width:44px; height:44px; min-width:44px; padding:10px; color:var(--muted); background:transparent; }
+.for-root .circle-actions { display:flex; flex-direction:column; align-items:stretch; border-top:1px solid var(--soft-line); }
+.for-root .circle-action { width:100%; min-height:44px; padding:8px 0; justify-content:flex-start; margin:0; font-size:12px; }
+.for-root .circle-tools .settings-detail { margin-top:0; padding-top:0; }
+.for-root .settings-detail summary { min-height:44px; line-height:44px; font-size:13px; }
+.for-root .settings-form .inline-form { flex-direction:row; flex-wrap:nowrap; margin-top:4px; gap:6px; align-items:center; }
+.for-root .inline-form>div:has(>label) { min-width:0; flex:1; width:auto; }
+.for-root .inline-form>button { padding:8px 12px; min-height:44px; flex:none; }
+.for-root .pocket-sheet { padding:16px; border-radius:20px; max-height:calc(var(--pocket-height,100dvh) - 24px); }
+.for-root .pocket-sheet>header { margin-bottom:6px; }
+.for-root .pocket-sheet h2 { font-size:18px; }
+.for-root .sheet-actions { margin-top:12px; }
+.for-root .page-heading h1 { font-size:24px; }
+.for-root .editor-row { padding:8px 10px; gap:8px; }
+.for-root .editor-actions { margin-top:12px; }
+.for-root .app-footer { padding:12px 0; }
+@media(max-width:600px) {
+  .for-root { min-height:var(--pocket-height,100dvh); }
+  .for-root .app-shell { padding-left:14px; padding-right:14px; padding-top:var(--tg-content-safe-area-inset-top,0px); }
+  .for-root .app-header { height:44px; margin:0 0 8px; gap:8px; border:0; }
+  .for-root .ledger-switcher { max-width:calc(100vw - 128px); padding:6px 12px; min-height:36px; }
+  .for-root .ledger-switcher :is(h6,span) { font-size:12px; }
+  .for-root .ledger-switcher .for-icon { width:14px; height:14px; }
+  .for-root .profile-trigger { width:36px; height:36px; min-width:36px; }
+  .for-root[data-view=record] .app-shell { height:var(--pocket-height,100dvh); display:flex; flex-direction:column; padding-bottom:calc(var(--pocket-nav-height) + var(--pocket-bottom) + 8px); }
+  .for-root[data-view=record] .app-header { flex:0 0 44px; margin:0; }
+  .for-root #record-view { flex:1; min-height:0; display:flex; flex-direction:column; padding-bottom:0; }
+  .for-root #record-view .today-strip { flex:0 0 28px; min-height:28px; margin:0 0 4px; padding:0; gap:6px; }
+  .for-root #record-view .today-icon { display:none; }
+  .for-root #record-view .today-strip>div { gap:6px; }
+  .for-root #record-view .today-strip strong { font-size:13px; }
+  .for-root #record-view .today-strip div>span { font-size:10px; }
+  .for-root #record-view .date-button { min-height:28px; height:28px; padding:0; }
+  .for-root #record-view .date-button :is(h6,span) { font-size:10px; }
+  .for-root #record-view .date-button .for-icon { width:12px; height:12px; }
+  .for-root #record-view .record-layout { flex:1; min-height:0; grid-template-columns:minmax(0,1fr); grid-template-rows:minmax(76px,1.1fr) 110px minmax(188px,1.7fr) 44px; gap:4px; }
+  .for-root #record-view .amount-stage { min-height:0; padding:6px 16px; border-radius:20px; container-type:size; display:flex; flex-direction:column; justify-content:center; }
+  .for-root #record-view .amount-meta { flex:none; }
+  .for-root #record-view .amount-line { margin-top:0; }
+  .for-root #record-view #amount-display { font-size:clamp(40px,64cqh,82px); line-height:1; letter-spacing:-2px; }
+  .for-root #record-view #amount-display[data-length="6"] { font-size:clamp(44px,8dvh,68px); }
+  .for-root #record-view #amount-display[data-length="7"] { font-size:clamp(40px,7dvh,60px); }
+  .for-root #record-view #amount-display[data-length="8"] { font-size:clamp(35px,6.5dvh,54px); }
+  .for-root #record-view #amount-display[data-length="9"] { font-size:clamp(31px,6dvh,46px); }
+  .for-root #record-view #amount-display[data-length="long"] { font-size:28px; }
+  .for-root #record-view .input-caret { height:28px; }
+  .for-root #record-view .currency-symbol { font-size:22px; }
+  .for-root #record-view .mascot { width:62px; bottom:8px; right:12px; }
+  .for-root #record-view .currency-control { padding:0 8px; }
+  .for-root #record-view .type-pill-btn { min-height:28px; padding:3px 10px; }
+  .for-root #record-view .purposes { min-height:0; display:flex; flex-direction:column; }
+  .for-root #record-view .purposes .section-heading { flex:0 0 22px; margin:0; }
+  .for-root #record-view .purposes h2 { font-size:11px; font-weight:700; color:var(--muted); }
+  .for-root #record-view .purposes .text-button { min-height:22px; height:22px; padding:0; }
+  .for-root #record-view .categories { flex:1; min-height:0; grid-template-rows:repeat(2,minmax(0,1fr)); grid-template-columns:repeat(3,minmax(0,1fr)); grid-auto-flow:column; grid-auto-columns:calc((100% - 8px)/3); gap:4px; overflow-x:auto; scrollbar-width:none; scroll-snap-type:x proximity; }
+  .for-root #record-view .category { height:100%; min-height:0; flex-direction:row; gap:5px; padding:4px; font-size:11px; border-radius:12px; scroll-snap-align:start; }
+  .for-root #record-view .category-icon { width:24px; height:24px; border-radius:8px; }
+  .for-root #record-view .category-icon .for-icon { width:18px; height:18px; }
+  .for-root #record-view .category-label { min-width:0; }
+  .for-root #record-view .check { width:10px; height:10px; right:3px; top:2px; font-size:8px; }
+  .for-root #record-view .keypad { grid-template-rows:repeat(4,minmax(44px,1fr)); gap:4px; min-height:0; }
+  .for-root #record-view .key { height:100%; min-height:44px; border-radius:13px; font-size:24px; }
+  .for-root #record-view .key-secondary { font-size:14px; }
+  .for-root #record-view .finish { min-height:0; gap:0; padding:0; }
+  .for-root #record-view .entry-actions { gap:6px; height:44px; }
+  .for-root .editor-row { grid-template-columns:28px minmax(0,1fr) 90px 28px; gap:4px 8px; padding:6px 8px; }
+  .for-root .editor-row .category-icon { width:28px; height:28px; grid-column:1; grid-row:1; }
+  .for-root .editor-row>div:has(>.editor-label) { grid-column:2 / 4; grid-row:1; }
+  .for-root .editor-row .editor-remove { grid-column:4; grid-row:1; }
+  .for-root .editor-row>div:has(>.editor-select):nth-of-type(2) { grid-column:1 / 3; grid-row:2; }
+  .for-root .editor-row>div:has(>.editor-select):nth-of-type(3) { grid-column:3 / 5; grid-row:2; }
+  .for-root .editor-select { padding:3px 8px; min-height:30px; }
+  .for-root .category-editor { gap:6px; }
+  .for-root .add-category { min-height:44px; margin-top:8px; }
+  .for-root .page-heading { margin-bottom:12px; }
+}
+@media(max-width:355px) {
+  .for-root .consumer-chip { min-width:68px; flex-basis:68px; font-size:11px; padding:4px; gap:3px; }
+  .for-root #record-view .category { gap:3px; font-size:10px; }
+  .for-root #record-view .category-icon { width:20px; height:22px; }
+}
+
+.for-root .entry-actions .storage-state:has(button) { display:flex; }
+.editor-icon-trigger { border:0; padding:0; position:relative; cursor:pointer; }
+.editor-icon-trigger>.for-icon:last-child { position:absolute; bottom:0; right:0; width:9px; height:9px; border-radius:4px; background:var(--paper); }
+@media(max-width:600px) {
+ .for-root .editor-row:not([data-expanded=true])>div:has(>.editor-select) { display:none; }
+ .for-root .editor-row .editor-icon-trigger { grid-column:1; grid-row:1; }
+ .for-root #record-view .category:nth-child(1) { grid-column:1; grid-row:1; }
+ .for-root #record-view .category:nth-child(2) { grid-column:2; grid-row:1; }
+ .for-root #record-view .category:nth-child(3) { grid-column:3; grid-row:1; }
+ .for-root #record-view .category:nth-child(4) { grid-column:1; grid-row:2; }
+ .for-root #record-view .category:nth-child(5) { grid-column:2; grid-row:2; }
+ .for-root #record-view .category:nth-child(6) { grid-column:3; grid-row:2; }
+}
+/* Short usable viewports keep all six categories beside the keypad. */
+@media(max-width:600px) {
+ html[data-pocket-compact=true] .for-root #record-view .record-layout { grid-template-columns:minmax(0,.46fr) minmax(0,.54fr); grid-template-rows:minmax(76px,1fr) minmax(188px,1.5fr) 44px; gap:4px 8px; }
+ html[data-pocket-compact=true] .for-root #record-view .amount-stage { grid-column:1 / -1; grid-row:1; }
+ html[data-pocket-compact=true] .for-root #record-view .purposes { grid-column:1; grid-row:2; }
+ html[data-pocket-compact=true] .for-root #record-view .keypad { grid-column:2; grid-row:2; }
+ html[data-pocket-compact=true] .for-root #record-view .finish { grid-column:1 / -1; grid-row:3; }
+ html[data-pocket-compact=true] .for-root #record-view .categories { grid-template-columns:repeat(2,minmax(0,1fr)); grid-template-rows:repeat(3,minmax(0,1fr)); grid-auto-columns:calc((100% - 4px)/2); }
+ html[data-pocket-compact=true] .for-root #record-view .category { grid-column:auto; grid-row:auto; flex-direction:column; gap:2px; font-size:10px; }
+}
