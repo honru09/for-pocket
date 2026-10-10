@@ -1,6 +1,6 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 
-export function validateInitData(raw, token, { now = Date.now(), maxAgeSeconds = 86400 } = {}) {
+export function validateInitData(raw, token, { now = Date.now(), maxAgeSeconds = 86400, enforceFresh = true } = {}) {
   if (typeof raw !== 'string' || !raw || raw.length > 16384 || !token) throw new Error('Missing Telegram authentication');
   const params = new URLSearchParams(raw);
   const keys = [...params.keys()];
@@ -14,7 +14,7 @@ export function validateInitData(raw, token, { now = Date.now(), maxAgeSeconds =
   if (!timingSafeEqual(calculated, Buffer.from(hash, 'hex'))) throw new Error('Authentication failed');
   const authDate = Number(params.get('auth_date'));
   const current = Math.floor(now / 1000);
-  if (!Number.isSafeInteger(authDate) || authDate < 1 || current - authDate > maxAgeSeconds || authDate > current + 30) throw new Error('Authentication expired');
+  if (!Number.isSafeInteger(authDate) || authDate < 1 || authDate > current + 30 || (enforceFresh && current - authDate > maxAgeSeconds)) throw new Error('Authentication expired');
   const user = JSON.parse(params.get('user') || 'null');
   if (!user || !Number.isSafeInteger(user.id) || user.id <= 0 || user.is_bot) throw new Error('Invalid Telegram user');
   return user;

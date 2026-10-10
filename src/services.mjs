@@ -39,21 +39,35 @@ export function localService(defaultLang = 'zh') {
 }
 export function remoteService(telegram) {
   let currentToken = localStorage.getItem(SESSION_KEY), ledgerId;
+  let lastInitData = null, telegramDisabled = false;
   const track = p => { if (p?.ledgerId) ledgerId = p.ledgerId; return p; };
-  async function request(route, method = 'GET', body) {
+  const remember = p => {
+    if (p?.sessionToken) {
+      currentToken = p.sessionToken;
+      try { localStorage.setItem(SESSION_KEY, currentToken); } catch {}
+    }
+    return p;
+  };
+  async function request(route, method = 'GET', body, { includeInitData = false } = {}) {
     const headers = { 'Content-Type': 'application/json' };
-    if (telegram?.initData) headers['X-Telegram-Init-Data'] = telegram.initData;
+    if (!telegramDisabled && telegram?.initData && (includeInitData || !currentToken)) headers['X-Telegram-Init-Data'] = telegram.initData;
     if (currentToken) headers.Authorization = `Bearer ${currentToken}`;
     let response;
     try { response = await fetch(`/api${route}`, { method, headers, body: body === undefined ? undefined : JSON.stringify(body), signal: AbortSignal.timeout(15000) }); }
     catch { throw new Error('errorNetwork'); }
     const data = await response.json();
     if (!response.ok) { const error = new Error(data.error || 'errorSave'); error.status = response.status; throw error; }
-    return data;
+    return remember(data);
+  }
+  async function exchangeTelegram() {
+    if (telegramDisabled || !telegram?.initData || telegram.initData === lastInitData) return;
+    const raw = telegram.initData;
+    await request('/auth/telegram', 'POST', {}, { includeInitData: true });
+    lastInitData = raw;
   }
   const profileAction = async (route, body, method = 'POST') => track(await request(route, method, body));
   return {
-    getProfile: async () => track(await request('/profile')),
+    getProfile: async () => { await exchangeTelegram(); return track(await request('/profile')); },
     saveSettings: ({ consumers, ...settings }) => profileAction('/settings', { ...settings, ledgerId }, 'PUT'),
     updateUserProfile: p => profileAction('/user-profile', p, 'PUT'),
     addExpense: payload => request('/expenses', 'POST', { ledgerId, ...payload }),
@@ -66,7 +80,7 @@ export function remoteService(telegram) {
       if (res.profile) track(res.profile);
       return res;
     },
-    logout: async () => { await request('/auth/logout', 'POST', {}); currentToken = null; localStorage.removeItem(SESSION_KEY); },
+    logout: async () => { await request('/auth/logout', 'POST', {}); currentToken = null; telegramDisabled = true; localStorage.removeItem(SESSION_KEY); },
     getLinkCode: () => request('/auth/link-code', 'POST', {}),
     previewLink: code => request('/auth/link-preview', 'POST', { code }),
     verifyLink: async payload => track((await request('/auth/link-verify', 'POST', { ...payload, confirm: true })).profile),
