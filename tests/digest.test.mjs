@@ -27,11 +27,11 @@ function state({ two = false, expenses = [] } = {}) {
   return { version: 2, revision: 0, users, identities, sessions: {}, links: {}, circles: {}, ledgers };
 }
 
-async function serviceFixture(t, initial, now = at) {
+async function serviceFixture(t, initial, now = at, options = {}) {
   const dataDir = await mkdtemp(path.join(os.tmpdir(), 'for-digest-test-'));
   await writeFile(path.join(dataDir, '_pocket-v2.json'), JSON.stringify(initial));
   const store = createStore(dataDir), calls = [];
-  const service = createDigestService({ store, now: () => now, summarizer: { enabled: true, async summarize() { return '咳咳，哇哦，抓到了！'; } }, callTelegram: async (method, params) => { calls.push({ method, params }); return { message_id: 1 }; } });
+  const service = createDigestService({ store, now: () => now, summarizer: { enabled: true, async summarize() { return '咳咳，哇哦，抓到了！'; } }, callTelegram: async (method, params) => { calls.push({ method, params }); return { message_id: 1 }; }, ...options });
   t.after(async () => { await store.close(); await rm(dataDir, { recursive: true, force: true }); });
   return { service, store, calls, dataDir };
 }
@@ -73,6 +73,45 @@ test('empty digest uses the cheeky zero-spend fallback and deduplicates same loc
   const second = await f.service.processSlot('evening', { at });
   assert.equal(second.results[0].skipped, true);
   assert.equal(f.calls.length, 1);
+});
+
+test('mixed currencies stay separate in category and payer aggregates', async t => {
+  const entries = [expense('jpy-food', '2026-10-10T16:00:00.000Z', 850), { ...expense('usd-food', '2026-10-10T17:00:00.000Z', 250), currency: 'USD', consumer: 'u_101' }];
+  const f = await serviceFixture(t, state({ expenses: entries }), at);
+  const result = await f.service.processSlot('morning', { at });
+  assert.deepEqual(result.results[0].aggregate.totals.map(item => item.currency).sort(), ['JPY', 'USD']);
+  assert.equal(result.results[0].aggregate.categories.length, 2);
+  assert.deepEqual(result.results[0].aggregate.payers.map(item => item.currency).sort(), ['JPY', 'USD']);
+});
+
+test('preferences keyed by uid discover a bound chat and failed recipients retry alone', async t => {
+  const initial = state({ two: true });
+  const sharedExpense = expense('bound', '2026-10-10T16:00:00.000Z');
+  initial.circles = { cir_shared: { id: 'cir_shared', ledgerId: 'shared', members: ['101', '202'], admins: ['101'] } };
+  initial.users['101'].activeCircleId = 'cir_shared';
+  initial.users['202'].activeCircleId = 'cir_shared';
+  initial.ledgers.shared = { settings: { currency: 'JPY', language: 'zh', timezone: 'Asia/Tokyo', categories: [category] }, expenses: [sharedExpense] };
+  delete initial.identities['telegram:202'];
+  initial.telegram = { preferences: { '202': { chatId: '202', language: 'en' } } };
+  let fail202 = true;
+  const f = await serviceFixture(t, initial, at, { callTelegram: async (method, params) => {
+    f.calls.push({ method, params });
+    if (String(params.chat_id) === '202' && fail202) throw new Error('temporary Telegram outage');
+    return { message_id: Number(params.chat_id) };
+  } });
+  const first = await f.service.processSlot('morning', { at });
+  const firstShared = first.results.find(item => item.ledgerId === 'shared');
+  assert.equal(firstShared.deliveryFailed, true);
+  assert.equal(firstShared.recipients.find(item => item.chatId === '101').status, 'sent');
+  assert.equal(firstShared.recipients.find(item => item.chatId === '202').status, 'failed');
+  assert.equal(f.calls[0].params.disable_notification, undefined, 'digest notifications are ordinary');
+  fail202 = false;
+  const second = await f.service.processSlot('morning', { at: at + 1 });
+  const retried = f.calls.filter(call => String(call.params.chat_id) === '202');
+  const healthy = f.calls.filter(call => String(call.params.chat_id) === '101');
+  assert.equal(retried.length, 2);
+  assert.equal(healthy.length, 1, 'successful recipient is checkpointed');
+  assert.equal(second.results.find(item => item.ledgerId === 'shared').deliveryFailed, false);
 });
 
 test('cron digest rejects a missing or incorrect X-Cron-Secret with 401', async t => {

@@ -320,8 +320,15 @@ function periodForText(text) {
 function expenseIntent(text) {
   const value = String(text || '').normalize('NFKC').trim();
   if (!value) return false;
-  if (/\d|[¥$₴€£]|(?:日元|人民币|美元|гривн|yen|yuan|dollar|uah|jpy|usd)/iu.test(value)) return true;
-  return /(记账|记一笔|花了|买了|消费|支出|付款|付了|吃了|喝了|打车|房租|转给|代付|报销|收入|入账|expense|spent|spend|bought|buy|paid|pay|purchase|rent|taxi|transfer|reimburse|income|витрат|витратив|купив|купити|запис|оплатив|оренда|переказ|дохід)/iu.test(value);
+  const hasMoney = /\d|[¥$₴€£]|(?:日元|人民币|美元|гривн|yen|yuan|dollar|uah|jpy|usd)/iu.test(value);
+  // A future plan (“tomorrow I'll buy…”, “завтра куплю…”) is conversation
+  // until an amount or an explicit already-paid verb appears. This prevents
+  // the parser from turning meal ideas and shopping plans into fake drafts.
+  const futurePlan = /(明天|后天|下周|以后|打算|准备|想(?:要)?|tomorrow|next\s+(?:day|week)|planning\s+to|going\s+to|завтра|післязавтра|наступн(?:ого|ої)|планую|хочу)/iu.test(value);
+  const alreadyPaid = /(花了|买了|买过|消费了|支出了|付款了|付了|吃了|喝了|打车了|转给|代付|报销|收入|入账|记账|记一笔|spent|spend|bought|paid|purchased|was\s+charged|витратив|витратила|купив|купила|оплатив|оплатила|переказав|отримав|записати|дохід)/iu.test(value);
+  if (futurePlan && !hasMoney && !alreadyPaid) return false;
+  if (hasMoney) return true;
+  return /(记账|记一笔|花了|买了|买过|消费|支出|付款|付了|吃了|喝了|打车|房租|转给|代付|报销|收入|入账|expense|spent|spend|bought|paid|pay(?:ment)?|purchase|rent|taxi|transfer|reimburse|income|витрат|витратив|купив|оплатив|оренда|переказ|дохід)/iu.test(value);
 }
 
 function chatLedgerContext(profile, now, timezone) {
@@ -873,14 +880,33 @@ export function createTelegramHandler({
         stored.ledgerId = profile.ledgerId;
         stored.previewSent = 0;
         stored.previewComplete = true;
-        return { kind: 'confirmed', count: savedIds.length, retryId: stored.retryId };
+        return { kind: 'confirmed', count: savedIds.length, savedIds, retryId: stored.retryId };
       });
     } catch (error) {
       outcome = { kind: error instanceof RequestError ? error.message : 'failed' };
     }
+    // Auto mode writes the same domain records as the callback confirmation.
+    // Notify the other current circle members only after that transaction has
+    // completed, and exclude the Telegram chat that initiated this entry.
+    if (outcome.kind === 'confirmed' && Array.isArray(outcome.savedIds)) {
+      await notifySavedEntries(context, outcome.savedIds, draft.chatId);
+    }
     if (outcome.retryId) deleteCachedImage(outcome.retryId);
     const key = outcome.kind === 'confirmed' ? 'confirmed' : outcome.kind === 'already' ? 'alreadyConfirmed' : outcome.kind === 'errorLedgerChanged' ? 'ledgerChanged' : 'failed';
     return deliverReply(context.operation, { type: 'reply', chatId: draft.chatId, text: botText(context.language, key, { n: outcome.count }), result: { ok: ['confirmed', 'already'].includes(outcome.kind), auto: true, ...outcome } });
+  }
+
+  async function notifySavedEntries(context, savedIds, excludeChatId = '') {
+    if (!expenseSync?.notify || !Array.isArray(savedIds)) return;
+    for (const savedId of savedIds) {
+      try {
+        const saved = await store.run(db => {
+          const profile = visible(db, context.uid);
+          return structuredClone(profile.expenses.find(item => item.id === savedId) || null);
+        });
+        if (saved) await expenseSync.notify(saved, { excludeChatId });
+      } catch {}
+    }
   }
 
   async function startDraftEdit(context, query, draftId) {
@@ -1114,17 +1140,7 @@ export function createTelegramHandler({
     const language = context.language;
     const chatId = query.message?.chat?.id;
     const messageId = query.message?.message_id;
-    if (outcome.kind === 'confirmed' && expenseSync?.notify && Array.isArray(outcome.savedIds)) {
-      for (const savedId of outcome.savedIds) {
-        try {
-          const saved = await store.run(db => {
-            const profile = visible(db, context.uid);
-            return structuredClone(profile.expenses.find(item => item.id === savedId) || null);
-          });
-          if (saved) await expenseSync.notify(saved, { excludeChatId: chatId });
-        } catch {}
-      }
-    }
+    if (outcome.kind === 'confirmed' && Array.isArray(outcome.savedIds)) await notifySavedEntries(context, outcome.savedIds, chatId);
     if (outcome.retryId) deleteCachedImage(outcome.retryId);
     if (['cancelled', 'already'].includes(outcome.kind)) for (const [id, cached] of imageCache) if (cached.draftId === draftId) deleteCachedImage(id);
     const key = ({ confirmed: 'confirmed', already: 'alreadyConfirmed', cancelled: 'cancelled', missing: 'expired', expired: 'expired',

@@ -28,8 +28,13 @@ function ensureSyncState(db) {
 }
 
 function memberIds(db, ledgerId) {
+  // A personal ledger must never fan out a notification.  Only a ledger that
+  // is currently owned by a circle has a defined set of recipients.  Keeping
+  // this boundary here also protects callers that accidentally pass a stale
+  // or user owned entry into the sync helper.
   const circle = Object.values(db.circles || {}).find(item => item?.ledgerId === ledgerId);
-  return circle?.members?.length ? circle.members : db.users?.[ledgerId] ? [ledgerId] : [];
+  if (!circle?.members?.length) return [];
+  return [...new Set(circle.members)].filter(id => db.users?.[id]);
 }
 
 function knownChats(db, ledgerId) {
@@ -54,9 +59,21 @@ export function expenseNotificationText(entry, language = 'zh') {
   const payer = entry?.member?.name || entry?.consumer || '';
   const category = entry?.category?.label || entry?.categoryId || '';
   const amount = amountText(entry);
-  if (lang === 'en') return `${payer || 'Someone'} spent ${amount}${category ? ` · ${category}` : ''}${entry?.note ? ` · ${String(entry.note).slice(0, 80)}` : ''}`;
-  if (lang === 'uk') return `${payer || 'Хтось'} витратив ${amount}${category ? ` · ${category}` : ''}${entry?.note ? ` · ${String(entry.note).slice(0, 80)}` : ''}`;
-  return `${payer || '有人'} 花了 ${amount}${category ? ` · ${category}` : ''}${entry?.note ? ` · ${String(entry.note).slice(0, 80)}` : ''}`;
+  const suffix = `${category ? ` · ${category}` : ''}${entry?.note ? ` · ${String(entry.note).slice(0, 80)}` : ''}`;
+  const kind = entry?.type === 'income' ? 'income' : entry?.recordKind;
+  if (lang === 'en') {
+    if (kind === 'income') return `${payer || 'Someone'} received ${amount}${suffix}`;
+    if (kind === 'transfer' || kind === 'reimbursement') return `${payer || 'Someone'} recorded a ${kind}${suffix}`;
+    return `${payer || 'Someone'} spent ${amount}${suffix}`;
+  }
+  if (lang === 'uk') {
+    if (kind === 'income') return `${payer || 'Хтось'} отримав ${amount}${suffix}`;
+    if (kind === 'transfer' || kind === 'reimbursement') return `${payer || 'Хтось'} записав: ${kind === 'transfer' ? 'переказ' : 'відшкодування'}${suffix}`;
+    return `${payer || 'Хтось'} витратив ${amount}${suffix}`;
+  }
+  if (kind === 'income') return `${payer || '有人'} 收到 ${amount}${suffix}`;
+  if (kind === 'transfer' || kind === 'reimbursement') return `${payer || '有人'} 记了${kind === 'transfer' ? '一笔转账' : '一笔代付/报销'}${suffix}`;
+  return `${payer || '有人'} 花了 ${amount}${suffix}`;
 }
 
 /**
@@ -66,6 +83,11 @@ export function expenseNotificationText(entry, language = 'zh') {
 export function createTelegramExpenseSync({ store, token = '', callTelegram, now = () => Date.now() } = {}) {
   if (!store || typeof store.run !== 'function') throw new TypeError('Expense sync requires a store');
   const telegram = callTelegramFactory(token, callTelegram);
+  // Telegram has no idempotency key for sendMessage.  Serialize a recipient
+  // locally and persist a short claim before sending so two web requests (or a
+  // Telegram retry and a web request) cannot create duplicate companion cards.
+  const inflight = new Map();
+  const CLAIM_TTL = 2 * 60 * 1000;
 
   async function notify(entry, { excludeChatId = '' } = {}) {
     if (!telegram || !entry?.id || entry.deletedAt) return { sent: 0, skipped: true };
@@ -76,7 +98,7 @@ export function createTelegramExpenseSync({ store, token = '', callTelegram, now
       const ledger = db.ledgers?.[entry.ledgerId];
       const actual = ledger?.expenses?.find(item => item.id === entry.id);
       if (!actual || actual.deletedAt) return { key, done: true, recipients: [] };
-      const covered = new Set(existing.map(item => String(item.chatId)));
+      const covered = new Set(existing.filter(item => item?.status === 'sent' && Number(item.messageId) > 0).map(item => String(item.chatId)));
       const recipients = knownChats(db, entry.ledgerId).filter(item => !covered.has(String(item.chatId)));
       return { key, done: Boolean(existing.length && !recipients.length), recipients, actual: structuredClone(actual) };
     });
@@ -84,19 +106,58 @@ export function createTelegramExpenseSync({ store, token = '', callTelegram, now
     let sent = 0;
     for (const recipient of snapshot.recipients) {
       if (excludeChatId && String(recipient.chatId) === String(excludeChatId)) continue;
-      try {
-        const result = await telegram('sendMessage', { chat_id: recipient.chatId, text: expenseNotificationText(snapshot.actual, recipient.language), disable_notification: true });
-        const messageId = Number(result?.message_id);
-        if (!Number.isSafeInteger(messageId) || messageId <= 0) continue;
-        await store.run(db => {
-          const state = ensureSyncState(db);
-          const list = state.expenseMessages[snapshot.key] ||= [];
-          if (!list.some(item => String(item.chatId) === String(recipient.chatId))) list.push({ chatId: String(recipient.chatId), messageId, sentAt: Number(typeof now === 'function' ? now() : now) || Date.now() });
-        });
-        sent++;
-      } catch {}
+      const recipientKey = `${snapshot.key}:${recipient.chatId}`;
+      const existingTask = inflight.get(recipientKey);
+      if (existingTask) {
+        // Another caller owns this send.  Wait for its result so a later
+        // recipient in this call observes the persisted binding, but do not
+        // report the other caller's successful delivery as our own send.
+        await existingTask.catch(() => {});
+        continue;
+      }
+      const task = sendToRecipient(snapshot, recipient);
+      inflight.set(recipientKey, task);
+      try { if (await task) sent++; } catch {} finally {
+        if (inflight.get(recipientKey) === task) inflight.delete(recipientKey);
+      }
     }
     return { sent, skipped: false };
+  }
+
+  async function sendToRecipient(snapshot, recipient) {
+    const claimed = await store.run(db => {
+      const state = ensureSyncState(db);
+      const list = state.expenseMessages[snapshot.key] ||= [];
+      const current = list.find(item => String(item?.chatId) === String(recipient.chatId));
+      const timestamp = Number(typeof now === 'function' ? now() : now) || Date.now();
+      if (current?.status === 'sent' && Number(current.messageId) > 0) return false;
+      if (current?.status === 'sending' && Number(current.claimUntil) > timestamp) return false;
+      const binding = current || { chatId: String(recipient.chatId) };
+      Object.assign(binding, { status: 'sending', claimUntil: timestamp + CLAIM_TTL, attempts: Number(binding.attempts || 0) + 1, lastError: '' });
+      if (!current) list.push(binding);
+      return true;
+    });
+    if (!claimed) return false;
+    try {
+      const result = await telegram('sendMessage', { chat_id: recipient.chatId, text: expenseNotificationText(snapshot.actual, recipient.language), disable_notification: true });
+      const messageId = Number(result?.message_id);
+      if (!Number.isSafeInteger(messageId) || messageId <= 0) throw new Error('Telegram returned no message id');
+      await store.run(db => {
+        const list = ensureSyncState(db).expenseMessages[snapshot.key] || [];
+        const binding = list.find(item => String(item?.chatId) === String(recipient.chatId));
+        if (binding) Object.assign(binding, { status: 'sent', messageId, sentAt: Number(typeof now === 'function' ? now() : now) || Date.now(), claimUntil: 0, lastError: '', lastText: expenseNotificationText(snapshot.actual, recipient.language) });
+      });
+      return true;
+    } catch (error) {
+      // Keep the binding so the next invocation retries.  A failed send must
+      // never make the system believe that this recipient is synchronized.
+      await store.run(db => {
+        const list = ensureSyncState(db).expenseMessages[snapshot.key] || [];
+        const binding = list.find(item => String(item?.chatId) === String(recipient.chatId));
+        if (binding) Object.assign(binding, { status: 'failed', claimUntil: 0, lastError: String(error?.message || 'telegram-send-failed').slice(0, 160) });
+      }).catch(() => {});
+      return false;
+    }
   }
 
   async function sync(entry, action = 'edit') {
@@ -105,21 +166,44 @@ export function createTelegramExpenseSync({ store, token = '', callTelegram, now
     const bindings = await store.run(db => structuredClone(ensureSyncState(db).expenseMessages[key] || []));
     let synced = 0;
     for (const binding of bindings) {
+      if (!Number.isSafeInteger(Number(binding?.messageId)) || Number(binding.messageId) <= 0) continue;
+      let editText = '';
+      if (action !== 'delete') {
+        const language = await store.run(db => {
+          const uid = db.identities?.[`telegram:${binding.chatId}`];
+          return resolveLanguage(db.telegram?.preferences?.[uid]?.language || db.users?.[uid]?.settings?.language, 'zh');
+        });
+        editText = expenseNotificationText(entry, language);
+        // A retry of the same edit only needs to revisit bindings whose prior
+        // call failed.  A genuinely changed record produces a different text
+        // and updates every recipient once.
+        if (binding.status === 'sent' && binding.lastText === editText) continue;
+      }
       try {
         if (action === 'delete') await telegram('deleteMessage', { chat_id: binding.chatId, message_id: binding.messageId });
-        else {
-          const language = await store.run(db => {
-            const uid = db.identities?.[`telegram:${binding.chatId}`];
-            return resolveLanguage(db.telegram?.preferences?.[uid]?.language || db.users?.[uid]?.settings?.language, 'zh');
-          });
-          await telegram('editMessageText', { chat_id: binding.chatId, message_id: binding.messageId, text: expenseNotificationText(entry, language) });
-        }
+        else await telegram('editMessageText', { chat_id: binding.chatId, message_id: binding.messageId, text: editText });
         synced++;
-      } catch {}
+        await store.run(db => {
+          const state = ensureSyncState(db), list = state.expenseMessages[key] || [];
+          const current = list.find(item => String(item?.chatId) === String(binding.chatId) && Number(item?.messageId) === Number(binding.messageId));
+          if (current) {
+            if (action === 'delete') list.splice(list.indexOf(current), 1);
+            else Object.assign(current, { status: 'sent', lastSyncedAt: Number(typeof now === 'function' ? now() : now) || Date.now(), lastError: '', lastText: editText });
+          }
+          if (!list.length) delete state.expenseMessages[key];
+        });
+      } catch (error) {
+        // Retain failed bindings and their message ids for a later retry.  In
+        // particular, never clear a delete/edit binding merely because the
+        // Bot API was temporarily unavailable.
+        await store.run(db => {
+          const current = (ensureSyncState(db).expenseMessages[key] || []).find(item => String(item?.chatId) === String(binding.chatId) && Number(item?.messageId) === Number(binding.messageId));
+          if (current) Object.assign(current, { status: 'failed', lastError: String(error?.message || `telegram-${action}-failed`).slice(0, 160), lastAttemptAt: Number(typeof now === 'function' ? now() : now) || Date.now() });
+        }).catch(() => {});
+      }
     }
-    if (action === 'delete') await store.run(db => { const state = ensureSyncState(db); delete state.expenseMessages[key]; });
     return { synced };
   }
 
-  return { notify, sync };
+  return { notify, sync, retry: sync };
 }

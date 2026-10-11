@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Button, Input } from '@telegram-apps/telegram-ui';
 import { AVATARS, CONSUMER_COLORS } from '../public/shared.mjs';
 import { Icon, CloudAvatar } from './icons.jsx';
+import { imageFileToAvatarDataUrl, isAvatarImageType } from './avatar-image.mjs';
 
 export function Avatar({ person, className = '' }) {
   const cloud = !person?.avatar || person.avatar === 'cloud';
@@ -38,22 +39,27 @@ function GoogleButton({ clientId, language, onCredential, t }) {
   return <div className="google-login">{!loaded && <p>{t('googleLoading')}</p>}<div ref={ref}/></div>;
 }
 export function ProfileEditor({ user, t, busy, run, service }) {
-  const [draft, setDraft] = useState({ name: user.name, color: user.color, avatar: user.avatar }), [avatarError, setAvatarError] = useState('');
-  const chooseFile = event => {
+  const [draft, setDraft] = useState({ name: user.name, color: user.color, avatar: user.avatar }), [avatarError, setAvatarError] = useState(''), [avatarBusy, setAvatarBusy] = useState(false);
+  const avatarOperation = useRef(0);
+  const chooseFile = async event => {
     const file = event.target.files?.[0];
     event.target.value = '';
     if (!file) return;
-    if (!/^image\/(?:png|jpe?g|webp|gif)$/i.test(file.type) || file.size > 5 * 1024 * 1024) { setAvatarError(t('avatarUploadError')); return; }
-    const reader = new FileReader();
-    reader.onload = () => {
-      const value = String(reader.result || '');
-      if (!/^data:image\/(?:png|jpe?g|webp|gif);base64,/i.test(value) || value.length > 256 * 1024) { setAvatarError(t('avatarUploadError')); return; }
-      setAvatarError(''); setDraft(current => ({ ...current, avatar: value }));
-    };
-    reader.onerror = () => setAvatarError(t('avatarUploadError'));
-    reader.readAsDataURL(file);
+    if (!isAvatarImageType(file.type) || file.size > 12 * 1024 * 1024) { setAvatarError(t('avatarUploadError')); return; }
+    const operation = ++avatarOperation.current;
+    setAvatarBusy(true);
+    setAvatarError('');
+    try {
+      const value = await imageFileToAvatarDataUrl(file);
+      if (operation !== avatarOperation.current) return;
+      setDraft(current => ({ ...current, avatar: value }));
+    } catch {
+      if (operation === avatarOperation.current) setAvatarError(t('avatarUploadError'));
+    } finally {
+      if (operation === avatarOperation.current) setAvatarBusy(false);
+    }
   };
-  return <form className="settings-form" onSubmit={e => { e.preventDefault(); run(() => service.updateUserProfile(draft), 'profileSaved'); }}><div className="profile-preview"><Avatar person={draft}/><strong>{draft.name}</strong></div><Input className="settings-input" id="profile-name" header={t('profileName')} aria-label={t('profileName')} maxLength={24} value={draft.name} onChange={e => setDraft({ ...draft, name: e.target.value })} required disabled={busy}/><fieldset className="avatar-picker"><legend>{t('profileAvatar')}</legend>{AVATARS.map(avatar => <Button type="button" mode="plain" key={avatar} aria-label={t(avatar)} aria-pressed={draft.avatar === avatar} onClick={() => setDraft({ ...draft, avatar })}><Avatar person={{ ...draft, avatar }}/></Button>)}<label className="avatar-upload"><input id="profile-avatar-upload" type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={chooseFile} disabled={busy}/><span aria-hidden="true">＋</span><small>{t('avatarUpload')}</small></label></fieldset>{avatarError && <p className="field-error">{avatarError}</p>}<fieldset className="color-picker"><legend>{t('profileColor')}</legend>{CONSUMER_COLORS.map(color => <button type="button" key={color} className={`color-swatch consumer-color-${color}`} aria-label={t(color)} aria-pressed={draft.color === color} onClick={() => setDraft({ ...draft, color })}><span/></button>)}</fieldset><Button type="submit" className="panel-primary compact-save" disabled={busy || !draft.name.trim()}>{t('saveCategories')}</Button></form>;
+  return <form className="settings-form" onSubmit={e => { e.preventDefault(); if (!avatarBusy) run(() => service.updateUserProfile(draft), 'profileSaved'); }}><div className="profile-preview"><Avatar person={draft}/><strong>{draft.name}</strong></div><Input className="settings-input" id="profile-name" header={t('profileName')} aria-label={t('profileName')} maxLength={24} value={draft.name} onChange={e => setDraft(current => ({ ...current, name: e.target.value }))} required disabled={busy || avatarBusy}/><fieldset className="avatar-picker"><legend>{t('profileAvatar')}</legend>{AVATARS.map(avatar => <Button type="button" mode="plain" key={avatar} aria-label={t(avatar)} aria-pressed={draft.avatar === avatar} onClick={() => { avatarOperation.current++; setAvatarBusy(false); setDraft(current => ({ ...current, avatar })); }} disabled={busy}><Avatar person={{ ...draft, avatar }}/></Button>)}<label className={`avatar-upload ${avatarBusy ? 'is-processing' : ''}`}><input id="profile-avatar-upload" type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={chooseFile} disabled={busy || avatarBusy}/><span aria-hidden="true">＋</span><small>{t('avatarUpload')}</small></label></fieldset>{avatarError && <p className="field-error">{avatarError}</p>}<fieldset className="color-picker"><legend>{t('profileColor')}</legend>{CONSUMER_COLORS.map(color => <button type="button" key={color} className={`color-swatch consumer-color-${color}`} aria-label={t(color)} aria-pressed={draft.color === color} onClick={() => setDraft(current => ({ ...current, color }))}><span/></button>)}</fieldset><Button type="submit" className="panel-primary compact-save" disabled={busy || avatarBusy || !draft.name.trim()}>{t('saveCategories')}</Button></form>;
 }
 export function AccountPage({ t, profile, isRemote, config, language, busy, run, service, onGoogle, onLogout, copy }) {
   const [linkCode, setLinkCode] = useState(null), [input, setInput] = useState(''), [preview, setPreview] = useState(null);

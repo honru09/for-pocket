@@ -48,6 +48,19 @@ test('a spending sentence still uses the existing parser', async t => {
   assert.match(calls[0].params.text, /850/);
 });
 
+test('auto confirmation also hands saved entries to the companion sync hook', async t => {
+  const notified = [];
+  const { store } = await storeFixture(t);
+  const handler = createTelegramHandler({ store, autoConfirm: true, expenseSync: { async notify(entry, options) { notified.push({ entry, options }); } }, aiParser: {
+    async parse() { return [{ amountMinor: 850, currency: 'JPY', type: 'expense', categoryId: 'stomach', categoryLabel: '胃', occurredAt: new Date(at).toISOString(), timezone: 'Asia/Tokyo' }]; },
+  }, callTelegram: async () => ({ message_id: 8 }), now: () => at });
+  const result = await handler.handle(message(3, '午饭拉面 850 日元'));
+  assert.equal(result.kind, 'confirmed');
+  assert.equal(notified.length, 1);
+  assert.equal(String(notified[0].options.excludeChatId), '101');
+  assert.equal(notified[0].entry.amountMinor, 850);
+});
+
 function syncState() {
   const member = (id, name) => ({ id, name, color: 'blue', avatar: 'cloud', settings: { currency: 'JPY', language: id === '101' ? 'zh' : 'en', timezone: 'Asia/Tokyo' } });
   const entry = { id: 'sync-entry-1', ledgerId: 'cir_ledger', type: 'expense', amountMinor: 850, currency: 'JPY', categoryId: 'stomach', category: { id: 'stomach', label: '胃', icon: 'bowl', color: 'peach' }, consumer: 'u_101', member: { id: 'u_101', name: 'Kojun' }, note: '拉面', occurredAt: new Date(at).toISOString() };
@@ -75,4 +88,66 @@ test('expense notifications are silent and edits/deletes reuse stored Telegram m
   const db = await store.run(value => structuredClone(value));
   assert.deepEqual(db.telegram.expenseMessages, {});
   assert.match(expenseNotificationText(entry, 'uk'), /850/);
+});
+
+test('expense sync deduplicates concurrent sends and never leaks a personal ledger', async t => {
+  const fixture = syncState();
+  const { store } = await storeFixture(t, fixture);
+  const calls = [];
+  let release;
+  const gate = new Promise(resolve => { release = resolve; });
+  const sync = createTelegramExpenseSync({ store, now: () => at, callTelegram: async (method, params) => {
+    calls.push({ method, params });
+    await gate;
+    return { message_id: 500 + calls.length };
+  } });
+  const entry = await store.run(db => structuredClone(db.ledgers.cir_ledger.expenses[0]));
+  const first = sync.notify(entry);
+  const second = sync.notify(entry);
+  release();
+  const results = await Promise.all([first, second]);
+  assert.equal(calls.filter(item => item.method === 'sendMessage').length, 2);
+  assert.equal(results[0].sent + results[1].sent, 2);
+
+  const personal = structuredClone(fixture);
+  personal.circles = {};
+  personal.ledgers = { '101': { settings: personal.ledgers.cir_ledger.settings, expenses: [entry] } };
+  personal.ledgers['101'].expenses[0].ledgerId = '101';
+  const personalStore = await storeFixture(t, personal);
+  t.after(() => personalStore.store.close());
+  const personalCalls = [];
+  const personalSync = createTelegramExpenseSync({ store: personalStore.store, callTelegram: async (...args) => { personalCalls.push(args); return { message_id: 1 }; } });
+  const personalEntry = await personalStore.store.run(db => structuredClone(db.ledgers['101'].expenses[0]));
+  assert.equal((await personalSync.notify(personalEntry)).sent, 0);
+  assert.equal(personalCalls.length, 0);
+});
+
+test('failed Telegram sends and edits remain retryable', async t => {
+  const { store } = await storeFixture(t, syncState());
+  const entry = await store.run(db => structuredClone(db.ledgers.cir_ledger.expenses[0]));
+  let failSend = true;
+  const calls = [];
+  const sync = createTelegramExpenseSync({ store, now: () => at, callTelegram: async (method, params) => {
+    calls.push({ method, params });
+    if (method === 'sendMessage' && failSend && params.chat_id === '202') throw new Error('temporary');
+    if (method === 'editMessageText' && params.chat_id === '101') throw new Error('temporary edit');
+    return { message_id: 700 + calls.length };
+  } });
+  assert.equal((await sync.notify(entry)).sent, 1);
+  failSend = false;
+  assert.equal((await sync.notify(entry)).sent, 1);
+  const stateAfterRetry = await store.run(db => structuredClone(db.telegram.expenseMessages['cir_ledger:sync-entry-1']));
+  assert.equal(stateAfterRetry.length, 2);
+  await sync.sync({ ...entry, note: 'updated' }, 'edit');
+  const stateAfterEdit = await store.run(db => structuredClone(db.telegram.expenseMessages['cir_ledger:sync-entry-1']));
+  assert.equal(stateAfterEdit.length, 2);
+  assert.equal(stateAfterEdit.some(item => item.lastError), true);
+  assert.equal(calls.filter(item => item.method === 'editMessageText').length, 2);
+  await sync.sync({ ...entry, note: 'updated' }, 'edit');
+  assert.equal(calls.filter(item => item.method === 'editMessageText').length, 3);
+});
+
+test('income companion cards use received wording instead of spent', async () => {
+  assert.match(expenseNotificationText({ type: 'income', amountMinor: 1000, currency: 'JPY', member: { name: 'Kojun' } }, 'en'), /received/);
+  assert.doesNotMatch(expenseNotificationText({ type: 'income', amountMinor: 1000, currency: 'JPY', member: { name: 'Kojun' } }, 'en'), /spent/);
 });

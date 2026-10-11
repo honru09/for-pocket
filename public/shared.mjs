@@ -25,7 +25,7 @@ export const CONSUMER_COLORS = ['milk', 'blue', 'pink', 'mint', 'peach', 'yellow
 export const DEFAULT_CONSUMERS = [];
 export const CONSUMERS = {};
 export const MAX_CIRCLE_MEMBERS = 99;
-const MAX_CUSTOM_AVATAR_LENGTH = 256 * 1024;
+export const MAX_CUSTOM_AVATAR_LENGTH = 256 * 1024;
 export function isCustomAvatar(value) {
   return typeof value === 'string' && value.length <= MAX_CUSTOM_AVATAR_LENGTH
     && /^data:image\/(?:png|jpe?g|webp|gif);base64,[A-Za-z0-9+/]+={0,2}$/i.test(value);

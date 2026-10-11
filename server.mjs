@@ -10,7 +10,7 @@ import { createStore } from './store.mjs';
 import { createLocationResolver } from './location.mjs';
 import { normalizeLocation, currencyForCountry } from './public/location.mjs';
 import { RequestError, fail, hash, ensureUser, issueSession, googleLogin, handleDomain } from './domain.mjs';
-import { CURRENCIES, resolveLanguage } from './public/shared.mjs';
+import { CURRENCIES, MAX_CUSTOM_AVATAR_LENGTH, resolveLanguage } from './public/shared.mjs';
 import { AiError, createExpenseParser, createExpenseSummarizer, createExpenseChat } from './ai.mjs';
 import { summarizeExpenses } from './ai-summary.mjs';
 import { createTelegramHandler } from './telegram-ai.mjs';
@@ -188,13 +188,21 @@ export function createApp({ token = process.env.BOT_TOKEN || '', dataDir = path.
           if (cronDigestRoute) {
             if (typeof cronBody.slot !== 'string' || !['morning', 'noon', 'evening'].includes(cronBody.slot)) fail('errorAiInput', 400);
             const ledgerId = cronBody.ledgerId === undefined ? '' : String(cronBody.ledgerId || '').trim();
-            await send(res, 200, await digestService.processSlot(cronBody.slot, { ledgerId, at: now() })); return;
+            const result = await digestService.processSlot(cronBody.slot, { ledgerId, at: now() });
+            const status = result.results?.some(item => item?.deliveryFailed) ? 503 : 200;
+            if (status >= 500) await store.flush();
+            await send(res, status, result); return;
           }
-          await send(res, 200, await digestService.tick({ at: now() })); return;
+          const result = await digestService.tick({ at: now() });
+          const status = result.results?.some(batch => batch?.results?.some(item => item?.deliveryFailed)) ? 503 : 200;
+          if (status >= 500) await store.flush();
+          await send(res, status, result); return;
         }
         const aiRoute = url.pathname === '/api/ai/parse-expense' && req.method === 'POST';
         const telegramAiRoute = url.pathname === '/api/ai/telegram-parse' && req.method === 'POST';
-        const body = aiRoute || telegramAiRoute ? null : ['POST', 'PUT'].includes(req.method) ? await bodyOf(req, url.pathname === '/api/expenses/import' ? 131072 : 32768) : {};
+        const body = aiRoute || telegramAiRoute ? null : ['POST', 'PUT'].includes(req.method)
+          ? await bodyOf(req, url.pathname === '/api/expenses/import' ? 131072 : url.pathname === '/api/user-profile' ? MAX_CUSTOM_AVATAR_LENGTH + 8192 : 32768)
+          : {};
         if (url.pathname === '/api/location/reverse' && req.method === 'POST') {
           limit(`location-ip:${req.socket.remoteAddress}`, 30);
           const context = token || googleClientId ? await store.run(db => {
