@@ -48,6 +48,18 @@ test('a spending sentence still uses the existing parser', async t => {
   assert.match(calls[0].params.text, /850/);
 });
 
+test('ordinary numbers and future shopping plans stay in conversation while bare amounts remain recordable', async t => {
+  const { store } = await storeFixture(t), calls = [], parsed = [];
+  const handler = createTelegramHandler({ store, now: () => at, aiParser: {
+    async parse(input) { parsed.push(input); return [{ type: 'expense', amountMinor: 850, currency: 'JPY', categoryId: 'stomach', occurredAt: new Date(at).toISOString(), timezone: 'Asia/Tokyo' }]; },
+    async chat({ text }) { return `chat:${text}`; },
+  }, callTelegram: async (method, params) => { calls.push({ method, params }); return { message_id: 5 }; } });
+  assert.equal((await handler.handle(message(4, 'I have 2 cats'))).kind, 'chat');
+  assert.equal((await handler.handle(message(5, '明天买面包'))).kind, 'chat');
+  assert.equal((await handler.handle(message(6, '850'))).kind, 'draft');
+  assert.equal(parsed.length, 1);
+});
+
 test('auto confirmation also hands saved entries to the companion sync hook', async t => {
   const notified = [];
   const { store } = await storeFixture(t);

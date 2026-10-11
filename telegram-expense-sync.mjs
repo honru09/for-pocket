@@ -63,16 +63,16 @@ export function expenseNotificationText(entry, language = 'zh') {
   const kind = entry?.type === 'income' ? 'income' : entry?.recordKind;
   if (lang === 'en') {
     if (kind === 'income') return `${payer || 'Someone'} received ${amount}${suffix}`;
-    if (kind === 'transfer' || kind === 'reimbursement') return `${payer || 'Someone'} recorded a ${kind}${suffix}`;
+    if (kind === 'transfer' || kind === 'reimbursement') return `${payer || 'Someone'} recorded a ${kind} of ${amount}${suffix}`;
     return `${payer || 'Someone'} spent ${amount}${suffix}`;
   }
   if (lang === 'uk') {
     if (kind === 'income') return `${payer || 'Хтось'} отримав ${amount}${suffix}`;
-    if (kind === 'transfer' || kind === 'reimbursement') return `${payer || 'Хтось'} записав: ${kind === 'transfer' ? 'переказ' : 'відшкодування'}${suffix}`;
+    if (kind === 'transfer' || kind === 'reimbursement') return `${payer || 'Хтось'} записав: ${kind === 'transfer' ? 'переказ' : 'відшкодування'} ${amount}${suffix}`;
     return `${payer || 'Хтось'} витратив ${amount}${suffix}`;
   }
   if (kind === 'income') return `${payer || '有人'} 收到 ${amount}${suffix}`;
-  if (kind === 'transfer' || kind === 'reimbursement') return `${payer || '有人'} 记了${kind === 'transfer' ? '一笔转账' : '一笔代付/报销'}${suffix}`;
+  if (kind === 'transfer' || kind === 'reimbursement') return `${payer || '有人'} 记了${kind === 'transfer' ? '一笔转账' : '一笔代付/报销'} ${amount}${suffix}`;
   return `${payer || '有人'} 花了 ${amount}${suffix}`;
 }
 
@@ -127,6 +127,8 @@ export function createTelegramExpenseSync({ store, token = '', callTelegram, now
   async function sendToRecipient(snapshot, recipient) {
     const claimed = await store.run(db => {
       const state = ensureSyncState(db);
+      const currentEntry = db.ledgers?.[snapshot.actual.ledgerId]?.expenses?.find(item => item.id === snapshot.actual.id);
+      if (!currentEntry || currentEntry.deletedAt) return false;
       const list = state.expenseMessages[snapshot.key] ||= [];
       const current = list.find(item => String(item?.chatId) === String(recipient.chatId));
       const timestamp = Number(typeof now === 'function' ? now() : now) || Date.now();

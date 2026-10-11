@@ -320,15 +320,21 @@ function periodForText(text) {
 function expenseIntent(text) {
   const value = String(text || '').normalize('NFKC').trim();
   if (!value) return false;
-  const hasMoney = /\d|[¥$₴€£]|(?:日元|人民币|美元|гривн|yen|yuan|dollar|uah|jpy|usd)/iu.test(value);
+  const hasCurrency = /[¥$₴€£]|(?:日元|人民币|美元|гривн|yen|yuan|dollar|uah|jpy|usd)/iu.test(value);
   // A future plan (“tomorrow I'll buy…”, “завтра куплю…”) is conversation
   // until an amount or an explicit already-paid verb appears. This prevents
   // the parser from turning meal ideas and shopping plans into fake drafts.
   const futurePlan = /(明天|后天|下周|以后|打算|准备|想(?:要)?|tomorrow|next\s+(?:day|week)|planning\s+to|going\s+to|завтра|післязавтра|наступн(?:ого|ої)|планую|хочу)/iu.test(value);
   const alreadyPaid = /(花了|买了|买过|消费了|支出了|付款了|付了|吃了|喝了|打车了|转给|代付|报销|收入|入账|记账|记一笔|spent|spend|bought|paid|purchased|was\s+charged|витратив|витратила|купив|купила|оплатив|оплатила|переказав|отримав|записати|дохід)/iu.test(value);
-  if (futurePlan && !hasMoney && !alreadyPaid) return false;
-  if (hasMoney) return true;
-  return /(记账|记一笔|花了|买了|买过|消费|支出|付款|付了|吃了|喝了|打车|房租|转给|代付|报销|收入|入账|expense|spent|spend|bought|paid|pay(?:ment)?|purchase|rent|taxi|transfer|reimburse|income|витрат|витратив|купив|оплатив|оренда|переказ|дохід)/iu.test(value);
+  // A bare amount is a useful shorthand in Telegram (and is also used after
+  // a pending venue). Other numbers need a money unit or a spending cue;
+  // dates, times, quantities and ordinary chat should stay in the chat path.
+  const bareAmount = /^[\d.,\s]+$/u.test(value) && /\d/u.test(value);
+  const spendingCue = /(记账|记一笔|花|买|消费|支出|付款|付|吃|喝|午饭|晚饭|早餐|拉面|咖啡|房租|打车|转给|代付|报销|收入|入账|expense|spent|spend|bought|paid|pay(?:ment)?|purchase|rent|taxi|transfer|reimburse|income|lunch|dinner|breakfast|coffee|food|витрат|витратив|куп|оплат|оренд|переказ|дохід|обід|кава)/iu.test(value);
+  const hasAmount = hasCurrency || (spendingCue && /\d/u.test(value));
+  if (futurePlan && !alreadyPaid) return false;
+  if (bareAmount || hasAmount) return true;
+  return spendingCue;
 }
 
 function chatLedgerContext(profile, now, timezone) {
