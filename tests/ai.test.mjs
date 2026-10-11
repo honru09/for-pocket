@@ -80,7 +80,7 @@ test('AI parser normalizes multi-item receipts, currency units, custom categorie
   const calls = [], settings = initialSettings();
   settings.categories = [{ id: 'my_food', label: 'My lunch', icon: 'bowl', color: 'peach' }, settings.categories.at(-1)];
   const parser = createExpenseParser({ modelClient: modelReturning([
-    rawItem({ amount: 12.34, currency: 'USD', categoryId: 'unknown', categoryLabel: 'My lunch', occurredAt: '2026-10-10T15:30:00.000Z' }),
+    rawItem({ amount: 12.34, currency: 'USD', categoryId: 'unknown', categoryLabel: 'My lunch', rawText:'2026/10/11 00:30 拉面 USD 12.34', occurredAt: '2026-10-10T15:30:00.000Z' }),
     rawItem({ amount: 5000, type: 'income', categoryId: 'salary', categoryLabel: 'Salary', timezone: 'not/a-zone', note: 'n'.repeat(200), rawText: 'r'.repeat(600) }),
   ], calls) });
   const items = await parser.parse({ text: 'receipt', image: { mimeType: 'image/png', data: imageBytes.toString('base64') }, timezone: 'Asia/Tokyo' }, settings);
@@ -249,6 +249,38 @@ test('AI provider errors preserve their public error code', async t => {
   const response = await f.request('/ai/parse-expense', { body: { text: 'lunch 1200' } });
   assert.equal(response.status, 503);
   assert.deepEqual(response.data, { error: 'errorAiUnavailable' });
+});
+
+test('explicit money movement requires review even when the model incorrectly calls it a purchase', async () => {
+  const settings = initialSettings();
+  settings.consumers = [{ id: 'u_101', name: 'Test' }];
+  for (const [detectedLanguage, rawText, reason] of [
+    ['zh', '今天中午十二点帮朋友代付新宿拉面1723日元', /付款方向|代付|报销/],
+    ['en', 'Paid on behalf of a friend for ramen, 1723 yen today at noon', /direction|someone else/],
+    ['uk', 'Переказ за обід 1723 єн сьогодні опівдні', /напрямок|іншу людину/],
+  ]) {
+    const raw = rawItem({ amount: 1723, categoryId: 'other', categoryLabel: '其他', rawText, note: '',
+      occurredAt: '2026-10-11T03:00:00.000Z', localDate: '2026-10-11', localTime: '12:00', timeText: '', timeSource: 'explicit',
+      confidence: 0.95, consumer: 'u_101', recordKind: 'purchase', needsReview: false, reviewReason: '', detectedLanguage });
+    const parser = createExpenseParser({ modelClient: modelReturning([raw]), now: () => now });
+    const [item] = await parser.parse({ file: { mimeType: 'audio/ogg', data: Buffer.from('voice-fixture').toString('base64') }, timezone: 'Asia/Tokyo', defaultConsumer: 'u_101' }, settings);
+    assert.equal(item.needsReview, true, rawText);
+    assert.match(item.reviewReason, reason);
+    assert.equal(item.recordKind, 'purchase', 'uncertain money direction is not silently reclassified');
+    assert.equal(item.categoryId, 'other');
+  }
+});
+
+test('a valid custom category remains selected while suspicious payment wording requires review', async () => {
+  const settings = initialSettings();
+  settings.categories = [{ id: 'my_meals', label: 'Together meals', icon: 'bowl', color: 'peach' }, settings.categories.at(-1)];
+  settings.consumers = [{ id: 'u_101', name: 'Test' }];
+  const raw = rawItem({ categoryId: 'my_meals', categoryLabel: 'Together meals', rawText: '帮朋友代付拉面1200日元',
+    occurredAt: '2026-10-11T03:00:00.000Z', consumer: 'u_101', recordKind: 'purchase', needsReview: false, detectedLanguage: 'zh' });
+  const parser = createExpenseParser({ modelClient: modelReturning([raw]), now: () => now });
+  const [item] = await parser.parse({ text: raw.rawText, timezone: 'Asia/Tokyo' }, settings);
+  assert.equal(item.categoryId, 'my_meals');
+  assert.equal(item.needsReview, true);
 });
 
 test('AI results are rejected when the user switches ledgers during recognition', async t => {

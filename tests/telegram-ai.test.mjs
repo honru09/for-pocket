@@ -229,6 +229,72 @@ test('spoken expenses default to JPY even when the active ledger uses another cu
   assert.equal((await f.database()).users['101'].settings.currency, 'USD', 'voice default must not modify ledger settings');
 });
 
+test('delayed Telegram voice messages use their sending date as the parsing anchor without shortening draft lifetime', async t => {
+  const sentAt = Date.parse('2026-10-11T14:50:00.000Z'); // 23:50 in Tokyo.
+  const processedAt = Date.parse('2026-10-11T15:05:00.000Z'); // Next calendar day.
+  const f = await fixture(t, { now: () => processedAt, downloadFile: async () => Buffer.from('spoken note'),
+    aiParser: { async parse(input, settings) {
+      f.aiCalls.push({ input, settings });
+      return [parsed({ occurredAt: new Date(input.now).toISOString() })];
+    } } });
+  const voice = message(190, '');
+  voice.message.date = sentAt / 1000;
+  voice.message.voice = { file_id: 'delayed-voice', mime_type: 'audio/ogg', duration: 8, file_size: 64 };
+  const result = await f.handler.handle(voice);
+  assert.equal(result.kind, 'draft');
+  assert.equal(f.aiCalls[0].input.now, sentAt);
+  const db = await f.database(), draft = db.telegram.drafts[result.draftId];
+  assert.equal(draft.createdAt, processedAt);
+  assert.equal(draft.expiresAt, processedAt + DRAFT_TTL);
+  assert.equal(draft.items[0].expense.occurredAt, new Date(sentAt).toISOString());
+  assert.match(f.calls.at(-1).params.text, /2026\/10\/11 23:50/);
+});
+
+test('missing or invalid Telegram sending timestamps fall back to the processing clock', async t => {
+  const f = await fixture(t);
+  const timestamps = [undefined, null, '1791694800', 0, -1, 1.5, Infinity, NaN, 1e15];
+  for (const [index, timestamp] of timestamps.entries()) {
+    const update = message(191 + index);
+    if (timestamp !== undefined) update.message.date = timestamp;
+    assert.equal((await f.handler.handle(update)).kind, 'draft');
+    assert.equal(f.aiCalls.at(-1).input.now, at);
+  }
+});
+
+test('spoken noon ramen is corrected from the model output through preview and final ledger write', async t => {
+  const modelRequests = [];
+  const aiParser = createExpenseParser({ modelClient: { async generateContent(request) {
+    modelRequests.push(request);
+    return { response: { candidates: [{ content: { parts: [{ text: JSON.stringify([{
+      amount: 1723, currency: 'JPY', type: 'expense', categoryId: 'other', categoryLabel: '其他',
+      merchant: '新宿拉面', note: '午餐', rawText: '今天中午十二点，在新宿吃拉面，花了1723日元',
+      occurredAt: '2026-10-11T12:30:00.000Z', timezone: 'UTC', confidence: 0.95,
+      consumer: '', splitMode: 'none', splitParticipants: [], recordKind: 'purchase',
+      needsReview: false, reviewReason: '', detectedLanguage: 'zh', currencyExplicit: false,
+    }]) }] } }] } };
+  } } });
+  const f = await fixture(t, { aiParser, now: () => Date.parse('2026-10-12T01:00:00.000Z'),
+    downloadFile: async () => Buffer.from('spoken noon ramen') });
+  const voice = message(200, '');
+  voice.message.date = Date.parse('2026-10-11T05:46:00.000Z') / 1000;
+  voice.message.voice = { file_id: 'noon-ramen', mime_type: 'audio/ogg', duration: 8, file_size: 64 };
+  const result = await f.handler.handle(voice);
+  assert.equal(result.kind, 'draft');
+  const preview = f.calls.at(-1).params.text;
+  assert.match(preview, /2026\/10\/11 12:00/);
+  assert.match(preview, /胃 · 新宿拉面/);
+  assert.doesNotMatch(preview, /21:30|其他/);
+  assert.match(modelRequests[0].contents[0].parts[0].text, /Time anchor: 2026-10-11T05:46:00.000Z/);
+  assert.equal((await f.database()).ledgers['101'].expenses.length, 0);
+  assert.equal((await f.handler.handle(callback(201, result.draftId))).kind, 'confirmed');
+  const saved = (await f.database()).ledgers['101'].expenses[0];
+  assert.equal(saved.occurredAt, '2026-10-11T03:00:00.000Z');
+  assert.equal(saved.timezone, 'Asia/Tokyo');
+  assert.equal(saved.categoryId, 'stomach');
+  assert.equal(saved.dayKey, '2026-10-11');
+  assert.equal(saved.amountMinor, 1723);
+});
+
 test('transfers and uncertain records always require review even with automatic saving enabled', async t => {
   const f = await fixture(t, { autoConfirm: true, aiParser: { async parse() { return [
     parsed({ amountMinor: 500, recordKind: 'transfer', needsReview: false }),
@@ -328,6 +394,51 @@ test('draft editing is owner-bound, replaces only the pending preview, and requi
   const active = (await f.database()).ledgers['101'].expenses.filter(item => !item.deletedAt);
   assert.equal(active.length, 1);
   assert.equal(active[0].amountMinor, 250);
+});
+
+test('editing a spoken amount after midnight preserves the original noon time and passes only the owners pending record', async t => {
+  let clock = Date.parse('2026-10-11T14:50:00.000Z');
+  const modelRequests = [];
+  const aiParser = createExpenseParser({ modelClient: { async generateContent(request) {
+    modelRequests.push(request);
+    const editing = modelRequests.length > 1;
+    return { response: { candidates: [{ content: { parts: [{ text: JSON.stringify([{
+      amount: editing ? 1800 : 1723, currency: 'JPY', type: 'expense', categoryId: 'stomach', categoryLabel: '胃',
+      merchant: '新宿拉面', note: '午餐', rawText: editing ? '改成1800日元' : '今天中午十二点新宿拉面1723日元',
+      occurredAt: editing ? new Date(clock).toISOString() : '2026-10-11T03:00:00.000Z', timezone: 'Asia/Tokyo', confidence: 0.95,
+      consumer: '', splitMode: 'none', splitParticipants: [], recordKind: 'purchase',
+      needsReview: false, reviewReason: '', detectedLanguage: 'zh', currencyExplicit: false,
+    }]) }] } }] } };
+  } } });
+  const inputs = [], parse = aiParser.parse;
+  aiParser.parse = (input, settings) => { inputs.push(input); return parse(input, settings); };
+  const f = await fixture(t, { aiParser, now: () => clock, downloadFile: async () => Buffer.from('spoken lunch') });
+  const voice = message(202, '');
+  voice.message.date = clock / 1000;
+  voice.message.voice = { file_id: 'original-edit-voice', mime_type: 'audio/ogg', duration: 8, file_size: 64 };
+  const first = await f.handler.handle(voice);
+  assert.equal(first.kind, 'draft');
+  assert.equal(inputs[0].previousRecords, undefined);
+  assert.equal((await f.handler.handle(callback(203, first.draftId, 'edit', 202, 101))).kind, 'missing');
+  assert.equal((await f.handler.handle(callback(204, first.draftId, 'edit'))).kind, 'editing');
+  clock += 11 * 60 * 1000;
+  const correction = message(205, '改成1800日元');
+  correction.message.date = clock / 1000;
+  const revised = await f.handler.handle(correction);
+  assert.equal(revised.kind, 'draft');
+  assert.equal(inputs[1].now, clock);
+  assert.equal(inputs[1].previousRecords.length, 1);
+  assert.equal(inputs[1].previousRecords[0].amount, 1723);
+  assert.equal(inputs[1].previousRecords[0].merchant, '新宿拉面');
+  assert.equal(inputs[1].previousRecords[0].occurredAt, '2026-10-11T03:00:00.000Z');
+  assert.match(f.calls.at(-1).params.text, /2026\/10\/11 12:00/);
+  assert.equal((await f.handler.handle(callback(206, first.draftId))).kind, 'cancelled');
+  assert.equal((await f.handler.handle(callback(207, revised.draftId))).kind, 'confirmed');
+  const saved = (await f.database()).ledgers['101'].expenses;
+  assert.equal(saved.length, 1);
+  assert.equal(saved[0].amountMinor, 1800);
+  assert.equal(saved[0].occurredAt, '2026-10-11T03:00:00.000Z');
+  assert.equal(saved[0].dayKey, '2026-10-11');
 });
 
 test('summary commands use the shared AI summarizer and bot copy follows the account language', async t => {

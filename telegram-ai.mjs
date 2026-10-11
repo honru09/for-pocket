@@ -36,6 +36,19 @@ const atMillis = value => {
   return Number.isFinite(numeric) ? numeric : Date.now();
 };
 
+function messageAnchor(message, fallback) {
+  // Telegram dates are Unix seconds. Use the sending day for relative speech
+  // even when webhook delivery or a download crosses midnight. Draft leases
+  // and persistence timestamps continue to use the processing clock.
+  const seconds = message?.date;
+  if (!Number.isSafeInteger(seconds) || seconds <= 0) return fallback;
+  const timestamp = seconds * 1000;
+  const date = new Date(timestamp);
+  if (!Number.isSafeInteger(timestamp) || !Number.isFinite(date.getTime())
+    || date.getUTCFullYear() < 1970 || date.getUTCFullYear() > 2100) return fallback;
+  return timestamp;
+}
+
 function validTimezone(value, fallback = DEFAULT_TIMEZONE) {
   for (const candidate of [value, fallback, 'UTC']) {
     if (typeof candidate !== 'string' || !candidate.trim()) continue;
@@ -584,7 +597,7 @@ export function createTelegramHandler({
     return { ok: true, kind: 'draft', draftId: draft.id, count: draft.items.length };
   }
 
-  async function parseMessage(context, message, attachment, { enhanced = false, replaceDraftId = null } = {}) {
+  async function parseMessage(context, message, attachment, { enhanced = false, replaceDraftId = null, previousRecords = null } = {}) {
     if (!aiParser || typeof aiParser.parse !== 'function') {
       return reply(context, message.chat.id, 'unavailable', { ok: false, reason: 'unavailable' });
     }
@@ -596,8 +609,9 @@ export function createTelegramHandler({
       return reply(context, message.chat.id, 'noInput', { ok: false, reason: 'no-input' });
     }
     invokeLimit(`telegram-ai:${context.telegramId}`, 12);
-    const input = { text, image, file, timezone: validTimezone(timezone), telegramUserId: context.telegramId, enhanced, now: context.at,
-      language: context.language, defaultConsumer: defaultConsumer(context.profile, context.uid), ...(isAudio ? { defaultCurrency: 'JPY' } : {}) };
+    const input = { text, image, file, timezone: validTimezone(timezone), telegramUserId: context.telegramId, enhanced, now: messageAnchor(message, context.at),
+      language: context.language, defaultConsumer: defaultConsumer(context.profile, context.uid),
+      ...(previousRecords ? { previousRecords } : {}), ...(isAudio ? { defaultCurrency: 'JPY' } : {}) };
     const retryId = (image || file) && !isAudio && !enhanced ? cacheImage(context, message.chat.id, input) : null;
     let parsed;
     try {
@@ -680,7 +694,14 @@ export function createTelegramHandler({
       }
       if (draft.ledgerId !== context.profile.ledgerId) return { id: draft.id, stale: true };
       draft.status = 'refining';
-      return { id: draft.id, language: draft.language };
+      const previousRecords = draft.items.map(({ expense, merchant, label }) => ({
+        amount: expense.amountMinor / (10 ** CURRENCIES[expense.currency].digits),
+        currency: expense.currency, type: expense.type, categoryId: expense.categoryId,
+        categoryLabel: label, consumer: expense.consumer, note: expense.note, merchant,
+        occurredAt: expense.occurredAt, timezone: expense.timezone,
+        splitMode: expense.splitMode, splitParticipants: [...expense.splitParticipants], recordKind: expense.recordKind,
+      }));
+      return { id: draft.id, language: draft.language, previousRecords };
     });
   }
 
@@ -909,7 +930,7 @@ export function createTelegramHandler({
     }
     if (!editing) return parseMessage(context, message, attachment);
     try {
-      return await parseMessage(context, message, attachment, { replaceDraftId: editing.id });
+      return await parseMessage(context, message, attachment, { replaceDraftId: editing.id, previousRecords: editing.previousRecords });
     } finally {
       await completeDraftEdit(context, editing.id);
     }
