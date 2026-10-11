@@ -15,11 +15,11 @@ import { normalizeLocation, currencyForCountry, locationLabel, summarizeFootprin
 import { createLocationClient, locationPreference } from './location-client.mjs';
 import { LocationSheet, Footprints } from './LocationViews.jsx';
 import CategorySuggestions from './CategorySuggestions.jsx';
+import { deviceTimezone } from '../public/timezone.mjs';
+import { bindForegroundRefresh } from './foreground-refresh.mjs';
 
 const telegram = window.Telegram?.WebApp;
 const language = resolveLanguage(telegram?.initDataUnsafe?.user?.language_code || navigator.language);
-const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-const TIMEZONE_OPTIONS = ['Asia/Tokyo', 'Asia/Shanghai', 'Asia/Singapore', 'Europe/Kyiv', 'Europe/London', 'America/New_York', 'America/Los_Angeles', 'Australia/Sydney', 'UTC'];
 const blankDraft = () => ({ raw: '0', selected: null, consumer: null, note: '', type: 'expense', occurredAt: null });
 const OUTBOX_KEY = 'for-pocket.unconfirmed.v1';
 function haptic(kind = 'selection') { try { if (!telegram?.isVersionAtLeast?.('6.1')) return; kind === 'success' ? telegram.HapticFeedback.notificationOccurred(kind) : telegram.HapticFeedback.selectionChanged(); } catch {} }
@@ -47,6 +47,8 @@ const Categories = memo(function Categories({ categories, lang, selected, disabl
 
 export default function App() {
   usePocketViewport(telegram);
+  const [timezone, setTimezone] = useState(() => deviceTimezone());
+  const timezoneSync = useRef(null);
   const [profile, setProfile] = useState(null), [settings, setSettings] = useState(() => initialSettings(language));
   const [draft, setDraft] = useState(blankDraft), [view, setView] = useState('record'), [ready, setReady] = useState(false), [busy, setBusy] = useState(false);
   const [isRemote, setRemote] = useState(false), [config, setConfig] = useState({}), [notice, setNotice] = useState(null), [failed, setFailed] = useState(false), [syncFailed, setSyncFailed] = useState(false);
@@ -201,7 +203,7 @@ export default function App() {
     locationClient.current.clear();
     setLocationEnabled(locationScope ? locationPreference(locationScope) : false);
   }, [locationScope]);
-  const captureLocation = useCallback(async ({ explicit = false } = {}) => {
+  const captureLocation = useCallback(async ({ explicit = false, refresh = false } = {}) => {
     const before = currentProfile.current, d = state.current.draft;
     if (!before || activeCapture.current || (!explicit && (locationSuppressed.current || d.occurredAt))) return;
     const scope = `${before.user.id}:${before.ledgerId}`;
@@ -212,7 +214,7 @@ export default function App() {
       && state.current.draft.occurredAt === occurredAt && !locationSuppressed.current;
     activeCapture.current = request; setLocationBusy(true);
     try {
-      const coords = await locationClient.current.capture({ allowPrompt: explicit, refresh: explicit });
+      const coords = await locationClient.current.capture({ allowPrompt: explicit, refresh: explicit || refresh });
       if (!coords || !current()) return;
       editDraft({ location: normalizeLocation(coords) });
       let resolved;
@@ -229,8 +231,27 @@ export default function App() {
     }
   }, []);
   useEffect(() => {
-    if (ready && view === 'record' && locationEnabled && !draft.location) void captureLocation();
+    if (!ready || view !== 'record' || !locationEnabled) return;
+    const refresh = () => { void captureLocation({ refresh:true }); };
+    refresh();
+    return bindForegroundRefresh({ telegram, refresh });
   }, [ready, view, locationEnabled, locationScope, captureLocation]);
+  useEffect(() => {
+    if (!ready || !locationScope) return;
+    const sync = async () => {
+      const p = currentProfile.current, backend = service.current;
+      const zone = deviceTimezone({ countryCode:state.current.draft.location?.countryCode, fallback:p?.settings.timezone });
+      setTimezone(zone); setToday(dateKey(new Date(), zone));
+      if (!p || !backend?.syncTimezone) return;
+      const key = `${p.user.id}:${p.ledgerId}:${zone}`;
+      if (timezoneSync.current?.key === key && timezoneSync.current.backend === backend) return;
+      const operation = { key, backend }; timezoneSync.current = operation;
+      try { await backend.syncTimezone(zone, p.ledgerId); }
+      catch { if (timezoneSync.current === operation) timezoneSync.current = null; }
+    };
+    void sync();
+    return bindForegroundRefresh({ telegram, refresh:sync });
+  }, [ready, locationScope]);
   useEffect(() => {
     if (view === 'record' && locationEnabled && Number(draft.raw) > 0 && !draft.location) void captureLocation();
   }, [draft.raw, view, locationEnabled, captureLocation]);
@@ -442,7 +463,7 @@ export default function App() {
       <section className="finish" aria-label={t('save')}><div className="entry-actions">{circle && settings.consumers.length > 1 && <div className="consumer-buttons" role="group" aria-label={t(draft.type === 'income' ? 'incomeOwner' : 'consumer')}>{settings.consumers.map(c => <Tappable Component="button" type="button" className={`consumer-chip consumer-color-${c.color}`} key={c.id} aria-pressed={draft.consumer === c.id} disabled={disabled} onClick={() => { editDraft({ consumer:c.id }); haptic(); }}><Avatar person={c}/><span>{c.name}</span></Tappable>)}</div>}<Button id="entry-location" mode="plain" className={`location-trigger ${draft.location ? 'has-location' : ''}`} aria-label={t('locationTitle')} aria-pressed={Boolean(draft.location)} title={locationLabel(draft.location) || t('locationTitle')} disabled={disabled} onClick={() => setLocationSheet(true)}><Icon name="pin"/></Button><Button id="edit-note" mode="plain" className={`note-trigger ${draft.note ? "has-note" : ""}`} aria-label={t('note')} title={draft.note || t('note')} disabled={disabled} onClick={() => setNoteEditor(true)}><Icon name="edit"/></Button></div></section></div>
       </>}
     {view === 'history' && <><div className="history-controls"><SegmentedControl className="period-tabs" aria-label={t('period')}>{['month','all'].map(p => <SegmentedControl.Item key={p} selected={period === p} onClick={() => setPeriod(p)}>{t(p)}</SegmentedControl.Item>)}</SegmentedControl><Select id="history-currency" className="history-currency" aria-label={t('ledgerCurrency')} value={historyCurrency} onChange={e => setHistoryCurrency(e.target.value)}>{Object.keys(CURRENCIES).map(c => <option key={c}>{c}</option>)}</Select></div><label className="history-category-filter"><span>{t('categoryFilter')}</span><Select id="history-category" aria-label={t('categoryFilter')} value={historyCategory} onChange={e => setHistoryCategory(e.target.value)}><option value="all">{t('allCategories')}</option>{['expense','income'].map(type => <optgroup key={type} label={t(type)}>{historyCategories.filter(option => option.type === type).map(option => <option key={option.key} value={option.key}>{categoryLabel(option.category,settings.language)}</option>)}</optgroup>)}</Select></label><section className="history-summary"><div className="history-summary-amount"><span>{t('netBalance')}</span><strong id="history-total">{money(historyIncome - historyExpense, historyCurrency)}</strong><small id="history-total-count">{countText(history.length, settings.language, historyCurrency)}</small></div><div className="balance-details"><div><span>{t('expense')}</span><strong>{money(historyExpense,historyCurrency)}</strong></div><div><span>{t('income')}</span><strong className="income-value">+{money(historyIncome,historyCurrency)}</strong></div></div></section><Footprints items={footprints} t={t}/><AiSummary t={t} profile={profile} settings={settings} currency={historyCurrency} busy={busy} run={run} service={service.current} isRemote={isRemote} config={config} onAccount={() => navigate('account')}/><div className="history-list">{!history.length && <Placeholder className="empty-state" header={t('emptyTitle')} description={t(historyCategory === 'all' ? 'emptyText' : 'filterEmpty')}><span className="empty-face">◡</span><Button mode="filled" onClick={() => navigate('record')}>{t('newEntry')}</Button></Placeholder>}{days.map(day => <section key={day}><div className="history-day">{day === today ? t('today') : new Intl.DateTimeFormat(locale,{ timeZone:'UTC',month:'short',day:'numeric' }).format(new Date(`${day}T12:00:00Z`))}</div>{history.filter(e => e.dayKey === day).map(e => <Cell Component="article" readOnly multiline key={e.id} className={`expense-row ${e.type === 'income' ? 'is-income' : ''}`} before={<span className="category-icon" style={{ background:`var(--${e.category.color})` }}><Icon name={e.category.icon}/></span>} subtitle={<span className="expense-meta"><span className={`consumer-badge consumer-color-${e.member?.color || 'blue'}`}><i/>{e.member?.name || settings.consumers.find(c => c.id === e.consumer)?.name || t('unknownConsumer')}</span><button type="button" className="entry-time" aria-label={t('editEntryTime')} disabled={busy || e.canDelete === false} onClick={() => setTimeEditor({ entry:e, ledgerId:profile.ledgerId })}><time dateTime={e.occurredAt || e.createdAt}>{new Intl.DateTimeFormat(locale,{timeZone:e.timezone || timezone,hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(new Date(e.occurredAt || e.createdAt))}</time></button></span>} description={e.note || e.location ? <span className="expense-description">{e.note && <span className="expense-note">{e.note}</span>}{e.location && <span className="expense-location"><Icon name="pin"/><span>{locationLabel(e.location) || t('locationAttached')}</span></span>}</span> : undefined} after={<div className="expense-actions"><span className="expense-money">{e.type === 'income' ? '+' : '−'}{money(e.amountMinor,e.currency)}</span>{e.canDelete !== false && <Button className="delete-expense" mode="plain" size="s" disabled={busy} data-delete={e.id} aria-label={t('deleteExpense',{category:categoryLabel(e.category,settings.language),amount:money(e.amountMinor,e.currency)})} onClick={() => removeEntry(e)}><Icon name="trash"/></Button>}</div>}><strong>{categoryLabel(e.category,settings.language)}</strong>{!isBudgetEntry(e) && <small className="entry-kind">{t(e.recordKind === 'transfer' ? 'recordKindTransfer' : 'recordKindReimbursement')}</small>}</Cell>)}</section>)}</div><div className="today-balance"><span>{t('todayBalance')}</span><strong>{money(todayIncome - todayExpense)}</strong></div></>}
-    {view === 'settings' && <div className="settings-home">{[['profile','myProfile'],['circles','circlesTitle'],['account','accountTitle'],['ai-import','aiImportTitle']].map(([v,key]) => <Button key={v} mode="plain" className="settings-row" onClick={() => navigate(v)} disabled={!ready}>{v === 'profile' ? <Avatar person={profile?.user}/> : <Icon name={v === 'circles' ? 'users' : v === 'ai-import' ? 'receipt' : 'card'}/>}<span>{t(key)}</span><span aria-hidden="true">›</span></Button>)}<Button mode="plain" className="settings-row" onClick={() => setLocationSheet(true)} disabled={!ready}><Icon name="pin"/><span>{t('locationTitle')}</span><span aria-hidden="true">›</span></Button><label className="settings-language"><span>{t('language')}</span><Select id="language" className="language-control" aria-label={t('language')} value={settings.language} disabled={disabled} onChange={e => updateSettings({ language:e.target.value })}><option value="zh">中文</option><option value="en">English</option><option value="uk">Українська</option></Select></label><label className="settings-language"><span>{t('timezone')}</span><Select id="timezone" className="language-control" aria-label={t('timezone')} value={settings.timezone || timezone} disabled={disabled} onChange={e => updateSettings({ timezone:e.target.value })}>{[...new Set([...TIMEZONE_OPTIONS, settings.timezone || timezone])].map(zone => <option key={zone} value={zone}>{zone}</option>)}</Select></label></div>}
+    {view === 'settings' && <div className="settings-home">{[['profile','myProfile'],['circles','circlesTitle'],['account','accountTitle'],['ai-import','aiImportTitle']].map(([v,key]) => <Button key={v} mode="plain" className="settings-row" onClick={() => navigate(v)} disabled={!ready}>{v === 'profile' ? <Avatar person={profile?.user}/> : <Icon name={v === 'circles' ? 'users' : v === 'ai-import' ? 'receipt' : 'card'}/>}<span>{t(key)}</span><span aria-hidden="true">›</span></Button>)}<Button mode="plain" className="settings-row" onClick={() => setLocationSheet(true)} disabled={!ready}><Icon name="pin"/><span>{t('locationTitle')}</span><span aria-hidden="true">›</span></Button><label className="settings-language"><span>{t('language')}</span><Select id="language" className="language-control" aria-label={t('language')} value={settings.language} disabled={disabled} onChange={e => updateSettings({ language:e.target.value })}><option value="zh">中文</option><option value="en">English</option><option value="uk">Українська</option></Select></label></div>}
     {view === 'profile' && profile && <ProfileEditor key={profile.user.id} user={profile.user} t={t} busy={busy} run={run} service={service.current}/>}
     {view === 'account' && profile && <AccountPage t={t} profile={profile} isRemote={isRemote} config={config} language={settings.language} busy={busy} run={run} service={service.current} onGoogle={login} onLogout={logout} copy={copy}/>}
     {view === 'circles' && profile && <CirclesPage t={t} profile={profile} busy={busy} isRemote={isRemote} run={run} service={service.current} onAccount={() => navigate('account')} onSwitch={switchCircle} copy={copy}/>}

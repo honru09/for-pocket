@@ -342,11 +342,11 @@ const CHAT_LANGUAGE_NAMES = { zh: 'natural Simplified Chinese', en: 'natural Eng
 export function chatPrompt({ text = '', language = 'zh', context = {} } = {}) {
   const lang = ['zh', 'en', 'uk'].includes(language) ? language : 'zh';
   const tone = lang === 'zh'
-    ? '自然使用一两个“哇哦、咳咳、竟然、让我来看看、哼哼、额、等一下、抓到了”'
+    ? '可以自然带一点“哇哦、咳咳、哼哼”这类语气，但不要每次都用，也不要为了逗趣硬塞'
     : lang === 'uk'
-      ? 'use natural Ukrainian playful interjections such as «ого», «гм», «ага», «ну-ну», without translating Chinese filler'
-      : 'use natural English playful interjections such as “wow”, “hm”, “wait”, or “gotcha”, without translating Chinese filler';
-  return `Reply in ${CHAT_LANGUAGE_NAMES[lang]} as a cheeky, curious friend who watches two people’s everyday life from their shoulders. Be playful and lightly nosy, never cruel. ${tone}. No headings, markdown, greeting formula, self-introduction, financial jargon, advice, moral lesson, or words AI, model, assistant. Do not claim facts outside the supplied context. Keep it to one compact paragraph of 60–110 characters or words appropriate for the language. If the message is tiredness, bedtime, food plans, or a casual update, answer like a real friend with a little teasing. The ledger context is optional flavor only; never expose private notes or invent spending.\nLedger context: ${JSON.stringify(context || {})}\nMessage: ${JSON.stringify(String(text).trim().slice(0, 500))}`;
+      ? 'A light «ого» or «гм» is fine when it fits, but do not force a catchphrase'
+      : 'A light “wow” or “hm” is fine when it fits, but do not force a catchphrase';
+  return `Reply in ${CHAT_LANGUAGE_NAMES[lang]} like a close friend in Telegram: warm, casual and concise, with a little personality. ${tone}. Answer the user directly in one or two short sentences. Do not perform a skit, interrogate them, repeat their message, or invent a secret plan. Do not mention the ledger unless it clearly helps the reply. No headings, markdown, greeting formula, self-introduction, financial jargon, advice, moral lesson, or words AI, model, assistant. Do not claim facts outside the supplied context. Keep the reply under 45 ${lang === 'zh' ? 'Chinese characters' : 'words'} when possible and never exceed 80 ${lang === 'zh' ? 'characters' : 'words'}. The optional ledger context is only a small hint; never expose private notes.\nLedger context: ${JSON.stringify(context || {})}\nMessage: ${JSON.stringify(String(text).trim().slice(0, 500))}`;
 }
 
 export function createExpenseChat(options = {}) {
@@ -362,7 +362,8 @@ export function createExpenseChat(options = {}) {
     try {
       const resolvedProject = projectId || await (projectPromise ||= new GoogleAuth().getProjectId());
       const vertex = options.vertex || new VertexAI({ project: resolvedProject, location, ...(location === 'global' ? { apiEndpoint: 'aiplatform.googleapis.com' } : {}) });
-      const next = vertex.getGenerativeModel({ model: modelName, generationConfig: { temperature: 0.7, maxOutputTokens: 260 } }, { timeout: 25000 });
+      // Keep casual replies small and quick, like a normal Telegram message.
+      const next = vertex.getGenerativeModel({ model: modelName, generationConfig: { temperature: 0.55, maxOutputTokens: 120 } }, { timeout: 25000 });
       models.set(modelName, next);
       return next;
     } catch { throw new AiError('errorAiUnavailable', 503); }

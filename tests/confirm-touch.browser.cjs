@@ -95,8 +95,8 @@ const ARTIFACTS = fs.mkdtempSync(path.join(os.tmpdir(), 'for-pocket-confirm-'));
       for (const name of ['left','right','top','bottom']) {
         await enter();
         const box = await page.locator('.mascot-confirm').boundingBox();
-        assert.equal(box.width,44,'Touch width must not shrink on short screens');
-        assert.equal(box.height,44,'Touch height must not shrink on short screens');
+        assert.ok(box.width >= 44 && box.width <= 56,`Touch width should stay in the 44–56px comfort range: ${box.width}`);
+        assert.ok(box.height >= 44 && box.height <= 56,`Touch height should stay in the 44–56px comfort range: ${box.height}`);
         const offsets = {left:[2,box.height/2],right:[box.width-2,box.height/2],top:[box.width/2,2],bottom:[box.width/2,box.height-2]};
         const [dx,dy] = offsets[name];
         const point = {x:box.x+dx,y:box.y+dy};

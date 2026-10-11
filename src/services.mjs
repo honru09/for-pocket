@@ -1,4 +1,5 @@
 import { initialSettings, validateSettings, validateExpense, validateUserProfile, validateEntryTime, dateKey } from '../public/shared.mjs';
+import { validTimezone } from '../public/timezone.mjs';
 export const PREVIEW_KEY = 'for-pocket.preview.v1';
 export const SESSION_KEY = 'for-pocket.session.v1';
 const FILE_MIME_BY_EXTENSION = {
@@ -29,6 +30,7 @@ export function localService(defaultLang = 'zh') {
   };
   return {
     getProfile: async () => visible(load()),
+    syncTimezone: async timezone => mutate(p => { const zone = validTimezone(timezone); if (!zone) throw new Error('errorEntryTime'); p.settings.timezone = zone; return { timezone:zone, ledgerId:'local' }; }),
     saveSettings: async settings => mutate(p => { p.settings = validateSettings({ ...settings, consumers: p.settings.consumers }); return visible(p); }),
     updateUserProfile: async value => mutate(p => { p.user = { ...p.user, ...validateUserProfile(value) }; p.settings.consumers = [p.user]; return visible(p); }),
     addExpense: async value => mutate(p => {
@@ -144,6 +146,7 @@ export function remoteService(telegram) {
   };
   return {
     getProfile: async () => { const sequence = ++profileRequestSequence; await exchangeTelegram(); return track(await request('/profile'), sequence); },
+    syncTimezone: (timezone, scope = ledgerId) => request('/timezone', 'PUT', { timezone, ledgerId:scope }),
     saveSettings: ({ consumers, ...settings }, scope = ledgerId) => profileAction('/settings', { ...settings, ledgerId: scope }, 'PUT'),
     updateUserProfile: p => profileAction('/user-profile', p, 'PUT'),
     addExpense: payload => request('/expenses', 'POST', { ledgerId, ...payload }),

@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Tappable } from '@telegram-apps/telegram-ui';
 import { createPortal } from 'react-dom';
+import { Icon } from './icons.jsx';
 
 const BODY = 'M24 53C16 18 48 7 68 18C86-1 121 23 107 52C130 74 113 107 87 101C70 128 38 116 35 98C4 105-5 68 24 53Z';
 const MOODS = ['cloudHappy', 'cloudSmile', 'cloudShy', 'cloudQuestion', 'cloudSigh', 'cloudGrumpy', 'cloudFurious'];
@@ -189,7 +190,7 @@ export default function PocketMascot({ mascotRef, t, onTap, canConfirm = false, 
         {phase === 'burst' && <span className="cloud-pop" aria-hidden="true"><span className="cloud-pop-word">{t('cloudPopSound')}</span>{Array.from({length:6},(_,i) => <i key={i} style={{ '--puff-x':`${Math.cos(i * Math.PI / 3) * 32}px`, '--puff-y':`${Math.sin(i * Math.PI / 3) * 27}px` }}/>)}</span>}
         {sign && <span className="stop-sign-rest" data-hidden={phase === 'falling'}><StopSign/></span>}
       </Tappable>
-      {canConfirm && <Tappable Component="button" type="button" interactiveAnimation="opacity" className="mascot-confirm" aria-label={confirmLabel || t('save')} title={confirmLabel || t('save')} aria-busy={busy} disabled={busy} onClick={event => { event.stopPropagation(); onConfirm?.(); }}><span aria-hidden="true">✓</span></Tappable>}
+      {canConfirm && <Tappable Component="button" type="button" interactiveAnimation="opacity" className="mascot-confirm" aria-label={confirmLabel || t('save')} title={confirmLabel || t('save')} aria-busy={busy} disabled={busy} onClick={event => { event.stopPropagation(); onConfirm?.(); }}><span aria-hidden="true"><Icon name="check"/></span></Tappable>}
       {celebration && <CashCelebration event={celebration} cloudVisible={phase === 'cloud'}/>}
     </span>
     <span className="cloud-announcement" role="status" aria-live="polite">{step ? t(moodKey) : ''}</span>

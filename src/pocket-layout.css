@@ -173,13 +173,13 @@
    placement at that boundary without changing the surrounding grid. */
 @media(max-width:600px) and (max-height:580px) {
  html .for-root #record-view .mascot-stack { --cloud-size:46px; right:34px; bottom:0; }
- html .for-root #record-view .mascot-confirm { --confirm-size:24px; font-size:14px; }
+ html .for-root #record-view .mascot-confirm { --confirm-size:36px; --confirm-target:46px; right:-34px; bottom:0; font-size:14px; }
 }
 /* On short but wider phones, leave the compact metadata row clear while
    keeping the cloud large enough to feel tactile. */
 @media(max-width:600px) and (min-height:581px) and (max-height:620px) {
  html .for-root #record-view .mascot-stack { --cloud-size:58px; right:34px; bottom:0; }
- html .for-root #record-view .mascot-confirm { --confirm-size:26px; font-size:15px; }
+  html .for-root #record-view .mascot-confirm { --confirm-size:38px; --confirm-target:52px; right:-25px; bottom:0; font-size:15px; }
 }
 
 /* Horizontal pill drawer: keep the quick category choice light and compact.

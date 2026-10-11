@@ -1008,20 +1008,32 @@ export function createTelegramHandler({
 
   function chatFallback(language, text) {
     if (language === 'en') return /tired|exhausted|long day/i.test(text)
-      ? 'Hm, the day clearly tried to eat you alive. Get something warm, then pretend tomorrow is totally under control, wow.'
+      ? 'Long day? Get something warm and take it easy tonight.'
       : /sleep|good night|晚安/i.test(text)
-        ? 'Good night, little spenders. Hide the snack drawer before midnight gets any ideas, hm.'
-        : 'Wow, a message with no receipt attached. I’m listening—tell me what tiny drama is happening today, hm.';
+        ? 'Good night. Hide the snacks before midnight gets ideas.'
+        : 'I’m here. What’s up?';
     if (language === 'uk') return /втом|важк|стомив/i.test(text)
-      ? 'Гм, день явно вирішив тебе добряче помучити. З’їж щось тепле й зроби вигляд, що завтра все під контролем, ого.'
+      ? 'Важкий день? З’їж щось тепле й відпочинь сьогодні.'
       : /ніч|спати|надобраніч/i.test(text)
-        ? 'Надобраніч, маленькі витратники. Сховайте смаколики, бо опівночі вони самі стрибають у кошик, ага.'
-        : 'Ого, цього разу без чека. Я слухаю — яка життєва драма трапилася сьогодні, гм?';
+        ? 'Надобраніч. Сховай смаколики від нічних нападів.'
+        : 'Я тут. Що сталося?';
     return /累|疲|困/u.test(text)
-      ? '额……今天像是被工作啃了一口。先吃点热乎的再躺平，明天继续装作一切尽在掌握，哇哦。'
+      ? '今天辛苦了，先吃点热的，早点休息。'
       : /晚安|睡觉|睡了/u.test(text)
-        ? '晚安，两位小花销家。零食抽屉先藏好，免得半夜自己跑去结账，哼哼。'
-        : '哇哦，这次没有小票也没有金额。来嘛，今天又发生什么小 drama 了，咳咳？';
+        ? '晚安，零食抽屉记得关好。'
+        : '嗯，我在。怎么啦？';
+  }
+
+  function compactChatReply(value, language) {
+    let text = String(value || '').replace(/\s+/gu, ' ').trim();
+    if (!text) return '';
+    text = text.replace(/^(?:回复|答复|answer)\s*[:：]\s*/iu, '');
+    const limit = language === 'zh' ? 72 : 160;
+    if (text.length <= limit) return text;
+    const parts = text.match(/[^。！？!?…]+[。！？!?…]?/gu) || [];
+    const short = parts.slice(0, 2).join('').trim();
+    if (short && short.length <= limit) return short;
+    return `${text.slice(0, limit).replace(/[，、,;；:：\s]+$/u, '')}…`;
   }
 
   async function chatFor(context, message, text) {
@@ -1034,7 +1046,8 @@ export function createTelegramHandler({
       }
     } catch {}
     if (!output.trim()) output = chatFallback(context.language, text);
-    return deliverReply(context.operation, { type: 'reply', chatId: message.chat.id, text: output.trim().slice(0, 3900), result: { ok: true, kind: 'chat', generated: Boolean(output) } });
+    const replyText = compactChatReply(output, context.language) || chatFallback(context.language, text);
+    return deliverReply(context.operation, { type: 'reply', chatId: message.chat.id, text: replyText, result: { ok: true, kind: 'chat', generated: Boolean(output) } });
   }
 
   async function cancelDrafts(context, chatId) {

@@ -45,6 +45,15 @@ test('granted browser location is single-shot, low power, and preserves zero coo
   assert.deepEqual(nav.calls.options, [{ enableHighAccuracy: false, maximumAge: 45000, timeout: 1200 }]);
 });
 
+test('foreground refresh requests a fresh browser position without enabling a watch', async () => {
+  const nav = browser();
+  const client = createLocationClient({ navigator: nav.navigator, maxAge: 60000 });
+  await client.capture();
+  await client.capture({ refresh: true });
+  assert.equal(nav.calls.positions, 2);
+  assert.equal(nav.calls.options[1].maximumAge, 0);
+});
+
 test('explicit capture can request browser permission but rejection and unavailable GPS remain silent', async () => {
   for (const code of [1, 2, 3]) {
     const nav = browser({ permission: 'prompt', error: { code } });

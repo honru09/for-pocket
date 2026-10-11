@@ -13,7 +13,7 @@ export function createLocationClient({ telegram, navigator: nav = globalThis.nav
     const result = normalizeLocation({ lat: value?.latitude, lng: value?.longitude });
     return result?.lat !== undefined ? { ...result, ...(Number.isFinite(value?.accuracy ?? value?.horizontal_accuracy) ? { accuracy: value.accuracy ?? value.horizontal_accuracy } : {}) } : null;
   };
-  async function acquire(allowPrompt, round) {
+  async function acquire(allowPrompt, round, refresh) {
     const manager = telegram?.LocationManager;
     if (manager?.init && manager?.getLocation && (!telegram?.isVersionAtLeast || telegram.isVersionAtLeast('8.0'))) {
       if (!manager.isInited) await bounded(done => manager.init(() => done(true)));
@@ -30,7 +30,7 @@ export function createLocationClient({ telegram, navigator: nav = globalThis.nav
     if (permission?.state === 'denied' || (!allowPrompt && permission?.state !== 'granted')) return null;
     return coordinates(await bounded(done => nav.geolocation.getCurrentPosition(
       position => done(position.coords), () => done(null),
-      { enableHighAccuracy: false, maximumAge: maxAge, timeout },
+      { enableHighAccuracy: false, maximumAge: refresh ? 0 : maxAge, timeout },
     )));
   }
   return {
@@ -38,7 +38,7 @@ export function createLocationClient({ telegram, navigator: nav = globalThis.nav
       if (!refresh && cached && now() - cached.at < maxAge) return cached.value;
       if (pending) return pending;
       const round = generation;
-      const job = acquire(allowPrompt, round).catch(() => null).then(value => {
+      const job = acquire(allowPrompt, round, refresh).catch(() => null).then(value => {
         if (round !== generation) return null;
         if (value) cached = { value, at: now() };
         return value;

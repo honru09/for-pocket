@@ -1,5 +1,6 @@
 import { randomUUID, randomBytes, randomInt, createHash } from 'node:crypto';
 import { initialSettings, resolveLanguage, validateSettings, validateExpense, validateUserProfile, validateEntryTime, dateKey, MAX_CIRCLE_MEMBERS, MAX_CATEGORIES } from './public/shared.mjs';
+import { validTimezone } from './public/timezone.mjs';
 
 export class RequestError extends Error { constructor(message, status = 400) { super(message); this.status = status; } }
 export const fail = (message, status) => { throw new RequestError(message, status); };
@@ -127,6 +128,13 @@ export function handleDomain(db, uid, route, method, body, { now, limit, ledgerQ
     mergeAccounts(db, source, target); return { profile: visible(db, target) };
   }
   if (route === '/user-profile' && method === 'PUT') { Object.assign(db.users[uid], validateUserProfile(body)); return visible(db, uid); }
+  if (route === '/timezone' && method === 'PUT') {
+    const ctx = checkLedger(db, uid, body.ledgerId), zone = validTimezone(body.timezone);
+    if (!zone) fail('errorEntryTime');
+    db.users[uid].settings.timezone = zone;
+    ctx.ledger.settings.timezone = zone;
+    return { timezone:zone, ledgerId:ctx.ledgerId };
+  }
   if (route === '/settings' && method === 'PUT') {
     const ctx = checkLedger(db, uid, body.ledgerId), valid = validateSettings({ ...body, consumers: ctx.consumers });
     if (ctx.circle && !ctx.circle.admins.includes(uid) && (JSON.stringify(valid.categories) !== JSON.stringify(ctx.ledger.settings.categories) || JSON.stringify(valid.incomeCategories) !== JSON.stringify(ctx.ledger.settings.incomeCategories))) fail('errorAdminOnly', 403);

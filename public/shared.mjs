@@ -65,7 +65,7 @@ export function initialSettings(lang = 'zh') {
   return {
     currency: 'JPY',
     // The scheduler uses the ledger's wall clock. Tokyo is the product's
-    // stable default; users can change it to any IANA timezone in settings.
+    // initial fallback; the app synchronizes the device's timezone on opening.
     timezone: 'Asia/Tokyo',
     language,
     languageManual: false,
