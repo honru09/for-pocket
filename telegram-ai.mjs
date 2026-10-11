@@ -9,8 +9,7 @@ import {
 import { ensureUser, handleDomain, RequestError, visible } from './domain.mjs';
 import { botLanguage, botText } from './bot-i18n.mjs';
 import { categoryLabel } from './public/i18n.mjs';
-import * as XLSX from 'xlsx';
-import mammoth from 'mammoth';
+import { extractImportText } from './import-files.mjs';
 
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
 const MAX_IMPORT_FILE_BYTES = MAX_IMAGE_BYTES;
@@ -84,6 +83,19 @@ function firstText(value) {
   return value.trim().slice(0, MAX_TEXT);
 }
 
+function contentLanguage(value, fallback = 'zh') {
+  const text = String(value || '').replace(/^\/[a-z]+(?:@[^\s]+)?\s*/i, '');
+  if (/[\u0400-\u04ff]/u.test(text)) return 'uk';
+  if (/[\u3400-\u9fff]/u.test(text)) return 'zh';
+  if (/[a-z]/i.test(text)) return 'en';
+  return botLanguage(fallback);
+}
+
+function parsedLanguage(parsed, fallback) {
+  const candidate = parsed?.detectedLanguage || normaliseItems(parsed).find(item => item?.detectedLanguage)?.detectedLanguage;
+  return ['zh', 'en', 'uk'].includes(candidate) ? candidate : fallback;
+}
+
 const IMPORT_MIME_TYPES = new Set([
   'image/jpeg', 'image/png', 'image/webp', 'image/gif', 'application/pdf', 'text/csv', 'text/plain',
   'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -117,19 +129,6 @@ function importKind(mime) {
   if (AUDIO_MIME_TYPES.has(mime)) return 'audio';
   if (mime.includes('spreadsheet') || mime === 'application/vnd.ms-excel') return 'spreadsheet';
   if (mime.includes('word')) return 'word';
-  return '';
-}
-
-function asImportText(bytes, mime) {
-  if (mime === 'text/plain' || mime === 'text/csv') return bytes.toString('utf8').slice(0, MAX_IMPORT_TEXT);
-  if (mime === 'application/vnd.ms-excel' || mime === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet') {
-    const workbook = XLSX.read(bytes, { type: 'buffer', cellDates: true, cellNF: false, cellText: true });
-    return workbook.SheetNames.slice(0, 20).map(name => `## ${name}\n${XLSX.utils.sheet_to_csv(workbook.Sheets[name], { blankrows: false })}`).join('\n').slice(0, MAX_IMPORT_TEXT);
-  }
-  if (mime === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
-    // mammoth is async; this branch is handled by prepareImportAttachment.
-    return '';
-  }
   return '';
 }
 
@@ -359,7 +358,7 @@ export function createTelegramHandler({
       const fallback = resolveLanguage(user?.language_code || 'zh', 'zh');
       const preference = ensureTelegramState(db).preferences[uid];
       const mode = preference?.mode === 'auto' ? true : preference?.mode === 'manual' ? false : Boolean(autoConfirm);
-      return { uid, telegramId, profile, language: botLanguage(profile.settings.language, fallback), autoConfirm: mode, at, operation };
+      return { uid, telegramId, profile, language: botLanguage(user?.language_code || profile.settings.language, fallback), autoConfirm: mode, at, operation };
     });
   }
 
@@ -425,15 +424,11 @@ export function createTelegramHandler({
     const kind = importKind(mimeType);
     if (!kind || bytes.length > MAX_IMPORT_FILE_BYTES) throw new Error('errorImportFileTooLarge');
     const name = safeString(fileInfo?.name, 160);
-    if (kind === 'text' || kind === 'spreadsheet') {
-      let text;
-      try { text = asImportText(bytes, mimeType); } catch { throw new Error('errorFileRead'); }
-      return { text: [caption, text].filter(Boolean).join('\n\n').slice(0, MAX_IMPORT_TEXT), image: null, file: null };
-    }
-    if (kind === 'word' && mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
-      let text;
-      try { text = (await mammoth.extractRawText({ buffer: bytes })).value.trim().slice(0, MAX_IMPORT_TEXT); } catch { throw new Error('errorFileRead'); }
-      return { text: [caption, text].filter(Boolean).join('\n\n').slice(0, MAX_IMPORT_TEXT), image: null, file: null };
+    if (kind === 'text' || kind === 'spreadsheet' || kind === 'word') {
+      const extracted = await extractImportText(bytes, mimeType);
+      const combined = [caption, extracted.text].filter(Boolean).join('\n\n');
+      return { text: combined.slice(0, MAX_IMPORT_TEXT), image: null, file: null,
+        truncated: extracted.truncated || combined.length > MAX_IMPORT_TEXT };
     }
     const data = bytes.toString('base64');
     const file = { data, mimeType, name };
@@ -449,7 +444,7 @@ export function createTelegramHandler({
     return mimeType ? { fileId: document.file_id, mimeType, fileSize: Number(document.file_size) || 0, name: safeString(document.file_name, 160), kind: importKind(mimeType) } : { fileId: document.file_id, mimeType: '', fileSize: Number(document.file_size) || 0, name: safeString(document.file_name, 160), kind: '' };
   }
 
-  function toDraftItem(item, profile, uid, sourceTimezone) {
+  function toDraftItem(item, profile, uid, sourceTimezone, language = profile.settings.language) {
     const type = item?.type === 'income' ? 'income' : 'expense';
     const currency = Object.hasOwn(CURRENCIES, item?.currency) ? item.currency : (profile.settings.currency || 'JPY');
     const category = chooseCategory(item, type, profile.settings);
@@ -481,11 +476,14 @@ export function createTelegramHandler({
     try { validateExpense(expense, profile.settings); } catch { return null; }
     return {
       expense,
-      label: categoryLabel(category, profile.settings.language),
+      label: categoryLabel(category, language),
       merchant,
       payerName: members.find(member => member.id === consumer)?.name || '',
       splitNames: splitMode === 'equal' ? members.filter(member => splitParticipants.includes(member.id)).map(member => member.name) : [],
       confidence: Number.isFinite(Number(item?.confidence)) ? Math.max(0, Math.min(1, Number(item.confidence))) : null,
+      needsReview: item?.needsReview === true || ['transfer', 'reimbursement'].includes(item?.recordKind),
+      recordKind: safeString(item?.recordKind, 32),
+      reviewReason: safeString(item?.reviewReason, 160),
     };
   }
 
@@ -504,17 +502,19 @@ export function createTelegramHandler({
       if (item.payerName) lines.push(`   ${botText(language, 'previewPayer')}: ${escapeTelegramText(item.payerName)}`);
       if (item.splitNames?.length) lines.push(`   ${botText(language, 'previewSplit')}: ${item.splitNames.map(escapeTelegramText).join(' / ')}`);
       if (expense.note && expense.note !== item.merchant) lines.push(`   ${botText(language, 'previewNote')}: ${escapeTelegramText(expense.note)}`);
+      if (item.needsReview) lines.push(`   ${botText(language, 'reviewNeeded')}${item.reviewReason ? `: ${escapeTelegramText(item.reviewReason)}` : ''}`);
     }
     lines.push('', botText(language, 'previewHint'));
     if (draft.needsTime) lines.push(botText(language, 'timeMissingHint'));
+    if (draft.inputTruncated) lines.push(botText(language, 'inputTruncated'));
     return lines.join('\n');
   }
 
-  async function saveDraft(context, chatId, parsed, { retryId = null, replaceDraftId = null } = {}) {
+  async function saveDraft(context, chatId, parsed, { retryId = null, replaceDraftId = null, inputTruncated = false } = {}) {
     const sourceTimezone = validTimezone(parsed?.timezone, timezone);
     const raw = normaliseItems(parsed);
     if (!raw.length || raw.length > MAX_PREVIEW_ITEMS) return null;
-    const items = raw.map(item => toDraftItem(item, context.profile, context.uid, sourceTimezone));
+    const items = raw.map(item => toDraftItem(item, context.profile, context.uid, sourceTimezone, context.language));
     if (items.some(item => !item)) return null;
     const id = randomUUID();
     const at = atMillis(now);
@@ -529,6 +529,8 @@ export function createTelegramHandler({
       expiresAt: at + DRAFT_TTL,
       status: 'pending',
       needsTime: items.some(item => !item.expense.occurredAt),
+      needsReview: inputTruncated || items.some(item => item.needsReview),
+      inputTruncated,
       items,
       retryId,
       previewSent: 0,
@@ -555,6 +557,7 @@ export function createTelegramHandler({
       const last = index === pages.length - 1;
       const inline_keyboard = [[
         { text: botText(language, draft.needsTime ? 'confirmNow' : 'confirm'), callback_data: `fp:${draft.needsTime ? 'now' : 'confirm'}:${draft.id}` },
+        { text: botText(language, 'edit'), callback_data: `fp:edit:${draft.id}` },
         { text: botText(language, 'cancel'), callback_data: `fp:cancel:${draft.id}` },
       ]];
       if (draft.retryId && getCachedImage(draft.retryId)) inline_keyboard.push([{ text: botText(language, 'enhance'), callback_data: `fp:retry:${draft.retryId}` }]);
@@ -573,30 +576,35 @@ export function createTelegramHandler({
     }
     const image = attachment?.image || null;
     const file = attachment?.file || null;
+    const isAudio = AUDIO_MIME_TYPES.has(file?.mimeType);
     const text = firstText(attachment?.text !== undefined ? attachment.text : (message.text || message.caption || ''));
     if (!text && !image && !file) {
       return reply(context, message.chat.id, 'noInput', { ok: false, reason: 'no-input' });
     }
     invokeLimit(`telegram-ai:${context.telegramId}`, 12);
-    const input = { text, image, file, timezone: validTimezone(timezone), telegramUserId: context.telegramId, enhanced, now: context.at };
+    const input = { text, image, file, timezone: validTimezone(timezone), telegramUserId: context.telegramId, enhanced, now: context.at,
+      language: context.language, ...(isAudio ? { defaultCurrency: 'JPY' } : {}) };
     const retryId = (image || file) && !enhanced ? cacheImage(context, message.chat.id, input) : null;
     let parsed;
     try {
-      parsed = await aiParser.parse(input, { ...context.profile.settings, currentConsumer: context.profile.user.id });
+      parsed = await aiParser.parse(input, { ...context.profile.settings, language: context.language,
+        ...(isAudio ? { currency: 'JPY' } : {}), currentConsumer: context.profile.user.id });
+      context.language = parsedLanguage(parsed, context.language);
     } catch (error) {
-      const key = enhanced ? 'enhanceFailed' : error?.message === 'errorAiResult' ? 'noResult' : 'unavailable';
+      const key = enhanced ? 'enhanceFailed' : AUDIO_MIME_TYPES.has(file?.mimeType) ? 'audioNoResult' : error?.message === 'errorAiResult' ? 'noResult' : 'unavailable';
       return reply(context, message.chat.id, key, { ok: false, reason: key }, retryMarkup(retryId, context.language));
     }
-    const draft = await saveDraft(context, message.chat.id, parsed, { retryId, replaceDraftId });
+    const draft = await saveDraft(context, message.chat.id, parsed, { retryId, replaceDraftId, inputTruncated: attachment?.truncated === true });
     if (!draft) {
-      return reply(context, message.chat.id, enhanced ? 'enhanceFailed' : 'noResult', { ok: false, reason: 'no-result' }, retryMarkup(retryId, context.language));
+      return reply(context, message.chat.id, enhanced ? 'enhanceFailed' : AUDIO_MIME_TYPES.has(file?.mimeType) ? 'audioNoResult' : 'noResult', { ok: false, reason: 'no-result' }, retryMarkup(retryId, context.language));
     }
-    if (retryId) { const cached = getCachedImage(retryId); if (cached) cached.draftId = draft.id; }
-    if (context.autoConfirm) return autoConfirmDraft(context, draft);
+    if (retryId) { const cached = getCachedImage(retryId); if (cached) { cached.draftId = draft.id; cached.input.language = context.language; } }
+    if (context.autoConfirm && !draft.needsReview && !replaceDraftId) return autoConfirmDraft(context, draft);
     return deliverDraft(draft);
   }
 
   async function autoConfirmDraft(context, draft) {
+    if (draft.needsReview) return deliverDraft(draft);
     const at = atMillis(now);
     let outcome;
     try {
@@ -627,6 +635,51 @@ export function createTelegramHandler({
     return deliverReply(context.operation, { type: 'reply', chatId: draft.chatId, text: botText(context.language, key, { n: outcome.count }), result: { ok: ['confirmed', 'already'].includes(outcome.kind), auto: true, ...outcome } });
   }
 
+  async function startDraftEdit(context, query, draftId) {
+    const chatId = query.message.chat.id;
+    const outcome = await store.run(db => {
+      const state = ensureTelegramState(db);
+      const draft = state.drafts[draftId];
+      if (!draft || draft.uid !== context.uid || draft.telegramId !== context.telegramId || draft.chatId !== String(chatId) || draft.expiresAt <= atMillis(now)) return { kind: 'missing' };
+      if (draft.ledgerId !== context.profile.ledgerId) return { kind: 'ledger-changed', language: draft.language };
+      if (!['pending', 'editing'].includes(draft.status)) return { kind: 'missing', language: draft.language };
+      const previous = state.preferences[context.uid]?.editingDraftId;
+      if (previous && previous !== draftId && state.drafts[previous]?.status === 'editing') {
+        state.drafts[previous].status = 'pending';
+      }
+      draft.status = 'editing';
+      state.preferences[context.uid] = { ...state.preferences[context.uid], editingDraftId: draftId, editingChatId: String(chatId) };
+      return { kind: 'editing', language: draft.language };
+    });
+    context.language = outcome.language || context.language;
+    return reply(context, chatId, outcome.kind === 'editing' ? 'editPrompt' : outcome.kind === 'ledger-changed' ? 'ledgerChanged' : 'expired', { ok: outcome.kind === 'editing', kind: outcome.kind });
+  }
+
+  async function pendingDraftEdit(context, chatId) {
+    return store.run(db => {
+      const state = ensureTelegramState(db);
+      const preference = state.preferences[context.uid];
+      if (!preference?.editingDraftId || preference.editingChatId !== String(chatId)) return null;
+      const draft = state.drafts[preference.editingDraftId];
+      if (!draft || draft.uid !== context.uid || draft.status !== 'editing' || draft.expiresAt <= atMillis(now)) {
+        delete preference.editingDraftId; delete preference.editingChatId; return null;
+      }
+      if (draft.ledgerId !== context.profile.ledgerId) return { id: draft.id, stale: true };
+      draft.status = 'refining';
+      return { id: draft.id, language: draft.language };
+    });
+  }
+
+  async function completeDraftEdit(context, originalId) {
+    await store.run(db => {
+      const state = ensureTelegramState(db);
+      const draft = state.drafts[originalId];
+      if (draft?.status === 'refining') draft.status = 'pending';
+      const preference = state.preferences[context.uid];
+      if (preference?.editingDraftId === originalId) { delete preference.editingDraftId; delete preference.editingChatId; }
+    });
+  }
+
   async function setConfirmationMode(context, chatId, mode) {
     await store.run(db => {
       const state = ensureTelegramState(db);
@@ -643,7 +696,9 @@ export function createTelegramHandler({
     let output = null;
     try {
       if (typeof aiParser?.summarize === 'function') {
-        const result = await aiParser.summarize({ question: firstText(text), period, timezone: currentTimezone }, context.profile);
+        const result = await aiParser.summarize({ question: firstText(text), period, timezone: currentTimezone }, {
+          ...context.profile, settings: { ...context.profile.settings, language: context.language },
+        });
         output = typeof result === 'string' ? result : result?.text;
       }
     } catch {}
@@ -656,8 +711,10 @@ export function createTelegramHandler({
       const state = ensureTelegramState(db);
       let changed = 0;
       for (const draft of Object.values(state.drafts)) {
-        if (draft.uid === context.uid && ['pending', 'refining'].includes(draft.status)) { draft.status = 'cancelled'; changed++; }
+        if (draft.uid === context.uid && ['pending', 'refining', 'editing'].includes(draft.status)) { draft.status = 'cancelled'; changed++; }
       }
+      const preference = state.preferences[context.uid];
+      if (preference) { delete preference.editingDraftId; delete preference.editingChatId; }
       return changed;
     });
     for (const [id, cached] of imageCache) if (cached.uid === context.uid) deleteCachedImage(id);
@@ -673,6 +730,7 @@ export function createTelegramHandler({
     }
     if (cached.used) return reply(context, chatId, 'enhancing', { ok: true, kind: 'already-retrying' });
     if (cached.ledgerId !== context.profile.ledgerId) return reply(context, chatId, 'ledgerChanged', { ok: false, reason: 'ledger-changed' });
+    context.language = cached.input.language || context.language;
     cached.used = true;
     if (cached.draftId) {
       const available = await store.run(db => {
@@ -706,7 +764,7 @@ export function createTelegramHandler({
     const from = query?.from;
     const context = await contextFor(from, operation);
     if (!context) return { ok: false, reason: 'invalid-user' };
-    const match = /^fp:(confirm|now|cancel|retry):([a-zA-Z0-9_-]{8,64})$/.exec(String(query.data || ''));
+    const match = /^fp:(confirm|now|cancel|retry|edit):([a-zA-Z0-9_-]{8,64})$/.exec(String(query.data || ''));
     if (!match) {
       try { await botCall('answerCallbackQuery', { callback_query_id: query.id }); } catch {}
       return { ok: false, reason: 'invalid-callback' };
@@ -714,6 +772,7 @@ export function createTelegramHandler({
     try { await botCall('answerCallbackQuery', { callback_query_id: query.id }); } catch {}
     const action = match[1], draftId = match[2], at = atMillis(now);
     if (action === 'retry') return retryImage(context, query, draftId);
+    if (action === 'edit') return startDraftEdit(context, query, draftId);
     let outcome;
     try {
       outcome = await store.run(db => {
@@ -721,12 +780,14 @@ export function createTelegramHandler({
         pruneTelegramState(state, at, maxDrafts);
         const draft = state.drafts[draftId];
         if (!draft || draft.uid !== context.uid || String(draft.chatId) !== String(query.message?.chat?.id ?? '')) return { kind: 'missing' };
+        context.language = draft.language || context.language;
         if (draft.expiresAt <= at || draft.status === 'expired') { draft.status = 'expired'; return { kind: 'expired' }; }
         if (action === 'cancel') {
           if (draft.status === 'confirmed') return { kind: 'already' };
           draft.status = 'cancelled'; return { kind: 'cancelled' };
         }
         if (draft.status === 'confirmed') return { kind: 'already', count: draft.savedIds?.length || draft.items.length };
+        if (draft.status === 'editing') return { kind: 'editing' };
         if (draft.status === 'refining') return { kind: 'refining' };
         if (draft.status !== 'pending') return { kind: 'cancelled' };
         if (!draft.previewComplete) return { kind: 'preview-incomplete' };
@@ -753,9 +814,9 @@ export function createTelegramHandler({
     if (outcome.retryId) deleteCachedImage(outcome.retryId);
     if (['cancelled', 'already'].includes(outcome.kind)) for (const [id, cached] of imageCache) if (cached.draftId === draftId) deleteCachedImage(id);
     const key = ({ confirmed: 'confirmed', already: 'alreadyConfirmed', cancelled: 'cancelled', missing: 'expired', expired: 'expired',
-      'needs-time': 'timeMissingHint', 'preview-incomplete': 'previewIncomplete', refining: 'enhancing', errorLedgerChanged: 'ledgerChanged' })[outcome.kind] || 'failed';
+      'needs-time': 'timeMissingHint', 'preview-incomplete': 'previewIncomplete', editing: 'editPrompt', refining: 'enhancing', errorLedgerChanged: 'ledgerChanged' })[outcome.kind] || 'failed';
     const result = { ok: ['confirmed', 'already', 'cancelled'].includes(outcome.kind), ...outcome };
-    const keepButtons = ['needs-time', 'preview-incomplete', 'refining'].includes(outcome.kind);
+    const keepButtons = ['needs-time', 'preview-incomplete', 'refining', 'editing'].includes(outcome.kind);
     return deliverReply(operation, { type: keepButtons || outcome.kind === 'missing' ? 'reply' : 'edit', chatId, messageId,
       text: botText(language, key, { n: outcome.count }), extra: keepButtons ? {} : { reply_markup: { inline_keyboard: [] } }, result });
   }
@@ -765,6 +826,7 @@ export function createTelegramHandler({
     if (!message?.chat || message.chat.type !== 'private') return { ok: true, kind: 'ignored' };
     const context = await contextFor(message.from, operation);
     if (!context) return { ok: false, reason: 'invalid-user' };
+    context.language = contentLanguage(message.text || message.caption || '', context.language);
     const text = firstText(message.text || '');
     const command = /^\/(start|help|cancel|month|week|auto|manual)(?:@[^\s]+)?(?:\s+([\s\S]*))?$/i.exec(text);
     if (command) {
@@ -826,7 +888,17 @@ export function createTelegramHandler({
         return { ok: false, reason: error?.message === 'errorImportFileTooLarge' ? 'file-too-large' : 'file-download' };
       }
     }
-    return parseMessage(context, message, attachment);
+    const editing = await pendingDraftEdit(context, message.chat.id);
+    if (editing?.stale) {
+      await completeDraftEdit(context, editing.id);
+      return reply(context, message.chat.id, 'ledgerChanged', { ok: false, reason: 'ledger-changed' });
+    }
+    if (!editing) return parseMessage(context, message, attachment);
+    try {
+      return await parseMessage(context, message, attachment, { replaceDraftId: editing.id });
+    } finally {
+      await completeDraftEdit(context, editing.id);
+    }
   }
 
   async function processUpdate(update) {

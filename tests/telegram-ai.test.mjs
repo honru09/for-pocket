@@ -24,11 +24,12 @@ async function fixture(t, extra = {}) {
   const handler = createTelegramHandler(options);
   t.after(async () => {
     handler.close();
+    await store.close();
     assert.equal(path.dirname(dataDir), path.resolve(os.tmpdir()));
     assert.ok(path.basename(dataDir).startsWith('for-telegram-test-'));
     await rm(dataDir, { recursive: true, force: true });
   });
-  return { store, handler, calls, aiCalls, options, dataDir, database: async () => JSON.parse(await readFile(path.join(dataDir, '_pocket-v2.json'), 'utf8')) };
+  return { store, handler, calls, aiCalls, options, dataDir, database: async () => { await store.flush(); return JSON.parse(await readFile(path.join(dataDir, '_pocket-v2.json'), 'utf8')); } };
 }
 
 test('private text becomes a persisted preview and confirmation saves once across handler restart', async t => {
@@ -42,8 +43,10 @@ test('private text becomes a persisted preview and confirmation saves once acros
   assert.equal(preview.params.reply_markup.inline_keyboard[0][0].callback_data, `fp:confirm:${draft.draftId}`);
   assert.equal((await f.handler.handle(message(1))).duplicate, true);
   assert.equal(f.aiCalls.length, 1);
-  const restarted = createTelegramHandler({ ...f.options, store: createStore(f.dataDir) });
+  const restartedStore = createStore(f.dataDir);
+  const restarted = createTelegramHandler({ ...f.options, store: restartedStore });
   const saved = await restarted.handle(callback(2, draft.draftId));
+  await restartedStore.flush();
   assert.equal(saved.kind, 'confirmed');
   const database = await f.database();
   assert.equal(database.ledgers['101'].expenses.length, 1);
@@ -51,6 +54,7 @@ test('private text becomes a persisted preview and confirmation saves once acros
   assert.equal(database.ledgers['101'].expenses[0].consumer, 'u_101');
   assert.equal(database.ledgers['101'].expenses[0].occurredAt, '2026-10-10T10:00:00.000Z');
   assert.equal((await restarted.handle(callback(3, draft.draftId))).kind, 'already');
+  await restartedStore.close(); restarted.close();
   assert.equal((await f.database()).ledgers['101'].expenses.length, 1);
 });
 
@@ -185,6 +189,70 @@ test('voice and audio messages use the same review flow with duration and size l
   assert.deepEqual(downloads, ['voice-ok', 'audio-ok']);
 });
 
+test('reply and preview languages follow the submitted text and detected spoken language', async t => {
+  const f = await fixture(t, { downloadFile: async () => Buffer.from('spoken note'), aiParser: { async parse(input) {
+    return input.file?.mimeType === 'audio/ogg' ? { items: [parsed()], detectedLanguage: 'uk' } : [parsed()];
+  } } });
+  const chinese = await f.handler.handle(message(170, '午饭 1200 日元', 101, 'en'));
+  assert.equal(chinese.kind, 'draft');
+  assert.match(f.calls.at(-1).params.text, /先看一眼/);
+  const english = await f.handler.handle(message(171, 'lunch 1200 yen', 101, 'zh'));
+  assert.match(f.calls.at(-1).params.text, /A quick look/);
+  assert.equal((await f.handler.handle(callback(172, english.draftId))).kind, 'confirmed');
+  assert.match(f.calls.at(-1).params.text, /Saved/);
+  const ukrainian = await f.handler.handle(message(173, 'обід 1200 єн', 101, 'en'));
+  assert.equal(ukrainian.kind, 'draft');
+  assert.match(f.calls.at(-1).params.text, /Швидкий перегляд/);
+  const voice = message(174, '', 101, 'zh');
+  voice.message.voice = { file_id: 'voice-language', mime_type: 'audio/ogg', duration: 5, file_size: 50 };
+  assert.equal((await f.handler.handle(voice)).kind, 'draft');
+  assert.match(f.calls.at(-1).params.text, /Швидкий перегляд/);
+});
+
+test('spoken expenses default to JPY even when the active ledger uses another currency', async t => {
+  const inputs = [];
+  const f = await fixture(t, { downloadFile: async () => Buffer.from('spoken note'), aiParser: { async parse(input, settings) {
+    inputs.push({ input, settings }); return [parsed({ currency: settings.currency })];
+  } } });
+  await f.store.run(db => {
+    const uid = ensureUser(db, 'telegram:101', { first_name: 'First' });
+    db.users[uid].settings.currency = 'USD';
+  });
+  const voice = message(175, '');
+  voice.message.voice = { file_id: 'voice-yen', mime_type: 'audio/ogg', duration: 5, file_size: 50 };
+  assert.equal((await f.handler.handle(voice)).kind, 'draft');
+  assert.equal(inputs[0].settings.currency, 'JPY');
+  assert.equal(inputs[0].input.defaultCurrency, 'JPY');
+  assert.equal((await f.database()).users['101'].settings.currency, 'USD', 'voice default must not modify ledger settings');
+});
+
+test('transfers and uncertain records always require review even with automatic saving enabled', async t => {
+  const f = await fixture(t, { autoConfirm: true, aiParser: { async parse() { return [parsed({ recordKind: 'transfer', needsReview: false })]; } } });
+  const draft = await f.handler.handle(message(176, '朋友转账 500 日元'));
+  assert.equal(draft.kind, 'draft');
+  assert.match(f.calls.at(-1).params.text, /请核对/);
+  assert.equal((await f.database()).ledgers['101'].expenses.length, 0);
+  assert.equal((await f.handler.handle(callback(177, draft.draftId))).kind, 'confirmed');
+});
+
+test('draft editing is owner-bound, replaces only the pending preview, and requires a fresh confirmation', async t => {
+  const f = await fixture(t, { aiParser: { async parse(input) { return [parsed({ amountMinor: input.text.includes('250') ? 250 : 188 })]; } } });
+  const first = await f.handler.handle(message(178, '午饭 188 日元'));
+  assert.ok(f.calls.at(-1).params.reply_markup.inline_keyboard[0].some(button => button.callback_data === `fp:edit:${first.draftId}`));
+  assert.equal((await f.handler.handle(callback(179, first.draftId, 'edit', 202, 101))).kind, 'missing');
+  assert.equal((await f.handler.handle(callback(180, first.draftId, 'edit'))).kind, 'editing');
+  assert.equal((await f.handler.handle(callback(181, first.draftId))).kind, 'editing');
+  const corrected = await f.handler.handle(message(182, '午饭 250 日元'));
+  assert.equal(corrected.kind, 'draft');
+  assert.notEqual(corrected.draftId, first.draftId);
+  assert.equal((await f.handler.handle(callback(183, first.draftId))).kind, 'cancelled');
+  assert.equal((await f.database()).ledgers['101'].expenses.length, 0);
+  assert.equal((await f.handler.handle(callback(184, corrected.draftId))).kind, 'confirmed');
+  const active = (await f.database()).ledgers['101'].expenses.filter(item => !item.deletedAt);
+  assert.equal(active.length, 1);
+  assert.equal(active[0].amountMinor, 250);
+});
+
 test('summary commands use the shared AI summarizer and bot copy follows the account language', async t => {
   const summaries = [];
   const f = await fixture(t, { aiParser: { async summarize(input, profile) { summaries.push({ input, profile }); return { text: '☁️ Weekly summary' }; } } });
@@ -245,14 +313,16 @@ test('failed preview delivery resumes from a persisted checkpoint without repars
   assert.equal(before.telegram.drafts[draftId].previewSent, 1);
   assert.equal(before.telegram.drafts[draftId].previewComplete, false);
   assert.equal(before.ledgers['101'].expenses.length, 0);
-  const restarted = createTelegramHandler({ ...f.options, store: createStore(f.dataDir) });
-  t.after(() => restarted.close());
+  const restartedStore = createStore(f.dataDir);
+  const restarted = createTelegramHandler({ ...f.options, store: restartedStore });
   const resumed = await restarted.handle(message(80));
+  await restartedStore.flush();
   assert.equal(resumed.draftId, draftId);
   assert.equal(parses, 1);
   assert.equal(sent.filter(item => item.text.includes('先看一眼，再记下')).length, 1);
   assert.equal((await f.database()).telegram.updates['80'].status, 'done');
   assert.equal((await restarted.handle(callback(81, draftId))).count, 25);
+  await restartedStore.close(); restarted.close();
   assert.equal((await f.database()).ledgers['101'].expenses.length, 25);
 });
 
@@ -360,9 +430,11 @@ test('failed image recognition offers a manual retry and image cache expiry or r
   photo.update_id = 134;
   await f.handler.handle(photo);
   const beforeRestart = f.calls.at(-1).params.reply_markup.inline_keyboard[0][0].callback_data.split(':')[2];
-  const restarted = createTelegramHandler({ ...f.options, store: createStore(f.dataDir) });
-  t.after(() => restarted.close());
+  await f.store.flush();
+  const restartedStore = createStore(f.dataDir);
+  const restarted = createTelegramHandler({ ...f.options, store: restartedStore });
   assert.equal((await restarted.handle(callback(135, beforeRestart, 'retry'))).reason, 'retry-expired');
+  await restartedStore.close(); restarted.close();
   assert.equal(requests.length, 4);
 });
 
