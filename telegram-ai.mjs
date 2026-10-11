@@ -330,7 +330,7 @@ function expenseIntent(text) {
   // a pending venue). Other numbers need a money unit or a spending cue;
   // dates, times, quantities and ordinary chat should stay in the chat path.
   const bareAmount = /^[\d.,\s]+$/u.test(value) && /\d/u.test(value);
-  const spendingCue = /(记账|记一笔|花|买|消费|支出|付款|付|吃|喝|午饭|晚饭|早餐|拉面|咖啡|房租|打车|转给|代付|报销|收入|入账|expense|spent|spend|bought|paid|pay(?:ment)?|purchase|rent|taxi|transfer|reimburse|income|lunch|dinner|breakfast|coffee|food|витрат|витратив|куп|оплат|оренд|переказ|дохід|обід|кава)/iu.test(value);
+  const spendingCue = /(记账|记一笔|花|买|消费|支出|付款|付|吃|喝|午饭|晚饭|早餐|拉面|咖啡|房租|打车|转给|代付|报销|收入|入账|夜市|夜宵|市场|便利店|超市|餐厅|便当|外卖|expense|spent|spend|bought|paid|pay(?:ment)?|purchase|rent|taxi|transfer|reimburse|income|lunch|dinner|breakfast|coffee|food|market|snack|ramen|restaurant|convenience|grocery|витрат|витратив|куп|оплат|оренд|переказ|дохід|обід|кава|ринок|магазин|ресторан)/iu.test(value);
   const hasAmount = hasCurrency || (spendingCue && /\d/u.test(value));
   if (futurePlan && !alreadyPaid) return false;
   if (bareAmount || hasAmount) return true;

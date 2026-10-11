@@ -41,6 +41,7 @@ function GoogleButton({ clientId, language, onCredential, t }) {
 export function ProfileEditor({ user, t, busy, run, service }) {
   const [draft, setDraft] = useState({ name: user.name, color: user.color, avatar: user.avatar }), [avatarError, setAvatarError] = useState(''), [avatarBusy, setAvatarBusy] = useState(false);
   const avatarOperation = useRef(0);
+  useEffect(() => () => { avatarOperation.current++; }, []);
   const chooseFile = async event => {
     const file = event.target.files?.[0];
     event.target.value = '';

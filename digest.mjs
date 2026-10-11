@@ -227,11 +227,15 @@ function fallbackDigestText(slot, records, language, names = []) {
 
 function telegramIds(db, memberIds) {
   const result = new Map();
-  const add = (chatId, uid, language) => {
+  const add = (chatId, uid, language, { preferLanguage = false } = {}) => {
     const key = String(chatId ?? '').trim();
     if (!key || key.length > 64) return;
     const existing = result.get(key);
-    if (!existing || (!existing.language && language)) result.set(key, { chatId: key, uid, language });
+    // Telegram preferences capture the language used in the latest private
+    // message. Prefer that over a stale profile setting when both sources
+    // identify the same chat, while retaining the profile fallback for old
+    // data that predates persisted preferences.
+    if (!existing || preferLanguage || (!existing.language && language)) result.set(key, { chatId: key, uid, language });
   };
   const memberSet = new Set(memberIds);
   for (const [identity, uid] of Object.entries(db.identities || {})) {
@@ -245,7 +249,7 @@ function telegramIds(db, memberIds) {
       const uid = item?.uid || item?.userId || item?.locationEntry?.uid || (pool === state.preferences && key);
       if (!memberSet.has(uid)) continue;
       const chatId = item?.chatId || item?.chat_id || item?.telegramChatId || item?.editingChatId || item?.locationEntry?.chatId;
-      if (chatId !== undefined) add(chatId, uid, db.users?.[uid]?.settings?.language);
+      if (chatId !== undefined) add(chatId, uid, item?.language || db.users?.[uid]?.settings?.language, { preferLanguage: pool === state.preferences && Boolean(item?.language) });
     }
   }
   return [...result.values()];
