@@ -98,7 +98,7 @@ export function createTelegramExpenseSync({ store, token = '', callTelegram, now
       const ledger = db.ledgers?.[entry.ledgerId];
       const actual = ledger?.expenses?.find(item => item.id === entry.id);
       if (!actual || actual.deletedAt) return { key, done: true, recipients: [] };
-      const covered = new Set(existing.filter(item => item?.status === 'sent' && Number(item.messageId) > 0).map(item => String(item.chatId)));
+      const covered = new Set(existing.filter(item => Number(item?.messageId) > 0 && !['failed', 'sending'].includes(item?.status)).map(item => String(item.chatId)));
       const recipients = knownChats(db, entry.ledgerId).filter(item => !covered.has(String(item.chatId)));
       return { key, done: Boolean(existing.length && !recipients.length), recipients, actual: structuredClone(actual) };
     });
@@ -130,7 +130,9 @@ export function createTelegramExpenseSync({ store, token = '', callTelegram, now
       const list = state.expenseMessages[snapshot.key] ||= [];
       const current = list.find(item => String(item?.chatId) === String(recipient.chatId));
       const timestamp = Number(typeof now === 'function' ? now() : now) || Date.now();
-      if (current?.status === 'sent' && Number(current.messageId) > 0) return false;
+      // Bindings written before status/lastText were introduced are known to
+      // be successful because they already contain a Telegram message id.
+      if (current && Number(current.messageId) > 0 && !['failed', 'sending'].includes(current.status)) return false;
       if (current?.status === 'sending' && Number(current.claimUntil) > timestamp) return false;
       const binding = current || { chatId: String(recipient.chatId) };
       Object.assign(binding, { status: 'sending', claimUntil: timestamp + CLAIM_TTL, attempts: Number(binding.attempts || 0) + 1, lastError: '' });
