@@ -1,0 +1,9 @@
+.category-suggestions { margin:0 0 16px; max-width:790px; }
+.category-suggestions>header { display:flex; flex-wrap:wrap; gap:4px 10px; align-items:baseline; margin-bottom:8px; }
+.category-suggestions strong { font-size:13px; font-weight:800; }
+.category-suggestions header>span { font-size:11px; color:var(--muted); }
+.category-suggestions>div { display:flex; flex-wrap:wrap; gap:6px; }
+.for-root .category-suggestion { display:flex; align-items:center; gap:6px; min-height:44px; padding:8px 12px; border:1px dashed #d9d5bc; border-radius:22px; background:#f4f0df; font-size:12px; }
+.for-root .category-suggestion .for-icon { width:15px; height:15px; color:#938367; }
+.category-suggestion small { font-size:10px; color:var(--muted); }
+.for-root .category-suggestion:disabled { opacity:.5; }

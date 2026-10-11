@@ -60,9 +60,49 @@ const SPECIFIC_PURPOSES = [
   { family: 'travel', test: text => /交通|通勤|地铁|地鐵|电车|電車|公交|车费|車費/u.test(text) || token('transport|transportation|commute|metro|subway|taxi|bus|train|транспорт|метро|таксі').test(text) },
 ];
 
+// Dedicated presets were added after the original six broad families.  Keep
+// the broad-family fallback for ordinary food words (so old ledgers continue
+// to resolve coffee/lunch to `stomach`), but use a dedicated pill when the
+// wording names a clearly distinct purpose.  These checks intentionally use
+// the note/raw text only; a merchant name by itself must never fabricate a
+// spending purpose.
+const DEDICATED_PURPOSES = [
+  { id: 'convenience', test: text => /便利店|便利商店|コンビニ|罗森|羅森|全家|セブン[‐-]?イレブン/u.test(text)
+    || token('convenience store|lawson|family\\s?mart|7[‐-]?eleven').test(text) },
+  { id: 'takeaway', test: text => /外卖|外賣|外送|外帶|外带|送餐/u.test(text)
+    || token('takeout|takeaway|delivery|food\\s?delivery').test(text) },
+  { id: 'izakaya', test: text => /居酒屋|小酌|酒吧|酒馆|酒館/u.test(text)
+    || token('izakaya|pub|bar\\s?tab|drinks?').test(text) },
+  { id: 'groceries', test: text => /超市|食材|生鲜|生鮮|市場/u.test(text)
+    || token('supermarket|groceries|grocery').test(text) },
+];
+
+function dedicatedCategory(pool, context) {
+  const text = words(context);
+  for (const purpose of DEDICATED_PURPOSES) {
+    if (!purpose.test(text)) continue;
+    const category = pool.find(item => item.id === purpose.id);
+    if (category) return category;
+  }
+  return null;
+}
+
 function uniqueFamilyCategory(pool, family, context = '') {
   const choices = pool.filter(item => !isOther(item) && categoryFamily(item, EXPENSE_FAMILIES.concat(INCOME_FAMILIES)) === family);
   if (choices.length === 1) return choices[0];
+  // The expanded presets intentionally contain several food/transport
+  // subcategories. Keep the original family id as the conservative fallback
+  // so old free-form notes do not suddenly jump to a narrower pill. A ledger
+  // editor may still add a same-id dedicated category; in that case the
+  // explicitly matching duplicate is the user's deliberate choice.
+  const duplicateIds = choices.filter(item => choices.some(other => other !== item && other.id === item.id));
+  if (duplicateIds.length) {
+    const specificDuplicate = duplicateIds.filter(item => SPECIFIC_PURPOSES.some(purpose => purpose.family === family
+      && purpose.test(context) && purpose.test(words(item.label))));
+    if (specificDuplicate.length) return specificDuplicate.at(-1);
+  }
+  const canonical = choices.find(item => item.id === family);
+  if (canonical) return canonical;
   const specific = choices.filter(item => SPECIFIC_PURPOSES.some(purpose => purpose.family === family && purpose.test(context) && purpose.test(words(item.label))));
   return specific.length === 1 ? specific[0] : null;
 }
@@ -121,6 +161,12 @@ export function mapExpenseCategory(candidate = {}, type, settings = {}) {
     if (category) return category;
   }
   if (type === 'expense') {
+    const context = words([candidate.rawText, candidate.note].join(' '));
+    // A named convenience store, takeaway order, izakaya, or supermarket is
+    // more specific than the broad food/household family.  Only apply this
+    // after explicit category values above so a user's chosen category wins.
+    const dedicated = dedicatedCategory(pool, context);
+    if (dedicated) return dedicated;
     const family = inferExpenseFamily(candidate);
     const category = family && uniqueFamilyCategory(pool, family, words([candidate.rawText, candidate.note].join(' ')));
     if (category) return category;

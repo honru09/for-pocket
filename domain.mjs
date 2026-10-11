@@ -1,5 +1,5 @@
 import { randomUUID, randomBytes, randomInt, createHash } from 'node:crypto';
-import { initialSettings, resolveLanguage, validateSettings, validateExpense, validateUserProfile, validateEntryTime, dateKey, MAX_CIRCLE_MEMBERS } from './public/shared.mjs';
+import { initialSettings, resolveLanguage, validateSettings, validateExpense, validateUserProfile, validateEntryTime, dateKey, MAX_CIRCLE_MEMBERS, MAX_CATEGORIES } from './public/shared.mjs';
 
 export class RequestError extends Error { constructor(message, status = 400) { super(message); this.status = status; } }
 export const fail = (message, status) => { throw new RequestError(message, status); };
@@ -66,7 +66,7 @@ function mergeAccounts(db, source, target) {
     const merged = structuredClone(to.settings[pool]);
     for (const category of from?.settings[pool] || []) {
       if (merged.some(c => c.label === category.label)) continue;
-      if (merged.length === 18) fail('errorLinkCategories', 409);
+      if (merged.length >= MAX_CATEGORIES) fail('errorLinkCategories', 409);
       const id = merged.some(c => c.id === category.id) ? randomUUID() : category.id;
       merged.push({ ...category, id });
       if (id !== category.id) for (const entry of from.expenses) {

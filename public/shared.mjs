@@ -1,4 +1,6 @@
 import { normalizeLocation } from './location.mjs';
+import { DEFAULT_CATEGORIES, LEGACY_DEFAULT_CATEGORIES, sortCategoriesByUsage } from './category-presets.mjs';
+import { normalizeCategorySuggestion } from './category-suggestions.mjs';
 
 export const CURRENCIES = {
   JPY: { symbol: '¥', name: '日元', digits: 0 },
@@ -35,14 +37,8 @@ export function validateUserProfile(value) {
   if (!AVATARS.includes(avatar) && !(typeof avatar === 'string' && avatar.length <= 2048 && /^https:\/\//.test(avatar))) throw new Error('请选择有效的图标和颜色。');
   return { name, color: value.color, avatar };
 }
-export const DEFAULT_CATEGORIES = [
-  { id: 'stomach', label: '胃', icon: 'bowl', color: 'peach' },
-  { id: 'learning', label: '学习', icon: 'book', color: 'blue' },
-  { id: 'daily', label: '日常用品', icon: 'bag', color: 'mint' },
-  { id: 'hobby', label: '兴趣', icon: 'game', color: 'pink' },
-  { id: 'travel', label: '旅游', icon: 'plane', color: 'yellow' },
-  { id: 'other', label: '其他', icon: 'spark', color: 'lavender' },
-];
+export { DEFAULT_CATEGORIES, LEGACY_DEFAULT_CATEGORIES, sortCategoriesByUsage } from './category-presets.mjs';
+export const MAX_CATEGORIES = 48;
 export const DEFAULT_INCOME_CATEGORIES = [
   { id: 'wage', label: '工资', icon: 'wallet', color: 'mint' },
   { id: 'bonus', label: '奖金', icon: 'coins', color: 'yellow' },
@@ -71,12 +67,15 @@ export function initialSettings(lang = 'zh') {
   };
 }
 export function validateSettings(value) {
-  if (value?.language !== undefined && !LANGUAGES.includes(value.language)) throw new Error('请选择有效的语言。');
-  if (!value || !Object.hasOwn(CURRENCIES, value.currency) || !Array.isArray(value.categories)
-    || value.categories.length < 1 || value.categories.length > 18) throw new Error('请保留 1–18 个分类。');
+  // Existing six-category ledgers remain intact. New ledgers use the thirty
+  // built-ins from initialSettings; validation never rewrites a user's list.
+  const input = value || {};
+  if (input?.language !== undefined && !LANGUAGES.includes(input.language)) throw new Error('请选择有效的语言。');
+  if (!value || !Object.hasOwn(CURRENCIES, input.currency) || !Array.isArray(input.categories)
+    || input.categories.length < 1 || input.categories.length > MAX_CATEGORIES) throw new Error('请保留 1–48 个分类。');
   const ids = new Set();
   const labels = new Set();
-  const categories = value.categories.map(item => {
+  const categories = input.categories.map(item => {
     if (!item || typeof item.id !== 'string' || !/^[a-zA-Z0-9_-]{1,64}$/.test(item.id)
       || ids.has(item.id) || typeof item.label !== 'string') throw new Error('分类格式有误。');
     const label = item.label.trim();
@@ -86,8 +85,8 @@ export function validateSettings(value) {
     return { id: item.id, label, icon: item.icon, color: item.color };
   });
 
-  const rawIncome = Array.isArray(value.incomeCategories) && value.incomeCategories.length > 0 ? value.incomeCategories : DEFAULT_INCOME_CATEGORIES;
-  if (rawIncome.length > 18) throw new Error('请保留 1–18 个分类。');
+  const rawIncome = Array.isArray(input.incomeCategories) && input.incomeCategories.length > 0 ? input.incomeCategories : DEFAULT_INCOME_CATEGORIES;
+  if (rawIncome.length > MAX_CATEGORIES) throw new Error('请保留 1–48 个分类。');
   const incomeIds = new Set();
   const incomeLabels = new Set();
   const incomeCategories = rawIncome.map(item => {
@@ -115,9 +114,9 @@ export function validateSettings(value) {
   });
 
   return {
-    currency: value.currency,
-    language: value.language || 'zh',
-    languageManual: Boolean(value.languageManual),
+    currency: input.currency,
+    language: input.language || 'zh',
+    languageManual: Boolean(input.languageManual),
     categories,
     incomeCategories,
     consumers,
@@ -152,10 +151,12 @@ export function validateExpense(value, settings) {
   const recordKinds = ['purchase', 'transfer', 'reimbursement', 'refund', 'gift', 'other'];
   const recordKind = recordKinds.includes(value.recordKind) ? value.recordKind : 'purchase';
   const occurredAt = value.occurredAt == null ? null : validateEntryTime(value.occurredAt, value.timezone).occurredAt;
+  const suggestion = type === 'expense' && recordKind === 'purchase' ? normalizeCategorySuggestion(value.categorySuggestion) : undefined;
   const location = normalizeLocation(value.location);
   return { id: value.id, type, amountMinor: value.amountMinor, currency: value.currency, occurredAt,
     categoryId: category.id, category: structuredClone(category), consumer: value.consumer, note: value.note.trim(), timezone: value.timezone,
-    splitMode, splitParticipants: [...splitParticipants], recordKind, ...(location ? { location } : {}) };
+    splitMode, splitParticipants: [...splitParticipants], recordKind,
+    ...(suggestion ? { categorySuggestion: suggestion } : {}), ...(location ? { location } : {}) };
 }
 export function validateEntryTime(value, timezone) {
   if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/.test(value)) throw new Error('errorEntryTime');

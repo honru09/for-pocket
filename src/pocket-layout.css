@@ -181,3 +181,97 @@
  html .for-root #record-view .mascot-stack { --cloud-size:58px; right:34px; bottom:0; }
  html .for-root #record-view .mascot-confirm { --confirm-size:26px; font-size:15px; }
 }
+
+/* Horizontal pill drawer: keep the quick category choice light and compact.
+   This block intentionally comes last so the old six-card responsive rules
+   cannot turn the drawer back into a grid on short WebViews. */
+.for-root #record-view .categories.category-drawer {
+  display:flex;
+  align-items:center;
+  gap:8px;
+  width:100%;
+  min-width:0;
+  height:46px;
+  min-height:46px;
+  padding:2px 1px;
+  overflow-x:auto;
+  overflow-y:hidden;
+  -webkit-overflow-scrolling:touch;
+  scroll-behavior:smooth;
+  overscroll-behavior-inline:contain;
+  scroll-snap-type:x proximity;
+  scrollbar-width:none;
+  touch-action:pan-x;
+}
+.for-root #record-view .categories.category-drawer::-webkit-scrollbar { display:none; width:0; height:0; }
+.for-root #record-view .category.category-pill {
+  flex:0 0 auto;
+  width:auto;
+  height:42px;
+  min-height:42px;
+  display:inline-flex;
+  flex-direction:row;
+  align-items:center;
+  justify-content:center;
+  gap:6px;
+  padding:5px 12px 5px 7px;
+  border:1px solid transparent;
+  border-radius:999px;
+  background:#f0f0e7;
+  color:#5c6651;
+  font-size:12px;
+  line-height:1;
+  white-space:nowrap;
+  overflow:visible;
+  scroll-snap-align:start;
+  box-shadow:0 1px 0 rgba(51,58,48,.03);
+  transition:transform 260ms var(--spring),background-color 180ms ease,border-color 180ms ease,box-shadow 220ms ease;
+}
+.for-root #record-view .category.category-pill .category-icon {
+  width:28px;
+  height:28px;
+  border-radius:50%;
+  color:#59604e;
+  transition:transform 300ms var(--spring),background-color 180ms ease,color 180ms ease;
+}
+.for-root #record-view .category.category-pill .category-icon .for-icon { width:18px; height:18px; }
+.for-root #record-view .category.category-pill .category-label { max-width:12em; }
+.for-root #record-view .category.category-pill:hover { transform:translateY(-1px) scale(1.02); box-shadow:0 3px 10px rgba(51,58,48,.08); }
+.for-root #record-view .category.category-pill:active { transform:scale(.94)!important; }
+.for-root #record-view .category.category-pill.selected {
+  background:#f8e7c9;
+  border-color:#e4c681;
+  color:#765829;
+  box-shadow:0 3px 12px rgba(168,126,47,.16);
+  transform:scale(1.025);
+}
+.for-root #record-view .category.category-pill.selected .category-icon {
+  background:#f4d48e!important;
+  color:#765829;
+  transform:scale(1.04);
+}
+
+@media(max-width:600px) {
+  .for-root #record-view .record-layout { grid-template-rows:minmax(76px,1.1fr) 74px minmax(188px,1.7fr) 44px; }
+  .for-root #record-view .purposes { min-height:74px; }
+  .for-root #record-view .purposes .section-heading { flex:0 0 24px; }
+  .for-root #record-view .categories.category-drawer { height:46px; min-height:46px; gap:7px; }
+  .for-root #record-view .category.category-pill { height:42px; min-height:42px; padding-right:10px; font-size:11px; }
+  .for-root #record-view .category.category-pill .category-icon { width:27px; height:27px; }
+  .for-root #record-view .category.category-pill .category-icon .for-icon { width:17px; height:17px; }
+  .for-root #record-view .category.category-pill { grid-column:auto!important; grid-row:auto!important; }
+}
+@media(max-width:600px) {
+  /* Very short WebViews use a full-width drawer too. Put its edit action
+     beside the row and reclaim the heading, instead of shrinking pills. */
+  html[data-pocket-compact=true] .for-root #record-view .record-layout { grid-template-columns:minmax(0,1fr); grid-template-rows:minmax(76px,1fr) 46px minmax(166px,1.6fr) 44px; gap:2px; }
+  html[data-pocket-compact=true] .for-root #record-view .amount-stage { grid-column:1; grid-row:1; }
+  html[data-pocket-compact=true] .for-root #record-view .purposes { grid-column:1; grid-row:2; min-height:46px; flex-direction:row; align-items:center; gap:4px; }
+  html[data-pocket-compact=true] .for-root #record-view .purposes .section-heading { flex:0 0 auto; order:2; }
+  html[data-pocket-compact=true] .for-root #record-view .purposes h2 { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; }
+  html[data-pocket-compact=true] .for-root #record-view .purposes .text-button { min-height:44px; padding:0 4px; }
+  html[data-pocket-compact=true] .for-root #record-view .categories.category-drawer { flex:1 1 0; height:46px; min-height:46px; }
+  html[data-pocket-compact=true] .for-root #record-view .keypad { grid-column:1; grid-row:3; grid-template-rows:repeat(4,minmax(40px,1fr)); gap:2px; }
+  html[data-pocket-compact=true] .for-root #record-view .key { min-height:40px; }
+  html[data-pocket-compact=true] .for-root #record-view .finish { grid-column:1; grid-row:4; }
+}

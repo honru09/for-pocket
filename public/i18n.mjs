@@ -1,4 +1,4 @@
-import { DEFAULT_CATEGORIES } from './shared.mjs';
+import { CATEGORY_LABELS, LEGACY_DEFAULT_CATEGORIES } from './category-presets.mjs';
 import { ACCOUNT_COPY } from './account-i18n.mjs';
 
 export const LOCALES = { zh: 'zh-CN', en: 'en-US', uk: 'uk-UA' };
@@ -57,7 +57,7 @@ export const MESSAGES = {
     loading: '正在打开…', localStorage: '仅保存在此浏览器', remoteStorage: '已同步', unavailable: '暂时无法打开', undo: '撤销', closeNotice: '关闭提示',
     saved: '{person} · {amount}，记下啦。', savedIncome: '{person} · +{amount}，入账啦。', removed: '已移除这笔。', restored: '已恢复这笔。', categoriesSaved: '分类已保存。', membersSaved: '角色已保存。', currencyChanged: '已切换为 {currency}，请重新输入金额。', maxDigits: '最多输入 8 位整数。', keepCategory: '至少保留一个分类。',
     switchCircle: '切换圈子', defaultLedger: '个人 / 双人账本', switchToDefaultLedger: '切回个人账本', generateLinkCode: '生成设备同步码', syncCodeHint: '在另一台设备输入此码即可将两端数据合并（15分钟内有效）：',
-    errorCategoryCount: '请保留 1–18 个分类。', errorCategoryFormat: '分类格式有误。', errorCategoryName: '分类名称需为 1–24 个字，且不能重复。', errorIconColor: '请选择有效的图标和颜色。', errorLanguage: '请选择有效的语言。',
+    errorCategoryCount: '请保留 1–48 个分类。', errorCategoryFormat: '分类格式有误。', errorCategoryName: '分类名称需为 1–24 个字，且不能重复。', errorIconColor: '请选择有效的图标和颜色。', errorLanguage: '请选择有效的语言。',
     errorConsumerCount: '请保留 1–8 位记账角色。', errorConsumerName: '角色名称需为 1–24 个字，且不能重复。',
     errorInvalidCode: '请输入有效的 6 位共享码。', errorSelfPair: '不能连接自己的共享码。', errorPairNotFound: '未找到该共享码对应的账本。',
     errorExpenseId: '记录编号有误。', errorAmount: '请输入有效金额。', errorCategory: '请选择一个花销方向。', errorConsumer: '请选择有效的记账角色。', errorNote: '备注最多 160 个字符。', errorTimezone: '时区格式有误。',
@@ -119,7 +119,7 @@ export const MESSAGES = {
     loading: 'Opening…', localStorage: 'Saved in this browser only', remoteStorage: 'Synced', unavailable: 'Unable to open', undo: 'Undo', closeNotice: 'Dismiss notice',
     saved: '{person} · {amount}, saved.', savedIncome: '{person} · +{amount}, income added.', removed: 'Expense removed.', restored: 'Expense restored.', categoriesSaved: 'Categories saved.', membersSaved: 'Members saved.', currencyChanged: 'Switched to {currency}. Enter the amount again.', maxDigits: 'Up to 8 whole-number digits.', keepCategory: 'Keep at least one category.',
     switchCircle: 'Switch circle', defaultLedger: 'Personal / Pair ledger', switchToDefaultLedger: 'Switch to personal ledger', generateLinkCode: 'Generate sync code', syncCodeHint: 'Enter this 6-digit code on another device to merge and link data (valid for 15 mins):',
-    errorCategoryCount: 'Keep 1–18 categories.', errorCategoryFormat: 'Invalid category format.', errorCategoryName: 'Names must be unique and contain 1–24 characters.', errorIconColor: 'Choose a valid icon and color.', errorLanguage: 'Choose a valid language.',
+    errorCategoryCount: 'Keep 1–48 categories.', errorCategoryFormat: 'Invalid category format.', errorCategoryName: 'Names must be unique and contain 1–24 characters.', errorIconColor: 'Choose a valid icon and color.', errorLanguage: 'Choose a valid language.',
     errorConsumerCount: 'Keep 1–8 members.', errorConsumerName: 'Member names must be unique and contain 1–24 characters.',
     errorInvalidCode: 'Enter a valid 6-character code.', errorSelfPair: 'You cannot connect to your own code.', errorPairNotFound: 'No ledger found with this code.',
     errorExpenseId: 'Invalid expense ID.', errorAmount: 'Enter a valid amount.', errorCategory: 'Choose a category.', errorConsumer: 'Choose a valid member.', errorNote: 'Notes can contain up to 160 characters.', errorTimezone: 'Invalid time zone.',
@@ -181,7 +181,7 @@ export const MESSAGES = {
     loading: 'Відкриваємо…', localStorage: 'Лише в цьому браузері', remoteStorage: 'Синхронізовано', unavailable: 'Не вдалося відкрити', undo: 'Скасувати', closeNotice: 'Закрити повідомлення',
     saved: '{person} · {amount}, збережено.', savedIncome: '{person} · +{amount}, надходження збережено.', removed: 'Витрату видалено.', restored: 'Витрату відновлено.', categoriesSaved: 'Категорії збережено.', membersSaved: 'Учасників збережено.', currencyChanged: 'Валюту змінено на {currency}. Введіть суму ще раз.', maxDigits: 'До 8 цифр у цілій частині.', keepCategory: 'Залиште хоча б одну категорію.',
     switchCircle: 'Змінити коло', defaultLedger: 'Особистий бюджет', switchToDefaultLedger: 'Повернутися до особистого', generateLinkCode: 'Створити код синхронізації', syncCodeHint: 'Введіть цей код на іншому пристрої, щоб об’єднати дані (діє 15 хв):',
-    errorCategoryCount: 'Залиште 1–18 категорій.', errorCategoryFormat: 'Неправильний формат категорії.', errorCategoryName: 'Назви мають бути унікальними й містити 1–24 символи.', errorIconColor: 'Оберіть правильну іконку та колір.', errorLanguage: 'Оберіть доступну мову.',
+    errorCategoryCount: 'Залиште 1–48 категорій.', errorCategoryFormat: 'Неправильний формат категорії.', errorCategoryName: 'Назви мають бути унікальними й містити 1–24 символи.', errorIconColor: 'Оберіть правильну іконку та колір.', errorLanguage: 'Оберіть доступну мову.',
     errorConsumerCount: 'Залиште 1–8 учасників.', errorConsumerName: 'Імена мають бути унікальними й містити 1–24 символи.',
     errorInvalidCode: 'Введіть правильний 6-значний код.', errorSelfPair: 'Не можна підключитися до власного коду.', errorPairNotFound: 'Бюджет за цим кодом не знайдено.',
     errorExpenseId: 'Неправильний номер витрати.', errorAmount: 'Введіть правильну суму.', errorCategory: 'Оберіть категорію.', errorConsumer: 'Оберіть учасника.', errorNote: 'Нотатка може містити до 160 символів.', errorTimezone: 'Неправильний часовий пояс.',
@@ -196,6 +196,9 @@ export function translate(language, key, values = {}) {
   return message.replace(/\{(\w+)\}/g, (_, field) => String(values[field] ?? ''));
 }
 const DEFAULT_LABEL_MAP = {
+  ...CATEGORY_LABELS,
+  // Original labels remain the canonical translation for bot previews and
+  // stored snapshots. The active drawer uses categoryDisplayLabel below.
   stomach: ['胃', 'Food', 'Їжа'],
   learning: ['学习', 'Learning', 'Навчання'],
   daily: ['日常用品', 'Daily needs', 'Для дому'],
@@ -210,11 +213,24 @@ const DEFAULT_LABEL_MAP = {
   other_in: ['其他入账', 'Other income', 'Інші надходження'],
 };
 export function categoryLabel(category, language) {
+  if (!category || typeof category.label !== 'string') return '';
   const standard = DEFAULT_LABEL_MAP[category.id];
-  if (standard && standard.includes(category.label)) {
-    return translate(language, category.id);
-  }
+  if (standard && standard.includes(category.label)) return standard[{ zh: 0, en: 1, uk: 2 }[language] ?? 0];
+  const builtIn = CATEGORY_LABELS[category.id];
+  if (builtIn && builtIn.includes(category.label)) return builtIn[{ zh: 0, en: 1, uk: 2 }[language] ?? 0];
   return category.label;
+}
+
+// The entry screen can use refreshed preset names while bot previews and
+// saved historical snapshots continue to use their original labels.
+export function categoryDisplayLabel(category, language) {
+  if (!category || typeof category.label !== 'string') return '';
+  const builtIn = CATEGORY_LABELS[category.id];
+  const legacy = LEGACY_DEFAULT_CATEGORIES.find(item => item.id === category.id);
+  if (builtIn && (builtIn.includes(category.label) || legacy?.label === category.label)) {
+    return builtIn[{ zh: 0, en: 1, uk: 2 }[language] ?? 0];
+  }
+  return categoryLabel(category, language);
 }
 export function translateError(message, language) {
   if (!message) return translate(language, 'errorSave');

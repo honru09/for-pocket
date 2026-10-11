@@ -11,6 +11,7 @@ import { botLanguage, botText } from './bot-i18n.mjs';
 import { categoryLabel } from './public/i18n.mjs';
 import { extractImportText } from './import-files.mjs';
 import { normalizeLocation, currencyForCountry, locationLabel } from './public/location.mjs';
+import { normalizeCategorySuggestion, isExistingCategorySuggestion } from './public/category-suggestions.mjs';
 
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
 const MAX_IMPORT_FILE_BYTES = MAX_IMAGE_BYTES;
@@ -659,6 +660,10 @@ export function createTelegramHandler({
     const splitMode = type === 'expense' && item?.splitMode === 'equal' && splitParticipants.length ? 'equal' : 'none';
     const recordKind = ['purchase', 'transfer', 'reimbursement', 'refund', 'gift', 'other'].includes(item?.recordKind)
       ? item.recordKind : 'purchase';
+    const suggestedLabel = normalizeCategorySuggestion(item?.categorySuggestion);
+    const categorySuggestion = type === 'expense' && recordKind === 'purchase' && !item?.needsReview
+      && suggestedLabel && !isExistingCategorySuggestion(suggestedLabel, profile.settings.categories)
+      ? suggestedLabel : undefined;
     const expense = {
         id: randomUUID(),
         type,
@@ -672,6 +677,7 @@ export function createTelegramHandler({
         splitMode,
         splitParticipants: splitMode === 'equal' ? splitParticipants : [],
         recordKind,
+        ...(categorySuggestion ? { categorySuggestion } : {}),
         ...(normalizeLocation(locationContext) ? { location: normalizeLocation(locationContext) } : {}),
       };
     try { validateExpense(expense, profile.settings); } catch { return null; }
@@ -894,6 +900,7 @@ export function createTelegramHandler({
         categoryLabel: label, consumer: expense.consumer, note: expense.note, merchant,
         occurredAt: expense.occurredAt, timezone: expense.timezone,
         splitMode: expense.splitMode, splitParticipants: [...expense.splitParticipants], recordKind: expense.recordKind,
+        ...(expense.categorySuggestion ? { categorySuggestion: expense.categorySuggestion } : {}),
         ...(expense.location ? { location: expense.location } : {}),
       }));
       return { id: draft.id, language: draft.language, previousRecords,
