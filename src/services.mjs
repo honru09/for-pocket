@@ -1,6 +1,13 @@
 import { initialSettings, validateSettings, validateExpense, validateUserProfile, validateEntryTime, dateKey } from '../public/shared.mjs';
 export const PREVIEW_KEY = 'for-pocket.preview.v1';
 export const SESSION_KEY = 'for-pocket.session.v1';
+const FILE_MIME_BY_EXTENSION = {
+  jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp', gif: 'image/gif', pdf: 'application/pdf',
+  csv: 'text/csv', txt: 'text/plain', xls: 'application/vnd.ms-excel', xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  doc: 'application/msword', docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+};
+const IMPORT_MIME_TYPES = new Set(Object.values(FILE_MIME_BY_EXTENSION));
+function fileMime(file) { const type = String(file?.type || '').toLowerCase(); if (IMPORT_MIME_TYPES.has(type)) return type; const ext = String(file?.name || '').split('.').pop()?.toLowerCase(); return FILE_MIME_BY_EXTENSION[ext] || type; }
 export function localService(defaultLang = 'zh') {
   const load = () => {
     const saved = localStorage.getItem(PREVIEW_KEY);
@@ -42,7 +49,10 @@ export function localService(defaultLang = 'zh') {
 export function remoteService(telegram) {
   let currentToken = localStorage.getItem(SESSION_KEY), ledgerId;
   let lastInitData = null, telegramDisabled = false;
-  const track = p => { if (p?.ledgerId) ledgerId = p.ledgerId; return p; };
+  let profileRequestSequence = 0;
+  // A delayed settings/profile response must not restore a ledger that a
+  // newer circle or account action already replaced.
+  const track = (p, sequence) => { if (sequence === profileRequestSequence && p?.ledgerId) ledgerId = p.ledgerId; return p; };
   const remember = p => {
     if (p?.sessionToken) {
       currentToken = p.sessionToken;
@@ -67,62 +77,93 @@ export function remoteService(telegram) {
     await request('/auth/telegram', 'POST', {}, { includeInitData: true });
     lastInitData = raw;
   }
-  async function aiParseExpense({ text = '', file = null, enhanced = false, timezone = Intl.DateTimeFormat().resolvedOptions().timeZone, ledgerId: requestedLedgerId } = {}) {
+  async function aiParseExpense({ text = '', file = null, files = [], enhanced = false, timezone = Intl.DateTimeFormat().resolvedOptions().timeZone, ledgerId: requestedLedgerId } = {}) {
     await exchangeTelegram();
     const ledger = requestedLedgerId || ledgerId;
     const baseHeaders = {};
     if (!telegramDisabled && telegram?.initData && !currentToken) baseHeaders['X-Telegram-Init-Data'] = telegram.initData;
     if (currentToken) baseHeaders.Authorization = `Bearer ${currentToken}`;
-    let response;
-    try {
-      if (file) {
-        const mimeType = ['image/png', 'image/jpeg', 'image/webp'].includes(file.type) ? file.type : 'image/jpeg';
-        const bytes = new Uint8Array(await file.arrayBuffer());
-        const chunks = [];
-        for (let offset = 0; offset < bytes.length; offset += 0x8000) chunks.push(String.fromCharCode(...bytes.subarray(offset, Math.min(offset + 0x8000, bytes.length))));
-        const imageBase64 = btoa(chunks.join(''));
+    const selectedFiles = Array.isArray(files) ? files.filter(Boolean) : [];
+    if (!selectedFiles.length && file) selectedFiles.push(file);
+    const language = document.documentElement.lang || 'zh-CN';
+    const parseOne = async (selectedFile, includeText = '') => {
+      let response;
+      try {
+        let attachment;
+        if (selectedFile) {
+          const bytes = new Uint8Array(await selectedFile.arrayBuffer());
+          const chunks = [];
+          for (let offset = 0; offset < bytes.length; offset += 0x8000) chunks.push(String.fromCharCode(...bytes.subarray(offset, Math.min(offset + 0x8000, bytes.length))));
+          attachment = { data: btoa(chunks.join('')), mimeType: fileMime(selectedFile), name: selectedFile.name || '' };
+        }
         response = await fetch('/api/ai/parse-expense', {
           method: 'POST',
-          headers: { ...baseHeaders, 'Content-Type': 'application/json', 'X-AI-Language': document.documentElement.lang || 'zh-CN' },
-          body: JSON.stringify({ text: String(text).slice(0, 4000), image: { data: imageBase64, mimeType }, enhanced: enhanced === true, timezone, language: document.documentElement.lang || 'zh-CN', ledgerId: ledger }),
+          headers: { ...baseHeaders, 'Content-Type': 'application/json', 'X-AI-Language': language },
+          body: JSON.stringify({ text: String(includeText).slice(0, 12000), ...(attachment ? { file: attachment } : {}), enhanced: enhanced === true, timezone, language, ledgerId: ledger }),
           signal: AbortSignal.timeout(60000),
         });
-      } else {
-        response = await fetch('/api/ai/parse-expense', {
-          method: 'POST',
-          headers: { ...baseHeaders, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text: String(text).slice(0, 4000), timezone, language: document.documentElement.lang || 'zh-CN', ledgerId: ledger }),
-          signal: AbortSignal.timeout(60000),
-        });
+      } catch (error) {
+        if (error?.name === 'AbortError' || error?.name === 'TimeoutError') throw new Error('errorNetwork');
+        throw new Error('errorNetwork');
       }
-    } catch { throw new Error('errorNetwork'); }
-    let data = {};
-    try { data = await response.json(); } catch { throw new Error('errorAiUnavailable'); }
-    if (!response.ok) { const error = new Error(data.error || 'errorAiUnavailable'); error.status = response.status; throw error; }
-    return remember(data);
+      let data = {};
+      try { data = await response.json(); } catch { throw new Error('errorAiUnavailable'); }
+      if (!response.ok) { const error = new Error(data.error || 'errorAiUnavailable'); error.status = response.status; throw error; }
+      return data;
+    };
+    const textTruncated = String(text).length > 12000;
+    if (!selectedFiles.length) {
+      const result = remember(await parseOne(null, text));
+      return textTruncated ? { ...result, warnings: [...(result?.warnings || []), 'errorTextTooLong'] } : result;
+    }
+    const results = [], warnings = textTruncated ? [{ code: 'errorTextTooLong', name: '' }] : [];
+    for (let index = 0; index < selectedFiles.length; index += 1) {
+      try {
+        const result = remember(await parseOne(selectedFiles[index], index === 0 ? text : ''));
+        const items = Array.isArray(result?.items) ? result.items : Array.isArray(result) ? result : [];
+        results.push(...items.map(item => ({ ...item, sourceName: selectedFiles[index].name })));
+        if (!items.length) warnings.push({ code: 'aiImportNoResult', name: selectedFiles[index].name });
+        if (Array.isArray(result?.warnings)) warnings.push(...result.warnings.map(code => ({ code, name: selectedFiles[index].name })));
+      } catch (error) {
+        if (error.status === 401 || error?.message === 'errorLedgerChanged') throw error;
+        warnings.push({ code: error?.message || 'errorAiUnavailable', name: selectedFiles[index].name });
+      }
+    }
+    return { items: results, warnings };
   }
-  const profileAction = async (route, body, method = 'POST') => track(await request(route, method, body));
+  const profileAction = async (route, body, method = 'POST') => {
+    const sequence = ++profileRequestSequence;
+    return track(await request(route, method, body), sequence);
+  };
   return {
-    getProfile: async () => { await exchangeTelegram(); return track(await request('/profile')); },
-    saveSettings: ({ consumers, ...settings }) => profileAction('/settings', { ...settings, ledgerId }, 'PUT'),
+    getProfile: async () => { const sequence = ++profileRequestSequence; await exchangeTelegram(); return track(await request('/profile'), sequence); },
+    saveSettings: ({ consumers, ...settings }, scope = ledgerId) => profileAction('/settings', { ...settings, ledgerId: scope }, 'PUT'),
     updateUserProfile: p => profileAction('/user-profile', p, 'PUT'),
     addExpense: payload => request('/expenses', 'POST', { ledgerId, ...payload }),
-    importExpenses: entries => request('/expenses/import', 'POST', { ledgerId: entries[0]?.ledgerId || ledgerId, entries }),
+    importExpenses: async entries => {
+      const scope = entries[0]?.ledgerId || ledgerId, saved = [];
+      for (let offset = 0; offset < entries.length; offset += 50) {
+        try { const result = await request('/expenses/import', 'POST', { ledgerId: scope, entries: entries.slice(offset, offset + 50) }); saved.push(...(result.entries || [])); }
+        catch (error) { if (!saved.length) throw error; return { entries: saved, warnings: [error.message || 'errorSave'], partial: true }; }
+      }
+      return { entries: saved };
+    },
     updateEntryTime: (id, value, scope = ledgerId) => request(`/expenses/${encodeURIComponent(id)}`, 'PUT', { ...value, ledgerId: scope }),
     deleteExpense: (id, scope = ledgerId) => request(`/expenses/${encodeURIComponent(id)}?ledgerId=${encodeURIComponent(scope)}`, 'DELETE'),
     restoreExpense: (id, scope = ledgerId) => request(`/expenses/${encodeURIComponent(id)}/restore`, 'POST', { ledgerId: scope }),
     aiParseExpense,
     aiSummary: async input => { await exchangeTelegram(); return request('/ai/summary', 'POST', { ledgerId, ...input }, { timeout: 60000 }); },
     loginWithGoogle: async (credential, link = false, language) => {
+      const sequence = ++profileRequestSequence;
       const res = await request('/auth/google', 'POST', { credential, link, language });
       if (res.sessionToken) { currentToken = res.sessionToken; localStorage.setItem(SESSION_KEY, currentToken); }
-      if (res.profile) track(res.profile);
+      if (res.profile) track(res.profile, sequence);
       return res;
     },
-    logout: async () => { await request('/auth/logout', 'POST', {}); currentToken = null; telegramDisabled = true; localStorage.removeItem(SESSION_KEY); },
+    logout: async () => { ++profileRequestSequence; await request('/auth/logout', 'POST', {}); currentToken = null; ledgerId = undefined; telegramDisabled = true; localStorage.removeItem(SESSION_KEY); },
     getLinkCode: () => request('/auth/link-code', 'POST', {}),
     previewLink: code => request('/auth/link-preview', 'POST', { code }),
-    verifyLink: async payload => track((await request('/auth/link-verify', 'POST', { ...payload, confirm: true })).profile),
+    verifyLink: async payload => { const sequence = ++profileRequestSequence; return track((await request('/auth/link-verify', 'POST', { ...payload, confirm: true })).profile, sequence); },
     createCircle: name => profileAction('/circles/create', { name }),
     switchCircle: circleId => profileAction('/circles/switch', { circleId }),
     getInvite: (circleId, renew = false) => request('/circles/invite', 'POST', { circleId, renew }),

@@ -1,4 +1,4 @@
-import { CURRENCIES, dateKey, resolveLanguage } from './public/shared.mjs';
+import { CURRENCIES, dateKey, resolveLanguage, isBudgetEntry } from './public/shared.mjs';
 import { categoryLabel } from './public/i18n.mjs';
 
 export function expenseStats(input = {}, profile, now = Date.now()) {
@@ -15,7 +15,7 @@ export function expenseStats(input = {}, profile, now = Date.now()) {
   const byConsumer = new Map(), byCategory = new Map();
   let expenseMinor = 0, incomeMinor = 0, count = 0;
   for (const entry of profile.expenses || []) {
-    if (entry.deletedAt || entry.currency !== currency || !Number.isSafeInteger(entry.amountMinor) || entry.amountMinor < 1) continue;
+    if (entry.deletedAt || !isBudgetEntry(entry) || entry.currency !== currency || !Number.isSafeInteger(entry.amountMinor) || entry.amountMinor < 1) continue;
     let day;
     try { day = dateKey(new Date(entry.occurredAt || entry.createdAt), timezone); } catch { continue; }
     if (day < startDay || day > endDay) continue;

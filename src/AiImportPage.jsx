@@ -22,10 +22,26 @@ export const AI_IMPORT_I18N_KEYS = [
   'aiImportNeedLogin', 'aiImportInvalidItem', 'aiImportSelectedCount',
   'aiImportSplit', 'aiImportNoSplit', 'aiImportSplitEqual', 'aiImportSplitParticipants',
   'aiImportEnhanced', 'aiImportEnhancedHint', 'aiImportEnhancing', 'aiImportReview',
+  'aiImportRecordKind', 'recordKindPurchase', 'recordKindTransfer', 'recordKindReimbursement',
+  'recordKindRefund', 'recordKindGift', 'recordKindOther', 'aiImportReviewReason', 'aiImportBatchHint',
 ];
 
-const IMAGE_TYPES = new Set(['image/png', 'image/jpeg', 'image/webp']);
-const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
+const IMPORT_TYPES = new Set([
+  'image/png', 'image/jpeg', 'image/webp', 'image/gif', 'application/pdf', 'text/csv', 'text/plain',
+  'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+]);
+const IMAGE_TYPES = new Set(['image/png', 'image/jpeg', 'image/webp', 'image/gif']);
+const MAX_FILE_BYTES = 8 * 1024 * 1024;
+const MAX_FILES = 8;
+const MAX_TOTAL_BYTES = 32 * 1024 * 1024;
+const MAX_IMPORT_TEXT = 12000;
+const EXTENSION_TYPES = {
+  jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp', gif: 'image/gif', pdf: 'application/pdf',
+  csv: 'text/csv', txt: 'text/plain', xls: 'application/vnd.ms-excel', xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  doc: 'application/msword', docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+};
+function fileMime(file) { const type = String(file?.type || '').toLowerCase(); if (IMPORT_TYPES.has(type)) return type; const extension = String(file?.name || '').split('.').pop()?.toLowerCase(); return EXTENSION_TYPES[extension] || type; }
 
 const idFor = () => globalThis.crypto?.randomUUID?.() || `import-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 const normalizeText = value => String(value ?? '').trim().toLocaleLowerCase();
@@ -112,6 +128,10 @@ function normalizeItem(raw, settings, profile) {
     merchant: String(raw?.merchant || raw?.store || '').trim(),
     note: String(raw?.note || '').trim(),
     confidence: raw?.confidence !== null && raw?.confidence !== undefined && Number.isFinite(Number(raw.confidence)) ? Number(raw.confidence) : null,
+    recordKind: ['purchase', 'transfer', 'reimbursement', 'refund', 'gift', 'other'].includes(raw?.recordKind) ? raw.recordKind : 'purchase',
+    needsReview: Boolean(raw?.needsReview),
+    reviewReason: String(raw?.reviewReason || '').trim(),
+    sourceName: String(raw?.sourceName || '').trim(),
     rawText: String(raw?.rawText || '').trim(),
   };
 }
@@ -132,10 +152,15 @@ function sourceLabel(file, t) {
   return `${file.name || t('aiImportImageLabel')} · ${size}`;
 }
 
+function fileTypeLabel(file) {
+  const extension = String(file?.name || '').split('.').pop()?.toUpperCase();
+  return extension || String(file?.type || '').split('/').pop()?.toUpperCase() || 'FILE';
+}
+
 export default function AiImportPage({ t, profile, settings, busy = false, run, service, onImported, isRemote = false, config = {}, onAccount }) {
   const [text, setText] = useState('');
-  const [file, setFile] = useState(null);
-  const [previewUrl, setPreviewUrl] = useState('');
+  const [files, setFiles] = useState([]);
+  const [previewUrls, setPreviewUrls] = useState({});
   const [items, setItems] = useState([]);
   const [status, setStatus] = useState('');
   const [error, setError] = useState('');
@@ -149,11 +174,12 @@ export default function AiImportPage({ t, profile, settings, busy = false, run, 
   const inputRef = useRef(null), scopeRef = useRef(scope), operationRef = useRef(0), workingRef = useRef(false), mountedRef = useRef(true);
   scopeRef.current = scope;
   const consumers = settings?.consumers || [];
-  const hasSource = Boolean(text.trim() || file);
+  const hasSource = Boolean(text.trim() || files.length);
   const aiEnabled = aiUiEnabled({ isRemote, config, service });
   const canParse = hasSource && aiEnabled && !working && !busy;
 
-  const updateFile = next => {
+  const updateFiles = nextList => {
+    const next = Array.from(nextList || []);
     setError('');
     setStatus('');
     setWarnings([]);
@@ -161,17 +187,12 @@ export default function AiImportPage({ t, profile, settings, busy = false, run, 
     setItemsScope(scope);
     setImageAttempted(false);
     setExpanded(new Set());
-    if (next && !IMAGE_TYPES.has(next.type)) {
-      setError(t('errorAiInput'));
-      setFile(null);
-      return;
-    }
-    if (next && next.size > MAX_IMAGE_BYTES) {
-      setError(t('errorTooLarge'));
-      setFile(null);
-      return;
-    }
-    setFile(next || null);
+    const rejected = next.filter(file => !IMPORT_TYPES.has(fileMime(file)) || file.size > MAX_FILE_BYTES);
+    const valid = next.filter(file => !rejected.includes(file));
+    setWarnings(rejected.map(file => ({ name: file.name, code: file.size > MAX_FILE_BYTES ? 'errorTooLarge' : 'errorFileType' })));
+    if (valid.length > MAX_FILES) { setError(t('errorImportFileCount')); return; }
+    if (valid.reduce((total, file) => total + file.size, 0) > MAX_TOTAL_BYTES) { setError(t('errorImportTotalSize')); return; }
+    setFiles(valid);
   };
 
   useEffect(() => {
@@ -182,21 +203,19 @@ export default function AiImportPage({ t, profile, settings, busy = false, run, 
   useEffect(() => {
     operationRef.current++;
     workingRef.current = false;
-    setText(''); setFile(null); setItems([]); setItemsScope(scope);
+    setText(''); setFiles([]); setItems([]); setItemsScope(scope);
     setExpanded(new Set()); setWarnings([]); setError(''); setStatus('');
     setWorking(false); setOperation(''); setImageAttempted(false);
     if (inputRef.current) inputRef.current.value = '';
   }, [scope]);
 
   useEffect(() => {
-    if (!file) {
-      setPreviewUrl('');
-      return undefined;
-    }
-    const url = URL.createObjectURL(file);
-    setPreviewUrl(url);
-    return () => URL.revokeObjectURL(url);
-  }, [file]);
+    const next = {};
+    const created = [];
+    files.forEach(file => { if (IMAGE_TYPES.has(fileMime(file))) { const url = URL.createObjectURL(file); next[`${file.name}:${file.size}:${file.lastModified}`] = url; created.push(url); } });
+    setPreviewUrls(next);
+    return () => created.forEach(url => URL.revokeObjectURL(url));
+  }, [files]);
 
   const execute = async (callback, kind = '') => {
     if (workingRef.current || busy) return null;
@@ -233,7 +252,7 @@ export default function AiImportPage({ t, profile, settings, busy = false, run, 
 
   const parse = async (event, enhanced = false) => {
     event?.preventDefault?.();
-    if (workingRef.current || busy || enhanced && !file) return;
+    if (workingRef.current || busy || enhanced && !files.length) return;
     if (!hasSource) {
       setError(t('aiImportNoSource'));
       return;
@@ -253,18 +272,32 @@ export default function AiImportPage({ t, profile, settings, busy = false, run, 
     const requestScope = scope;
     const result = await execute(() => service.aiParseExpense({
       text: text.trim(),
-      file,
+      files,
       timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       ledgerId: profile?.ledgerId,
       enhanced,
     }), enhanced ? 'enhanced' : 'parse');
     if (!mountedRef.current || scopeRef.current !== requestScope) return;
-    if (file) setImageAttempted(true);
+    if (files.some(file => IMAGE_TYPES.has(fileMime(file)))) setImageAttempted(true);
     if (!result) return;
     const parsed = resultItems(result).map(item => normalizeItem(item, settings, profile));
+    // Flag matching records for review; repeated purchases can be legitimate,
+    // so leave the decision to the user instead of silently deleting them.
+    const fingerprint = item => {
+      const merchant = normalizeText(item.merchant), note = normalizeText(item.note);
+      const description = merchant && !note.includes(merchant) ? [merchant, note].filter(Boolean).join(' · ') : note || merchant;
+      return item.occurredAt && [item.type, item.currency, item.amount, item.occurredAt, description].join('|');
+    };
+    const seen = new Set((profile.expenses || []).map(entry => fingerprint({ ...entry, amount: majorFromMinor(entry.amountMinor, entry.currency), occurredAt: toLocalInput(entry.occurredAt || entry.createdAt), merchant: entry.merchant || '', note: entry.note })).filter(Boolean));
+    for (const item of parsed) {
+      const key = fingerprint(item);
+      if (!key) continue;
+      if (seen.has(key)) { item.needsReview = true; item.reviewReason = [item.reviewReason, t('possibleDuplicate')].filter(Boolean).join(' · '); }
+      seen.add(key);
+    }
     setItems(parsed);
     setItemsScope(requestScope);
-    setWarnings(Array.isArray(result?.warnings) ? result.warnings.filter(Boolean).slice(0, 8) : []);
+    setWarnings(current => [...current, ...(Array.isArray(result?.warnings) ? result.warnings.filter(Boolean) : [])]);
     setExpanded(new Set(parsed.length ? [parsed[0].id] : []));
     if (!parsed.length) setError(t('aiImportNoResult'));
   };
@@ -308,6 +341,7 @@ export default function AiImportPage({ t, profile, settings, busy = false, run, 
       timezone: item.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone,
       splitMode: item.type === 'expense' && item.splitMode === 'equal' ? 'equal' : 'none',
       splitParticipants: item.type === 'expense' && item.splitMode === 'equal' ? [...new Set(item.splitParticipants || [])] : [],
+      recordKind: item.recordKind || 'purchase',
       ledgerId: profile?.ledgerId,
     };
     try { validateExpense(payload, settings); return payload; } catch { return null; }
@@ -334,11 +368,17 @@ export default function AiImportPage({ t, profile, settings, busy = false, run, 
     if (!result) return;
     const saved = Array.isArray(result) ? result : result.entries || result.expenses || [];
     onImported?.(saved.length ? saved : result);
+    if (result.partial) {
+      const ids = new Set(saved.map(entry => entry.id));
+      setItems(current => current.filter(item => !ids.has(item.id)));
+      setWarnings(result.warnings || []);
+      return;
+    }
     setItems([]);
     setExpanded(new Set());
     setWarnings([]);
     setText('');
-    updateFile(null);
+    updateFiles([]);
     if (inputRef.current) inputRef.current.value = '';
     setStatus(t('aiImportSaved', { n: payloads.length }));
   };
@@ -346,7 +386,7 @@ export default function AiImportPage({ t, profile, settings, busy = false, run, 
   const clear = () => {
     if (working || busy) return;
     setText('');
-    updateFile(null);
+    updateFiles([]);
     setItems([]);
     setExpanded(new Set());
     setWarnings([]);
@@ -368,30 +408,42 @@ export default function AiImportPage({ t, profile, settings, busy = false, run, 
 
     <form className="ai-import-source" onSubmit={event => parse(event)}>
       <label className="ai-import-text-label" htmlFor="ai-import-text">{t('aiImportTextLabel')}</label>
-      <Textarea id="ai-import-text" className="ai-import-text" rows={3} maxLength={4000} value={text} onChange={event => { setText(event.target.value); setError(''); }} placeholder={t('aiImportTextPlaceholder')} disabled={working || busy}/>
+      <Textarea id="ai-import-text" className="ai-import-text" rows={3} maxLength={MAX_IMPORT_TEXT} value={text} onPaste={event => { if (event.clipboardData.getData('text').length + text.length > MAX_IMPORT_TEXT) setWarnings(current => [...current.filter(warning => warning !== 'errorTextTooLong'), 'errorTextTooLong']); }} onChange={event => { setText(event.target.value); setError(''); }} placeholder={t('aiImportTextPlaceholder')} disabled={working || busy}/>
       <div className="ai-import-divider"><span>{t('aiImportImageLabel')}</span></div>
-      <input ref={inputRef} className="ai-import-file-input" type="file" accept="image/png,image/jpeg,image/webp" onChange={event => updateFile(event.target.files?.[0] || null)} disabled={working || busy}/>
+      <input ref={inputRef} className="ai-import-file-input" type="file" multiple accept="image/png,image/jpeg,image/webp,image/gif,application/pdf,text/csv,text/plain,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" onChange={event => { updateFiles(event.target.files); event.target.value = ''; }} disabled={working || busy}/>
       <div className="ai-import-file-row">
-        {previewUrl ? <Tappable Component="button" type="button" className="ai-import-preview" aria-label={t('aiImportReplaceImage')} onClick={() => inputRef.current?.click()} disabled={working || busy}><img src={previewUrl} alt=""/><span>{sourceLabel(file, t)}</span></Tappable> : <Button type="button" mode="outline" className="ai-import-file-button" disabled={working || busy} onClick={() => inputRef.current?.click()}><Icon name="receipt"/><span>{t('aiImportChooseImage')}</span></Button>}
-        {file && <span className="ai-import-file-ready">{t('aiImportImageReady')}</span>}
+        {!files.length && <Button type="button" mode="outline" className="ai-import-file-button" disabled={working || busy} onClick={() => inputRef.current?.click()}><Icon name="receipt"/><span>{t('aiImportChooseImage')}</span></Button>}
+        {files.length > 0 && <div className="ai-import-file-list" role="list">
+          {files.map(file => {
+            const key = `${file.name}:${file.size}:${file.lastModified}`;
+            const preview = previewUrls[key];
+            return <div role="listitem" key={key} className="ai-import-preview">
+              {preview ? <img src={preview} alt=""/> : <span className="ai-import-file-type">{fileTypeLabel(file)}</span>}
+              <span className="ai-import-filename">{sourceLabel(file, t)}</span><button type="button" className="ai-import-file-remove" aria-label={t('aiImportRemoveFile', { name: file.name })} disabled={working || busy} onClick={() => updateFiles(files.filter(item => item !== file))}>×</button>
+            </div>;
+          })}
+        </div>}
+        {files.length > 0 && <Button type="button" mode="plain" className="ai-import-add-file" disabled={working || busy} onClick={() => inputRef.current?.click()}>{t('aiImportReplaceImage')}</Button>}
       </div>
+      <small className="quiet-copy">{t('aiImportFileLimits')}</small>
       <div className="ai-import-actions">
         <Button type="submit" className="panel-primary" disabled={!canParse}>{operation === 'parse' ? t('aiImportParsing') : t('aiImportParse')}</Button>
-        {(text || file || items.length) && <Button type="button" mode="plain" className="text-button" disabled={working || busy} onClick={clear}>{t('aiImportClear')}</Button>}
+        {(text || files.length || items.length) && <Button type="button" mode="plain" className="text-button" disabled={working || busy} onClick={clear}>{t('aiImportClear')}</Button>}
       </div>
-      {file && imageAttempted && <div className="ai-import-enhanced"><span>{t('aiImportEnhancedHint')}</span><Button type="button" mode="plain" className="ai-import-enhanced-button" disabled={!canParse} onClick={event => parse(event, true)}><Icon name="spark"/>{operation === 'enhanced' ? t('aiImportEnhancing') : t('aiImportEnhanced')}</Button></div>}
+      {files.some(file => IMAGE_TYPES.has(fileMime(file))) && imageAttempted && <div className="ai-import-enhanced"><span>{t('aiImportEnhancedHint')}</span><Button type="button" mode="plain" className="ai-import-enhanced-button" disabled={!canParse} onClick={event => parse(event, true)}><Icon name="spark"/>{operation === 'enhanced' ? t('aiImportEnhancing') : t('aiImportEnhanced')}</Button></div>}
     </form>
 
     {(status || error) && <div className={`ai-import-status ${error ? 'is-error' : ''}`} role="status"><span>{error || status}</span></div>}
-    {warnings.length > 0 && <ul className="ai-import-warnings" aria-label={t('aiImportHint')}>{warnings.map((warning, index) => <li key={`${warning}-${index}`}>{warning}</li>)}</ul>}
+    {warnings.length > 0 && <ul className="ai-import-warnings" aria-label={t('aiImportHint')}>{warnings.map((warning, index) => <li key={index}>{typeof warning === 'object' ? `${warning.name || ''} · ${t(warning.code)}` : t(warning)}</li>)}</ul>}
 
     {currentItems.length > 0 && <form className="ai-import-results" onSubmit={saveAll}>
       <header className="ai-import-results-header"><h2>{t('aiImportResults', { n: currentItems.length })}</h2></header>
+      {currentItems.some(item => ['transfer', 'reimbursement'].includes(item.recordKind)) && <p className="quiet-copy">{t('recordKindBudgetHint')}</p>}
       <div className="ai-import-list">{currentItems.map((item, index) => {
         const category = categoriesFor(item).find(candidate => candidate.id === item.categoryId);
         const categoryName = category ? categoryLabel(category, settings.language) : t('aiImportCategory');
         const expandedItem = expanded.has(item.id);
-        const needsReview = !item.occurredAt || !item.amount || !item.categoryId || !item.consumer || item.confidence !== null && item.confidence < 0.75;
+        const needsReview = item.needsReview || !item.occurredAt || !item.amount || !item.categoryId || !item.consumer || item.confidence !== null && item.confidence < 0.75;
         const splitEnabled = item.type === 'expense' && consumers.length > 1;
         const summary = [item.merchant || categoryName, item.amount ? `${item.amount} ${item.currency}` : '', item.occurredAt ? item.occurredAt.replace('T', ' ') : t('aiImportTime')].filter(Boolean).join(' · ');
         return <article className={`ai-import-item ${expandedItem ? 'is-expanded' : ''}`} key={item.id}>
@@ -406,12 +458,16 @@ export default function AiImportPage({ t, profile, settings, busy = false, run, 
             <Input className="settings-input ai-import-field" header={t('aiImportAmount')} aria-label={t('aiImportAmount')} inputMode="decimal" value={item.amount} onChange={event => updateItem(item.id, { amount: numericText(event.target.value) })} required disabled={working || busy}/>
             <Select className="editor-select ai-import-field" aria-label={t('aiImportCurrency')} value={item.currency} onChange={event => updateItem(item.id, { currency: event.target.value })} disabled={working || busy}>{Object.keys(CURRENCIES).map(currency => <option key={currency} value={currency}>{currency}</option>)}</Select>
             <Select className="editor-select ai-import-field" aria-label={t('aiImportType')} value={item.type} onChange={event => updateItem(item.id, { type: event.target.value, categoryId: '', splitMode: 'none', splitParticipants: [] })} disabled={working || busy}><option value="expense">{t('aiImportExpense')}</option><option value="income">{t('aiImportIncome')}</option></Select>
+            <Select className="editor-select ai-import-field" aria-label={t('aiImportRecordKind')} value={item.recordKind} onChange={event => updateItem(item.id, { recordKind: event.target.value, needsReview: event.target.value !== 'purchase' })} disabled={working || busy}>
+              <option value="purchase">{t('recordKindPurchase')}</option><option value="transfer">{t('recordKindTransfer')}</option><option value="reimbursement">{t('recordKindReimbursement')}</option><option value="refund">{t('recordKindRefund')}</option><option value="gift">{t('recordKindGift')}</option><option value="other">{t('recordKindOther')}</option>
+            </Select>
             <Input type="datetime-local" className={`settings-input ai-import-field ai-import-time ${!item.occurredAt ? 'is-missing' : ''}`} header={t('aiImportTime')} aria-label={t('aiImportTime')} value={item.occurredAt} onChange={event => updateItem(item.id, { occurredAt: event.target.value, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone })} required disabled={working || busy}/>
             <Select className={`editor-select ai-import-field ${!item.categoryId ? 'is-missing' : ''}`} aria-label={t('aiImportCategory')} value={item.categoryId} onChange={event => updateItem(item.id, { categoryId: event.target.value })} required disabled={working || busy}><option value="">{t('aiImportCategory')}</option>{categoriesFor(item).map(category => <option key={category.id} value={category.id}>{categoryLabel(category, settings.language)}</option>)}</Select>
             <Select className={`editor-select ai-import-field ${!item.consumer ? 'is-missing' : ''}`} aria-label={t('aiImportConsumer')} value={item.consumer} onChange={event => updateItem(item.id, { consumer: event.target.value })} required disabled={working || busy}><option value="">{t('aiImportConsumer')}</option>{consumers.map(consumer => <option key={consumer.id} value={consumer.id}>{consumer.name}</option>)}</Select>
             {splitEnabled && <div className="ai-import-split"><Select className="editor-select ai-import-field" aria-label={t('aiImportSplit')} value={item.splitMode} onChange={event => updateItem(item.id, { splitMode: event.target.value, splitParticipants: event.target.value === 'equal' ? (item.splitParticipants?.length ? item.splitParticipants : consumers.map(consumer => consumer.id)) : [] })} disabled={working || busy}><option value="none">{t('aiImportNoSplit')}</option><option value="equal">{t('aiImportSplitEqual')}</option></Select>{item.splitMode === 'equal' && <div className="ai-import-participants" role="group" aria-label={t('aiImportSplitParticipants')}>{consumers.map(consumer => <Tappable Component="button" type="button" key={consumer.id} className={`ai-import-participant ${item.splitParticipants?.includes(consumer.id) ? 'is-selected' : ''}`} aria-pressed={item.splitParticipants?.includes(consumer.id)} onClick={() => toggleParticipant(item, consumer.id)} disabled={working || busy}>{consumer.name}</Tappable>)}</div>}</div>}
             <Input className="settings-input ai-import-field ai-import-note" header={t('aiImportNote')} aria-label={t('aiImportNote')} maxLength={160} value={item.note} onChange={event => updateItem(item.id, { note: event.target.value })} disabled={working || busy}/>
           </div>}
+          {expandedItem && item.needsReview && <p className="ai-import-review-reason">{t('aiImportReviewReason', { reason: item.reviewReason || t('aiImportReview') })}</p>}
           {expandedItem && item.rawText && <p className="ai-import-raw">{item.rawText}</p>}
         </article>;
       })}</div>

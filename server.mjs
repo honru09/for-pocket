@@ -3,6 +3,7 @@ import { timingSafeEqual } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { MAX_IMPORT_FILE_BYTES, MAX_IMPORT_TEXT, IMPORT_MIME_TYPES, IMAGE_MIME_TYPES, extractImportText } from './import-files.mjs';
 import { OAuth2Client } from 'google-auth-library';
 import { validateInitData } from './auth.mjs';
 import { createStore } from './store.mjs';
@@ -16,11 +17,20 @@ import { deriveTelegramWebhookSecret, ensureTelegramWebhook } from './telegram-c
 const root = path.dirname(fileURLToPath(import.meta.url));
 const { version } = JSON.parse(await readFile(path.join(root, 'package.json'), 'utf8'));
 const release = { version, commit: process.env.APP_COMMIT || null, revision: process.env.K_REVISION || null };
-export function createApp({ token = process.env.BOT_TOKEN || '', dataDir = path.resolve(root, process.env.DATA_DIR || 'data'), publicUrl = process.env.PUBLIC_URL || '', maxAgeSeconds = Number(process.env.AUTH_MAX_AGE_SECONDS || 86400), googleClientId = process.env.GOOGLE_CLIENT_ID || '', verifyGoogle, aiParser = createExpenseParser(), aiSummarizer = createExpenseSummarizer(), webhookSecret = process.env.TELEGRAM_WEBHOOK_SECRET || '', callTelegram, now = () => Date.now() } = {}) {
+
+function decodeBase64File(data, mimeType) {
+  if (typeof data !== 'string' || !/^[A-Za-z0-9+/]*={0,2}$/.test(data)) fail('errorAiInput', 400);
+  const estimatedBytes = Math.floor(data.length * 3 / 4) - (data.endsWith('==') ? 2 : data.endsWith('=') ? 1 : 0);
+  if (estimatedBytes < 1 || estimatedBytes > MAX_IMPORT_FILE_BYTES) fail('errorTooLarge', 413);
+  return { data, mimeType, bytes: Buffer.from(data, 'base64') };
+}
+
+export function createApp({ token = process.env.BOT_TOKEN || '', dataDir = path.resolve(root, process.env.DATA_DIR || 'data'), publicUrl = process.env.PUBLIC_URL || '', maxAgeSeconds = Number(process.env.AUTH_MAX_AGE_SECONDS || 86400), googleClientId = process.env.GOOGLE_CLIENT_ID || '', verifyGoogle, aiParser = createExpenseParser(), aiSummarizer = createExpenseSummarizer(), webhookSecret = process.env.TELEGRAM_WEBHOOK_SECRET || '', callTelegram, now = () => Date.now(), asyncPersist = process.env.STORE_ASYNC_PERSIST === 'true' || !process.env.K_SERVICE, storeOptions } = {}) {
   if (!Number.isSafeInteger(maxAgeSeconds) || maxAgeSeconds < 60) throw new Error('Invalid AUTH_MAX_AGE_SECONDS');
   const resolvedWebhookSecret = token ? deriveTelegramWebhookSecret(token, webhookSecret) : '';
-  const store = createStore(dataDir), google = new OAuth2Client(), attempts = new Map();
+  const store = createStore(dataDir, storeOptions), google = new OAuth2Client(), attempts = new Map();
   const telegramHandler = createTelegramHandler({ store, token, publicUrl, now, limit, callTelegram,
+    beforeDeliver: asyncPersist ? undefined : () => store.flush(),
     aiParser: { ...aiParser, summarize: (input, profile) => summarizeExpenses(input, profile, aiSummarizer, now()) } });
   function limit(key, max = 12) {
     const at = now(), item = attempts.get(key);
@@ -90,28 +100,50 @@ export function createApp({ token = process.env.BOT_TOKEN || '', dataDir = path.
     const headerTimezone = String(req.headers['x-timezone'] || req.headers['x-ai-timezone'] || '').trim();
     if (contentType === 'application/json') {
       const body = await bodyOf(req, 12 * 1024 * 1024);
-      const text = typeof body?.text === 'string' ? body.text.trim().slice(0, 4000) : '';
+      const originalText = typeof body?.text === 'string' ? body.text.trim() : '';
+      const text = originalText.slice(0, MAX_IMPORT_TEXT);
       const timezone = String(body?.timezone || headerTimezone || Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC').slice(0, 80);
-      const image = body?.image && typeof body.image === 'object' ? body.image : (body?.imageBase64 ? { data: body.imageBase64, mimeType: body.mimeType } : null);
-      if (image) {
-        if (typeof image.data !== 'string' || !/^image\/(jpeg|png|webp|gif)$/.test(String(image.mimeType || '').toLowerCase())) fail('errorAiInput', 400);
-        if (!/^[A-Za-z0-9+/]*={0,2}$/.test(image.data) || image.data.length > 11 * 1024 * 1024) fail('errorAiInput', 400);
-        const estimatedBytes = Math.floor(image.data.length * 3 / 4) - (image.data.endsWith('==') ? 2 : image.data.endsWith('=') ? 1 : 0);
-        if (estimatedBytes < 1 || estimatedBytes > 8 * 1024 * 1024) fail('errorTooLarge', 413);
+      const legacy = body?.image && typeof body.image === 'object' ? body.image : (body?.imageBase64 ? { data: body.imageBase64, mimeType: body.mimeType } : null);
+      const file = body?.file && typeof body.file === 'object' ? body.file : legacy;
+      let normalizedFile = null;
+      if (file) {
+        const mimeType = String(file.mimeType || '').toLowerCase();
+        if (!IMPORT_MIME_TYPES.has(mimeType)) fail('errorFileType', 415);
+        const decoded = decodeBase64File(file.data, mimeType);
+        const extracted = IMAGE_MIME_TYPES.has(mimeType) || mimeType === 'application/pdf' ? { text: '', truncated: false } : await extractImportText(decoded.bytes, mimeType);
+        const name = typeof file.name === 'string' ? file.name.slice(0, 160) : '';
+        normalizedFile = { data: decoded.data, mimeType, ...(name ? { name } : {}) };
+        if (extracted.text) {
+          const source = [text, extracted.text].filter(Boolean).join('\n\n');
+          const combined = source.slice(0, MAX_IMPORT_TEXT);
+          return { text: combined, file: null, image: null, timezone, enhanced: false, now: now(),
+            ledgerId: typeof body?.ledgerId === 'string' ? body.ledgerId.trim() : String(queryLedgerId || '').trim(),
+            textTruncated: originalText.length > MAX_IMPORT_TEXT || extracted.truncated || source.length > MAX_IMPORT_TEXT,
+            telegramUserId: typeof body?.telegramUserId === 'string' || typeof body?.telegramUserId === 'number' ? String(body.telegramUserId).trim() : '' };
+        }
       }
-      if (!text && !image) fail('errorAiInput', 400);
-      return { text, image: image ? { data: image.data, mimeType: String(image.mimeType).toLowerCase() } : null, timezone, enhanced: Boolean(image && body.enhanced === true), now: now(),
+      if (!text && !normalizedFile) fail('errorAiInput', 400);
+      return { text, file: normalizedFile, image: normalizedFile && IMAGE_MIME_TYPES.has(normalizedFile.mimeType) ? normalizedFile : null, timezone, enhanced: Boolean(normalizedFile && body.enhanced === true), now: now(), textTruncated: originalText.length > MAX_IMPORT_TEXT,
         ledgerId: typeof body?.ledgerId === 'string' ? body.ledgerId.trim() : String(queryLedgerId || '').trim(),
         telegramUserId: typeof body?.telegramUserId === 'string' || typeof body?.telegramUserId === 'number' ? String(body.telegramUserId).trim() : '' };
     }
-    if (!/^image\/(jpeg|png|webp|gif)$/.test(contentType)) fail('errorAiInput', 415);
-    const bytes = await rawBody(req, 8 * 1024 * 1024);
+    if (!IMPORT_MIME_TYPES.has(contentType)) fail('errorFileType', 415);
+    const bytes = await rawBody(req, MAX_IMPORT_FILE_BYTES);
     if (!bytes.length) fail('errorAiInput', 400);
     const timezone = String(headerTimezone || Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC').slice(0, 80);
-    return { text: '', image: { data: bytes.toString('base64'), mimeType: contentType }, timezone, now: now(), ledgerId: String(queryLedgerId || '').trim(),
+    const file = { data: bytes.toString('base64'), mimeType: contentType };
+    const extracted = IMAGE_MIME_TYPES.has(contentType) || contentType === 'application/pdf' ? { text: '', truncated: false } : await extractImportText(bytes, contentType);
+    return { text: extracted.text, file: extracted.text ? null : file, image: extracted.text || !IMAGE_MIME_TYPES.has(contentType) ? null : file, timezone, now: now(), textTruncated: extracted.truncated, ledgerId: String(queryLedgerId || '').trim(),
       telegramUserId: String(req.headers['x-telegram-user-id'] || '').trim() };
   }
-  function send(res, status, data) { res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' }); res.end(JSON.stringify(data)); }
+  async function send(res, status, data) {
+    // Request-based Cloud Run CPU can pause after the response. Unless the
+    // operator explicitly enables background persistence, finish writes before
+    // acknowledging success there. Local requests keep the debounced fast path.
+    if (!asyncPersist && status < 400) await store.flush();
+    res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' });
+    res.end(JSON.stringify(data));
+  }
   function checkOrigin(req) {
     if (['GET', 'HEAD'].includes(req.method) || !req.headers.origin) return;
     const allowed = new Set([`http://${req.headers.host}`, `https://${req.headers.host}`, 'https://web.telegram.org']);
@@ -119,10 +151,10 @@ export function createApp({ token = process.env.BOT_TOKEN || '', dataDir = path.
     if (req.headers.origin === 'null' && req.headers['x-telegram-init-data']) return;
     if (!allowed.has(req.headers.origin)) fail('errorOrigin', 403);
   }
-  return http.createServer(async (req, res) => {
+  const app = http.createServer(async (req, res) => {
     try {
       const url = new URL(req.url, 'http://localhost');
-      if (url.pathname === '/api/config' && req.method === 'GET') { send(res, 200, { ...release, mode: token || googleClientId ? 'remote' : 'local', googleClientId, telegramEnabled: Boolean(token), aiEnabled: Boolean(aiParser?.enabled) }); return; }
+      if (url.pathname === '/api/config' && req.method === 'GET') { await send(res, 200, { ...release, mode: token || googleClientId ? 'remote' : 'local', googleClientId, telegramEnabled: Boolean(token), aiEnabled: Boolean(aiParser?.enabled) }); return; }
       if (url.pathname.startsWith('/api/')) {
         checkOrigin(req);
         if (['/api/telegram/webhook', '/api/telegram-webhook'].includes(url.pathname) && req.method === 'POST') {
@@ -130,8 +162,8 @@ export function createApp({ token = process.env.BOT_TOKEN || '', dataDir = path.
           const update = await bodyOf(req, 65536);
           if (!Number.isSafeInteger(update?.update_id) || update.update_id < 0) fail('errorAiInput', 400);
           const handled = await telegramHandler.handle(update);
-          if (handled?.retryable) { send(res, 503, { ok: false }); return; }
-          send(res, 200, { ok: true }); return;
+          if (handled?.retryable) { await send(res, 503, { ok: false }); return; }
+          await send(res, 200, { ok: true }); return;
         }
         const aiRoute = url.pathname === '/api/ai/parse-expense' && req.method === 'POST';
         const telegramAiRoute = url.pathname === '/api/ai/telegram-parse' && req.method === 'POST';
@@ -149,8 +181,8 @@ export function createApp({ token = process.env.BOT_TOKEN || '', dataDir = path.
           const parsed = await aiParser.parse(input, context.profile.settings);
           await store.run(db => { const p = handleDomain(db, uid, '/profile', 'GET', {}, { now: now(), limit }); if (p.ledgerId !== context.profile.ledgerId) fail('errorLedgerChanged', 409); });
           const items = Array.isArray(parsed) ? parsed : parsed?.items && Array.isArray(parsed.items) ? parsed.items : [parsed];
-          const response = { items, ...(req.telegramSessionToken ? { sessionToken: req.telegramSessionToken } : {}) };
-          send(res, 200, response); return;
+          const response = { items, ...(input.textTruncated ? { warnings: ['errorTextTooLong'] } : {}), ...(req.telegramSessionToken ? { sessionToken: req.telegramSessionToken } : {}) };
+          await send(res, 200, response); return;
         }
         if (telegramAiRoute) {
           if (!safeTokenEqual(req.headers['x-bot-token'], token)) fail('errorAuth', 401);
@@ -165,7 +197,7 @@ export function createApp({ token = process.env.BOT_TOKEN || '', dataDir = path.
           });
           const parsed = await aiParser.parse(input, context.profile.settings);
           const items = Array.isArray(parsed) ? parsed : parsed?.items && Array.isArray(parsed.items) ? parsed.items : [parsed];
-          send(res, 200, { userId: `u_${context.uid}`, telegramUserId: rawId, items, saved: false }); return;
+          await send(res, 200, { userId: `u_${context.uid}`, telegramUserId: rawId, items, saved: false }); return;
         }
         if (url.pathname === '/api/ai/summary' && req.method === 'POST') {
           if (body.period !== undefined && !['week', 'month'].includes(body.period)) fail('errorAiInput');
@@ -185,7 +217,7 @@ export function createApp({ token = process.env.BOT_TOKEN || '', dataDir = path.
           limit(`ai-summary:${context.uid}`, 6);
           const result = await summarizeExpenses(body, context.profile, aiSummarizer, now());
           await store.run(db => { const p = handleDomain(db, context.uid, '/profile', 'GET', {}, { now: now(), limit }); if (p.ledgerId !== context.profile.ledgerId) fail('errorLedgerChanged', 409); });
-          send(res, 200, { ...result, ...(req.telegramSessionToken ? { sessionToken: req.telegramSessionToken } : {}) }); return;
+          await send(res, 200, { ...result, ...(req.telegramSessionToken ? { sessionToken: req.telegramSessionToken } : {}) }); return;
         }
         let googlePayload;
         if (url.pathname === '/api/auth/google' && req.method === 'POST') {
@@ -224,9 +256,9 @@ export function createApp({ token = process.env.BOT_TOKEN || '', dataDir = path.
         const response = req.telegramSessionToken && result && typeof result === 'object' && !Array.isArray(result)
           ? { ...result, sessionToken: req.telegramSessionToken }
           : result;
-        send(res, 200, response); return;
+        await send(res, 200, response); return;
       }
-      if (['/health', '/healthz'].includes(url.pathname)) { send(res, 200, { ok: true, ...release }); return; }
+      if (['/health', '/healthz'].includes(url.pathname)) { await send(res, 200, { ok: true, ...release }); return; }
       const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg', '.woff2': 'font/woff2', '.webmanifest': 'application/manifest+json' };
       const isIndex = ['/', '/index.html'].includes(url.pathname), asset = /^\/assets\/([a-zA-Z0-9_.-]+)$/.exec(url.pathname)?.[1];
       const publicName = ['/logo.png', '/logo.jpg', '/apple-touch-icon.png', '/apple-touch-icon-180x180.png', '/manifest.webmanifest'].includes(url.pathname) && path.basename(url.pathname);
@@ -239,11 +271,28 @@ export function createApp({ token = process.env.BOT_TOKEN || '', dataDir = path.
       fail('errorNotFound', 404);
     } catch (error) {
       if (!req.complete) req.resume();
-      const validation = !(error instanceof RequestError) && (['errorEntryTime', 'errorSplit'].includes(error.message) || /^(请|分类|收入分类|角色|记录|备注|时区)/.test(error.message));
-      if (!res.headersSent) send(res, error.status || (validation ? 400 : 500), { error: error instanceof RequestError || error instanceof AiError || validation ? error.message : 'errorSave' }); else res.end();
+      const validation = !(error instanceof RequestError) && (['errorEntryTime', 'errorSplit', 'errorFileRead'].includes(error.message) || /^(请|分类|收入分类|角色|记录|备注|时区)/.test(error.message));
+      if (!res.headersSent) await send(res, error.status || (validation ? 400 : 500), { error: error instanceof RequestError || error instanceof AiError || validation ? error.message : 'errorSave' }); else res.end();
       if (!(error instanceof RequestError) && !(error instanceof AiError) && !validation) console.error('Request failed:', error.name, error.code || 'internal');
     }
   });
+  // Stop accepting requests and wait for every active response before flushing:
+  // an in-flight login, model parse or webhook can still mutate the store.
+  const closeServer = app.close.bind(app);
+  let closing;
+  app.close = callback => {
+    if (!closing) {
+      closing = new Promise((resolve, reject) => closeServer(error => error ? reject(error) : resolve()))
+        .then(() => store.close()).catch(error => {
+        try { console.error('Store flush failed during shutdown:', error); } catch {}
+        throw error;
+      });
+    }
+    void closing.then(() => callback?.(), error => callback?.(error));
+    return app;
+  };
+  app.flushStore = () => store.flush();
+  return app;
 }
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const port = Number(process.env.PORT || 8787), host = process.env.HOST || (process.env.RENDER || process.env.K_SERVICE || process.env.NODE_ENV === 'production' ? '0.0.0.0' : '127.0.0.1');
@@ -254,6 +303,12 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
       .then(result => console.log(`Telegram webhook ${result.status}.`))
       .catch(error => console.error(`Telegram webhook setup skipped: ${error.message}`));
   }
-  process.on('SIGINT', () => app.close(() => process.exit(0)));
-  process.on('SIGTERM', () => app.close(() => process.exit(0)));
+  let stopping = false;
+  const stop = () => {
+    if (stopping) return;
+    stopping = true;
+    app.close(error => process.exit(error ? 1 : 0));
+  };
+  process.on('SIGINT', stop);
+  process.on('SIGTERM', stop);
 }

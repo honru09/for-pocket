@@ -43,7 +43,7 @@ async function fixture(t) {
   return {
     calls, values, init: id => signed(id, time), advance: duration => { time += duration; },
     restart: async () => { await new Promise(resolve => server.close(resolve)); await start(); },
-    database: async () => JSON.parse(await readFile(path.join(dataDir, '_pocket-v2.json'), 'utf8')),
+    database: async () => { await server.flushStore(); return JSON.parse(await readFile(path.join(dataDir, '_pocket-v2.json'), 'utf8')); },
     request: async (route, { raw, session, method = 'GET', body } = {}) => {
       const response = await nativeFetch(base + '/api' + route, { method, headers: { 'Content-Type': 'application/json', ...(raw ? { 'X-Telegram-Init-Data': raw } : {}), ...(session ? { Authorization: `Bearer ${session}` } : {}) }, body: body === undefined ? undefined : JSON.stringify(body) });
       return { status: response.status, data: await response.json() };

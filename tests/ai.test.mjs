@@ -60,7 +60,7 @@ async function fixture(t, parser) {
   });
   return {
     calls,
-    database: async () => JSON.parse(await readFile(path.join(dataDir, '_pocket-v2.json'), 'utf8')),
+    database: async () => { await server.flushStore(); return JSON.parse(await readFile(path.join(dataDir, '_pocket-v2.json'), 'utf8')); },
     request: async (route, { user = 101, session, body, bytes, headers = {}, method = 'POST' } = {}) => {
       const response = await fetch(base + route, {
         method,
@@ -107,13 +107,14 @@ test('AI parser accepts fenced JSON and rejects unusable model data without fabr
   assert.equal(items[0].source, 'text');
   for (const [raw, message, status] of [
     ['not JSON', 'errorAiResult', 502],
-    [[], 'errorAiResult', 502],
     [[rawItem({ amount: -10 })], 'errorAiAmount', 422],
     [[rawItem({ type: 'transfer' })], 'errorAiType', 422],
   ]) {
     const invalid = createExpenseParser({ modelClient: modelReturning(raw) });
     await assert.rejects(invalid.parse({ text: 'bad result', timezone: 'UTC' }, initialSettings()), { name: 'AiError', message, status });
   }
+  const empty = createExpenseParser({ modelClient: modelReturning([]) });
+  assert.deepEqual(await empty.parse({ text: 'no expense', timezone: 'UTC' }, initialSettings()), []);
 });
 
 test('AI parser selects the configured text and vision models and returns safe provider failures', async () => {
@@ -211,13 +212,15 @@ test('public AI accepts raw image streams and rejects unsupported, empty and ove
   assert.equal(image.status, 200);
   assert.deepEqual(f.calls[0].input.image, { mimeType: 'image/png', data: imageBytes.toString('base64') });
   assert.equal(f.calls[0].input.timezone, 'Europe/Kyiv');
-  assert.equal((await f.request('/ai/parse-expense', { bytes: 'lunch', headers: { 'Content-Type': 'text/plain' } })).status, 415);
+  assert.equal((await f.request('/ai/parse-expense', { bytes: 'lunch 188', headers: { 'Content-Type': 'text/plain' } })).status, 200);
+  assert.equal(f.calls[1].input.text, 'lunch 188');
+  assert.equal((await f.request('/ai/parse-expense', { bytes: '<svg/>', headers: { 'Content-Type': 'image/svg+xml' } })).status, 415);
   assert.equal((await f.request('/ai/parse-expense', { bytes: Buffer.alloc(0), headers: { 'Content-Type': 'image/png' } })).status, 400);
   assert.equal((await f.request('/ai/parse-expense', { body: { text: '   ' } })).status, 400);
-  assert.equal((await f.request('/ai/parse-expense', { body: { image: { mimeType: 'image/svg+xml', data: imageBytes.toString('base64') } } })).status, 400);
+  assert.equal((await f.request('/ai/parse-expense', { body: { image: { mimeType: 'image/svg+xml', data: imageBytes.toString('base64') } } })).status, 415);
   const large = await f.request('/ai/parse-expense', { bytes: Buffer.alloc(8 * 1024 * 1024 + 1), headers: { 'Content-Type': 'image/png' } });
   assert.equal(large.status, 413);
-  assert.equal(f.calls.length, 1, 'invalid inputs must not reach the model');
+  assert.equal(f.calls.length, 2, 'invalid inputs must not reach the model');
 });
 
 test('AI parsing rejects a stale ledger before model use and maps against the active ledger categories', async t => {

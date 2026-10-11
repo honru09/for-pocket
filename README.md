@@ -46,7 +46,7 @@ npm start
 
 `bot.mjs` 检测到已有 webhook 会停止，避免覆盖已有服务。Cloud Run 以 `BOT_TOKEN` 和 `PUBLIC_URL` 启动时会自动把 webhook 注册到 `/api/telegram-webhook`；旧的 `/api/telegram/webhook` 会安全迁移，其他地址不会接管。没有这两个变量时仍可使用 `npm run bot:configure -- --apply` 手动配置。`TELEGRAM_WEBHOOK_SECRET` 留空时，服务端和配置脚本会从 `BOT_TOKEN` 派生同一个随机不可读的校验值。
 
-Telegram 私聊支持直接发文字、照片或图片文件。AI 会用 Vertex AI Gemini 解析金额、币种、用途、商户、时间、付款人和分摊，默认先发预览并提供确认按钮；发送 `/auto` 后识别结果会直接入账，缺少时间时使用当前时间，发送 `/manual` 可恢复手动确认。图片不会写入账本或持久化，识别失败仍可重试或重发。
+Telegram 私聊支持文字、照片、语音/音频以及 PDF、Excel、Word 文件。语音最多 60 秒、单个文件最多 8 MB，通过 getFile 下载后直接传给 Gemini 原生多模态接口；未明确其他币种时按 JPY 记账。识别出金额、用途、商户、时间、付款人和分摊后，显示确认卡，可确认或点击修改后重新发送完整内容。回复跟随当次中、英、乌发送语言；听不清会提示重说或打字。`/auto` 开启自动入账，`/manual` 恢复手动确认；转账、代付、低可信度或截断内容始终需要核对。原始文件与音频不会存入账本。
 
 ## AI 解析 API
 
@@ -97,7 +97,7 @@ npm test
 
 React 18 + Vite，实际使用 TelegramUI 的 AppRoot、Button、Input、Select、Cell、SegmentedControl、Snackbar、Placeholder、Tappable；基础样式在 `src/main.jsx` 引入，主题变量延续原配色。
 
-页面切换约 220ms，按压约 100ms、释放约 240ms。transform / opacity 与 Web Animations API 驱动，不通过 React 逐帧更新布局。减少动态效果时取消伸缩、滑入。实际帧率取决于设备和 Telegram WebView，未声称所有手机达到 120fps。
+页面切换约 220ms，按压约 100ms、释放约 240ms。transform / opacity 与 Web Animations API 驱动，不通过 React 逐帧更新布局。动效按照用户选择始终完整播放。实际帧率取决于设备和 Telegram WebView，未声称所有手机达到 120fps。
 
 ## 主要文件
 
@@ -119,7 +119,7 @@ React 18 + Vite，实际使用 TelegramUI 的 AppRoot、Button、Input、Select�
 项目已完整迁到 **D:\Projects\Tools\for-pocket**。正式平台为 Google Cloud Run：
 [生产站点](https://for-pocket-698348906987.asia-northeast1.run.app)。线上 Google/Telegram 配置已存在，真实 OAuth 验收仍需实际账号。
 
-记账页按 Telegram 实际可用高度适配，一屏显示金额、用途、数字键和成员选择；确认键为 44×44px 小方格。“记一笔 / 小账本”固定在底部并预留安全区。较矮屏幕将分类和数字键并排排列。圈子名称可由管理员点击直接编辑；分类图标按钮展开图标与颜色选项。界面改动通过本地验证后，推送 main 会由 Cloud Build 自动发布到 Cloud Run。
+记账页按 Telegram 实际可用高度适配，一屏显示金额、用途、数字键和成员选择；确认键放在云朵旁。“记一笔 / 小账本”固定在底部并预留安全区。较矮屏幕将分类和数字键并排排列。圈子名称可由管理员点击直接编辑；分类图标按钮展开图标与颜色选项。界面改动通过本地验证后，推送 main 会由 Cloud Build 自动发布到 Cloud Run。
 
 金额卡片的小云朵可点击：闭眼笑、害羞、疑惑、叹气、小生气、暴怒，再轻轻炸开；「止まれ」路牌从屏幕顶部落下。点路牌两次或第七次点击后等待七秒恢复。彩蛋始终播放完整动效。
 
@@ -134,3 +134,17 @@ npm run verify:deployment -- --require-google --require-telegram
 ```
 
 Cloud Run 的 /data 必须另行配置持久存储；单纯创建目录不会保留重启后的账单。详见 [当前交接说明](DEPLOYMENT_HANDOFF_PLAN.md)。
+
+## 多文件整理与即时记账
+
+网页一次可选 8 个文件，每个最多 8 MB，合计 32 MB；支持图片、PDF、TXT/CSV、XLS/XLSX、DOC/DOCX。Office 文件在服务器提取文字；过长内容提示分批整理。每个文件单独分析，某个失败仍保留其他结果。导入以 50 笔为一批，中途失败保留未导入记录，已成功记录不会重复提交。
+
+转账及代付/回款保留在账本，标记账单类型并排除在日常支出、入账和消费小结统计之外；普通购买与报销往来请在预览中核对，系统不会猜测不同渠道是否已结清。
+
+记账立即清空输入、更新本地账本并播放云朵现金动作，网络提交独立运行，不锁住下一笔输入。失败会撤回临时记录并显示持久重试入口；未确认数据留在当前浏览器，刷新后可用原 ID 重试，保留首次记账时间。币种/语种立即切换，后台按顺序保存，分类编辑等待此前设置保存完成以避免覆盖。
+
+## 内存与写盘配置
+
+store 先提交内存，40 ms 防抖合并异步写盘，提供 flush/close，并在正常退出时等待持久化完成。Cloud Run 默认在 HTTP 响应前 flush；只有确认实例在请求结束后仍提供 CPU，才设置 `STORE_ASYNC_PERSIST=true` 开启响应后的后台写盘。Google 官方说明：按请求计费的实例在响应后会暂停或严格限制 CPU，因此不能直接依赖后台任务（[官方说明](https://docs.cloud.google.com/run/docs/tips/general#background_activity)）。前端乐观更新在两种模式下均即时反馈，不受写盘等待影响。
+
+当前 JSON store 仍要求单实例/单进程和已验证的持久存储。本次没有修改 Cloud Run 的计费或存储配置。

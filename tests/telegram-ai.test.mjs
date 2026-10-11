@@ -5,6 +5,9 @@ import os from 'node:os';
 import path from 'node:path';
 import * as XLSX from 'xlsx';
 import { createStore } from '../store.mjs';
+import { createExpenseParser } from '../ai.mjs';
+import { expenseStats } from '../ai-summary.mjs';
+import { BOT_COPY } from '../bot-i18n.mjs';
 import { ensureUser, handleDomain } from '../domain.mjs';
 import { createTelegramHandler, DRAFT_TTL, MAX_AUDIO_SECONDS, MAX_IMAGE_BYTES } from '../telegram-ai.mjs';
 import { configureTelegramBot } from '../scripts/configure-bot.mjs';
@@ -227,12 +230,86 @@ test('spoken expenses default to JPY even when the active ledger uses another cu
 });
 
 test('transfers and uncertain records always require review even with automatic saving enabled', async t => {
-  const f = await fixture(t, { autoConfirm: true, aiParser: { async parse() { return [parsed({ recordKind: 'transfer', needsReview: false })]; } } });
+  const f = await fixture(t, { autoConfirm: true, aiParser: { async parse() { return [
+    parsed({ amountMinor: 500, recordKind: 'transfer', needsReview: false }),
+    parsed({ amountMinor: 250, type: 'income', categoryId: 'reimburse', recordKind: 'reimbursement', needsReview: false }),
+    parsed({ amountMinor: 188, recordKind: 'purchase', needsReview: false }),
+  ]; } } });
   const draft = await f.handler.handle(message(176, '朋友转账 500 日元'));
   assert.equal(draft.kind, 'draft');
   assert.match(f.calls.at(-1).params.text, /请核对/);
   assert.equal((await f.database()).ledgers['101'].expenses.length, 0);
   assert.equal((await f.handler.handle(callback(177, draft.draftId))).kind, 'confirmed');
+  const db = await f.database();
+  const expenses = db.ledgers['101'].expenses;
+  assert.deepEqual(expenses.map(entry => entry.recordKind), ['transfer', 'reimbursement', 'purchase']);
+  const stats = expenseStats({ period: 'month', currency: 'JPY', timezone: 'Asia/Tokyo' },
+    { settings: db.users['101'].settings, expenses }, at);
+  assert.equal(stats.count, 1);
+  assert.equal(stats.expenseMinor, 188);
+  assert.equal(stats.incomeMinor, 0);
+});
+
+test('real parser defaults unmentioned text and voice payers to the sender, but explicit unknowns still need review', async t => {
+  const modelRequests = [];
+  const raw = (patch = {}) => ({ amount: 188, currency: 'JPY', type: 'expense', categoryId: 'stomach', categoryLabel: '胃',
+    merchant: 'Lunch', note: 'Lunch', rawText: 'lunch 188', occurredAt: '2026-10-11T01:00:00.000Z', timezone: 'Asia/Tokyo',
+    consumer: '', splitMode: 'none', splitParticipants: [], recordKind: 'purchase', needsReview: false, reviewReason: '',
+    detectedLanguage: 'zh', currencyExplicit: false, confidence: 0.95, ...patch });
+  const responses = [raw(), raw({ amount: 250 }), raw({ consumer: 'unknown payer' }),
+    raw({ consumer: '', needsReview: true, reviewReason: '付款人不确定' })];
+  const aiParser = createExpenseParser({ modelClient: { async generateContent(request) {
+    modelRequests.push(request);
+    return { response: { candidates: [{ content: { parts: [{ text: JSON.stringify([responses.shift()]) }] } }] } };
+  } } });
+  const f = await fixture(t, { autoConfirm: true, aiParser, downloadFile: async () => Buffer.from('spoken lunch amount') });
+  const text = await f.handler.handle(message(185, '今天午饭 188 日元'));
+  assert.equal(text.kind, 'confirmed');
+  assert.equal(text.auto, true);
+  const voice = id => {
+    const update = message(id, '');
+    update.message.voice = { file_id: `voice-${id}`, mime_type: 'audio/ogg', duration: 5, file_size: 64 };
+    return update;
+  };
+  const spoken = await f.handler.handle(voice(186));
+  assert.equal(spoken.kind, 'confirmed');
+  assert.equal(spoken.auto, true);
+  const unknown = await f.handler.handle(voice(187));
+  assert.equal(unknown.kind, 'draft');
+  const ambiguous = await f.handler.handle(voice(188));
+  assert.equal(ambiguous.kind, 'draft');
+  const db = await f.database();
+  assert.deepEqual(db.ledgers['101'].expenses.map(entry => [entry.amountMinor, entry.consumer]), [[188, 'u_101'], [250, 'u_101']]);
+  assert.equal(db.telegram.drafts[unknown.draftId].needsReview, true);
+  assert.equal(db.telegram.drafts[ambiguous.draftId].needsReview, true);
+  assert.equal(db.telegram.drafts[unknown.draftId].retryId, null);
+  assert.ok(modelRequests.every(request => request.contents[0].parts[0].text.includes('u_101')));
+});
+
+test('voice recognition failures ask for a new recording without an image retry button', async t => {
+  const f = await fixture(t, { downloadFile: async () => Buffer.from('unclear voice'),
+    aiParser: { async parse() { throw new Error('provider failure'); } } });
+  const voice = message(189, '');
+  voice.message.voice = { file_id: 'unclear', mime_type: 'audio/ogg', duration: 5, file_size: 64 };
+  const result = await f.handler.handle(voice);
+  assert.equal(result.reason, 'audioNoResult');
+  assert.match(f.calls.at(-1).params.text, /再说一次/);
+  assert.equal(f.calls.at(-1).params.reply_markup, undefined);
+  assert.equal((await f.database()).ledgers['101'].expenses.length, 0);
+});
+
+test('confirmation and help messages cover the same text, voice, and document flow in every language', () => {
+  assert.equal(BOT_COPY.zh.confirm, '✅ 确认记入账本');
+  assert.equal(BOT_COPY.en.confirm, '✅ Confirm in ledger');
+  for (const language of ['zh', 'en', 'uk']) {
+    assert.match(BOT_COPY[language].confirm, /^✅ /);
+    assert.match(BOT_COPY[language].help, /60/);
+    assert.match(BOT_COPY[language].help, /Excel/);
+    assert.match(BOT_COPY[language].help, /Word/);
+    assert.match(BOT_COPY[language].help, /PDF/);
+    assert.match(BOT_COPY[language].help, /8/);
+    assert.doesNotMatch(BOT_COPY[language].help, /AI|Gemini|Flash/);
+  }
 });
 
 test('draft editing is owner-bound, replaces only the pending preview, and requires a fresh confirmation', async t => {

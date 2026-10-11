@@ -1,6 +1,6 @@
 import React, { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { AppRoot, Button, Cell, Input, Placeholder, SegmentedControl, Select, Snackbar, Tappable } from '@telegram-apps/telegram-ui';
-import { CURRENCIES, COLORS, ICONS, DEFAULT_CATEGORIES, DEFAULT_INCOME_CATEGORIES, initialSettings, validateSettings, dateKey, resolveLanguage } from '../public/shared.mjs';
+import { CURRENCIES, COLORS, ICONS, DEFAULT_CATEGORIES, DEFAULT_INCOME_CATEGORIES, initialSettings, validateSettings, dateKey, resolveLanguage, isBudgetEntry } from '../public/shared.mjs';
 import { LOCALES, translate, translateError, categoryLabel } from '../public/i18n.mjs';
 import { PREVIEW_KEY, SESSION_KEY, localService, remoteService } from './services.mjs';
 import { Avatar, CirclePicker, ProfileEditor, AccountPage, CirclesPage, Sheet } from './AccountViews.jsx';
@@ -15,6 +15,7 @@ const telegram = window.Telegram?.WebApp;
 const language = resolveLanguage(telegram?.initDataUnsafe?.user?.language_code || navigator.language);
 const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 const blankDraft = () => ({ raw: '0', selected: null, consumer: null, note: '', type: 'expense', occurredAt: null });
+const OUTBOX_KEY = 'for-pocket.unconfirmed.v1';
 function haptic(kind = 'selection') { try { if (!telegram?.isVersionAtLeast?.('6.1')) return; kind === 'success' ? telegram.HapticFeedback.notificationOccurred(kind) : telegram.HapticFeedback.selectionChanged(); } catch {} }
 function countText(n, lang, currency) {
   const plural = new Intl.PluralRules(LOCALES[lang]).select(n);
@@ -32,11 +33,15 @@ export default function App() {
   const [isRemote, setRemote] = useState(false), [config, setConfig] = useState({}), [notice, setNotice] = useState(null), [failed, setFailed] = useState(false), [syncFailed, setSyncFailed] = useState(false);
   const [picker, setPicker] = useState(false), [period, setPeriod] = useState('month'), [historyCurrency, setHistoryCurrency] = useState('JPY');
   const [editing, setEditing] = useState([]), [editingType, setEditingType] = useState('expense'), [today, setToday] = useState(() => dateKey(new Date(), timezone));
-  const [retryCount, setRetryCount] = useState(0);
+  const [retryCount, setRetryCount] = useState(0), [celebration, setCelebration] = useState(null);
+  const [writeCount, setWriteCount] = useState(0);
+  const [failedCount, setFailedCount] = useState(0);
   const [timeEditor, setTimeEditor] = useState(null);
   const [noteEditor, setNoteEditor] = useState(false);
   const [editingCategoryId, setEditingCategoryId] = useState(null);
   const service = useRef(null), busyRef = useRef(false), state = useRef({}), settingsRef = useRef(settings), currentProfile = useRef(null), pending = useRef(null), drafts = useRef(new Map());
+  const pendingWrites = useRef(new Map()), failedWrites = useRef(new Map()), settingWrites = useRef(new Map()), settingQueue = useRef(Promise.resolve());
+  const confirmedSettings = useRef(new Map());
   const pageRef = useRef(null), mascotRef = useRef(null), stageRef = useRef(null), keyboard = useRef(false), epoch = useRef(0);
   const t = useCallback((key, values) => translate(settings.language, key, values), [settings.language]);
   const locale = LOCALES[settings.language], disabled = busy || !ready;
@@ -51,7 +56,28 @@ export default function App() {
   const changeBusy = value => { busyRef.current = value; setBusy(value); };
   const notify = useCallback((key, values, extra = {}) => setNotice({ id: crypto.randomUUID(), key, values, ...extra }), []);
   const showError = useCallback(error => notify(null, null, { error: error.message || 'errorSave' }), [notify]);
+  const persistOutbox = useCallback((scope = `${currentProfile.current?.user.id}:${currentProfile.current?.ledgerId}`) => {
+    setFailedCount([...failedWrites.current.values()].filter(write => write.scope === scope).length);
+    const writes = new Map([...failedWrites.current, ...pendingWrites.current]);
+    try {
+      if (!writes.size) localStorage.removeItem(OUTBOX_KEY);
+      else localStorage.setItem(OUTBOX_KEY, JSON.stringify([...writes.values()].map(({ scope, payload, optimistic }) => ({ scope, payload, optimistic }))));
+    } catch {}
+  }, []);
   const apply = useCallback(p => {
+    const scope = `${p.user.id}:${p.ledgerId}`;
+    const confirmedIds = new Set(p.expenses.map(entry => entry.id));
+    let reconciled = false;
+    for (const [id, write] of failedWrites.current) if (write.scope === scope && confirmedIds.has(id)) { failedWrites.current.delete(id); reconciled = true; }
+    for (const write of failedWrites.current.values()) if (write.scope === scope) write.backend = service.current;
+    setFailedCount([...failedWrites.current.values()].filter(write => write.scope === scope).length);
+    if (reconciled) persistOutbox(scope);
+    const edits = [...pendingWrites.current.values()].filter(write => write.scope === scope && write.backend === service.current);
+    const existing = new Set(p.expenses.map(entry => entry.id));
+    p = { ...p, expenses: [...p.expenses, ...edits.filter(write => !existing.has(write.payload.id)).map(write => write.optimistic)] };
+    const settingWrite = settingWrites.current.get(scope);
+    if (!settingWrite) confirmedSettings.current.set(scope, validateSettings(p.settings));
+    if (settingWrite?.backend === service.current) p.settings = { ...p.settings, ...settingWrite.settings, consumers: p.settings.consumers };
     const previous = currentProfile.current, next = validateSettings(p.settings);
     const currencyChanged = settingsRef.current.currency !== next.currency;
     const scopeChanged = previous?.ledgerId !== p.ledgerId || previous?.user.id !== p.user.id;
@@ -68,7 +94,7 @@ export default function App() {
       });
     }
     settingsRef.current = next; currentProfile.current = p; setSettings(next); setProfile(p);
-  }, []);
+  }, [persistOutbox]);
   const run = useCallback(async (operation, success) => {
     if (busyRef.current) return null;
     changeBusy(true); epoch.current++;
@@ -98,6 +124,12 @@ export default function App() {
           localStorage.removeItem(SESSION_KEY); backend = localService(language); p = await backend.getProfile(); notify('errorSignIn');
         }
         if (cancelled) return;
+        try {
+          const restored = JSON.parse(localStorage.getItem(OUTBOX_KEY) || '[]');
+          for (const write of Array.isArray(restored) ? restored : []) {
+            if (write?.payload?.id && write.optimistic?.id === write.payload.id && typeof write.scope === 'string') failedWrites.current.set(write.payload.id, { ...write, backend: null });
+          }
+        } catch {}
         service.current = backend; setRemote(backend.getInvite !== undefined); apply(p); setReady(true);
       } catch (error) { if (!cancelled) { setFailed(true); showError(error); } }
     }
@@ -108,7 +140,7 @@ export default function App() {
     if (!ready) return;
     let cancelled = false, refreshing = false;
     const refresh = async () => {
-      if (document.hidden || busyRef.current || refreshing) return;
+      if (document.hidden || busyRef.current || refreshing || pendingWrites.current.size || settingWrites.current.size) return;
       const backend = service.current, version = epoch.current; refreshing = true;
       try {
         const p = await backend.getProfile();
@@ -130,13 +162,13 @@ export default function App() {
     try { view === 'record' ? telegram?.BackButton?.hide?.() : telegram?.BackButton?.show?.(); } catch {}
     return () => telegram?.BackButton?.offClick?.(back);
   }, [view, navigate]);
-  useEffect(() => { if (telegram?.isVersionAtLeast?.('6.2')) { try { amountMinor || draft.note ? telegram.enableClosingConfirmation() : telegram.disableClosingConfirmation(); } catch {} } }, [amountMinor, draft.note]);
+  useEffect(() => { if (telegram?.isVersionAtLeast?.('6.2')) { try { amountMinor || draft.note || writeCount || failedCount ? telegram.enableClosingConfirmation() : telegram.disableClosingConfirmation(); } catch {} } }, [amountMinor, draft.note, writeCount, failedCount]);
   useLayoutEffect(() => {
     if (keyboard.current) return;
     const animation = pageRef.current?.animate([{ opacity: 0, transform: 'translateY(8px)' }, { opacity: 1, transform: 'translateY(0)' }], { duration: 220, easing: 'cubic-bezier(.23,1,.32,1)' });
     return () => animation?.cancel();
   }, [view]);
-  const editDraft = patch => { pending.current = null; setDraft(current => ({ ...current, ...patch })); };
+  const editDraft = patch => { pending.current = null; state.current.draft = { ...state.current.draft, ...patch }; setDraft(state.current.draft); };
   const pushKey = useCallback(key => {
     if (busyRef.current || !state.current.ready) return;
     const current = state.current.draft.raw, digits = CURRENCIES[settingsRef.current.currency].digits;
@@ -147,19 +179,54 @@ export default function App() {
     else if (/^\d$/.test(key)) { const [whole, part] = current.split('.'); if (part !== undefined && part.length >= digits) return; if (part === undefined && whole.length >= 8) return; next = current === '0' ? key : current + key; }
     pending.current = null; state.current.draft = { ...state.current.draft, raw: next }; setDraft(current => ({ ...current, raw: next }));
   }, []);
-  const save = useCallback(async () => {
+  const submitWrite = useCallback(write => {
+    const { payload, backend, scope } = write;
+    if (pendingWrites.current.has(payload.id)) return;
+    pendingWrites.current.set(payload.id, write); failedWrites.current.delete(payload.id); epoch.current++; setWriteCount(pendingWrites.current.size);
+    persistOutbox();
+    // The request runs independently, so the keypad stays ready for the next entry.
+    void backend.addExpense(payload).then(entry => {
+      const current = currentProfile.current;
+      if (service.current === backend && `${current?.user.id}:${current?.ledgerId}` === scope) {
+        const next = { ...current, expenses: [...current.expenses.filter(item => item.id !== payload.id), { ...entry, canDelete: true }] };
+        currentProfile.current = next; setProfile(next);
+      }
+    }).catch(error => {
+      failedWrites.current.set(payload.id, write);
+      const current = currentProfile.current;
+      if (service.current === backend && `${current?.user.id}:${current?.ledgerId}` === scope) {
+        const next = { ...current, expenses: current.expenses.filter(item => item.id !== payload.id) };
+        currentProfile.current = next; setProfile(next);
+        notify(null, null, { error: error.message || 'errorSave', retryWrites: true });
+      }
+    }).finally(() => { pendingWrites.current.delete(payload.id); epoch.current++; setWriteCount(pendingWrites.current.size); persistOutbox(); });
+  }, [notify, persistOutbox]);
+  const retryWrites = useCallback(() => {
+    const current = currentProfile.current, scope = `${current?.user.id}:${current?.ledgerId}`;
+    const writes = [...failedWrites.current.values()].filter(write => write.scope === scope);
+    if (!writes.length) return;
+    const ids = new Set(current.expenses.map(entry => entry.id));
+    const next = { ...current, expenses: [...current.expenses, ...writes.filter(write => !ids.has(write.payload.id)).map(write => write.optimistic)] };
+    currentProfile.current = next; setProfile(next); setNotice(null);
+    writes.forEach(write => { write.backend = service.current; submitWrite(write); });
+  }, [submitWrite]);
+  const save = useCallback(() => {
     const { draft: d, amountMinor, ready } = state.current;
     if (!ready || busyRef.current || !amountMinor || !d.selected || !d.consumer) return;
-    const payload = { id: pending.current?.id || crypto.randomUUID(), ledgerId: currentProfile.current.ledgerId, type: d.type, amountMinor, currency: settingsRef.current.currency, categoryId: d.selected, consumer: d.consumer, note: d.note, occurredAt: d.occurredAt, timezone };
-    pending.current = payload;
-    const entry = await run(() => service.current.addExpense(payload));
-    if (entry) {
-      const p = currentProfile.current; const expenses = p.expenses.some(e => e.id === entry.id) ? p.expenses : [...p.expenses, entry];
-      const next = { ...p, expenses }; currentProfile.current = next; setProfile(next);
-      setDraft({ ...blankDraft(), consumer: p.user.id, type: d.type }); pending.current = null; notify('savedShort'); haptic('success');
-      if (!keyboard.current) mascotRef.current?.animate([{ transform: 'scale(1.06,.95)' }, { transform: 'scale(1)' }], { duration: 260, easing: 'cubic-bezier(.23,1,.32,1)', composite: 'add' });
-    }
-  }, [run, notify]);
+    const payload = { id: crypto.randomUUID(), ledgerId: currentProfile.current.ledgerId, type: d.type, amountMinor, currency: settingsRef.current.currency, categoryId: d.selected, consumer: d.consumer, note: d.note, occurredAt: d.occurredAt || new Date().toISOString(), timezone };
+    const before = currentProfile.current;
+    const pool = d.type === 'income' ? settingsRef.current.incomeCategories : settingsRef.current.categories;
+    const category = pool.find(item => item.id === d.selected);
+    const member = settingsRef.current.consumers.find(item => item.id === d.consumer) || before.user;
+    const occurredAt = payload.occurredAt || new Date().toISOString();
+    const optimistic = { ...payload, occurredAt, createdAt: new Date().toISOString(), dayKey: dateKey(new Date(occurredAt), timezone), category: category ? structuredClone(category) : category, member: structuredClone(member), canDelete: false };
+    const optimisticProfile = { ...before, expenses: [...before.expenses, optimistic] };
+    currentProfile.current = optimisticProfile; setProfile(optimisticProfile);
+    const nextDraft = { ...blankDraft(), consumer: before.user.id, type: d.type };
+    state.current.draft = nextDraft; state.current.amountMinor = 0; setDraft(nextDraft);
+    setCelebration({ id: payload.id, type: d.type }); notify('savedShort'); haptic('success');
+    submitWrite({ payload, optimistic, draft: d, backend: service.current, scope: `${before.user.id}:${before.ledgerId}` });
+  }, [submitWrite, notify]);
   useEffect(() => {
     const keydown = e => {
       keyboard.current = true; document.documentElement.classList.add('keyboard-action');
@@ -179,9 +246,43 @@ export default function App() {
     document.addEventListener('keydown', keydown); document.addEventListener('pointerdown', pointer); document.addEventListener('pointerup', release); document.addEventListener('pointercancel', release);
     return () => { document.removeEventListener('keydown', keydown); document.removeEventListener('pointerdown', pointer); document.removeEventListener('pointerup', release); document.removeEventListener('pointercancel', release); };
   }, [pushKey, save, navigate]);
-  async function updateSettings(patch) { await run(() => service.current.saveSettings({ ...settingsRef.current, ...patch, ...(patch.language ? { languageManual: true } : {}) })); }
+  function updateSettings(patch) {
+    const before = currentProfile.current, backend = service.current;
+    const scope = `${before.user.id}:${before.ledgerId}`, id = crypto.randomUUID();
+    const next = validateSettings({ ...settingsRef.current, ...patch, ...(patch.language ? { languageManual: true } : {}) });
+    settingWrites.current.set(scope, { id, settings: next, backend }); epoch.current++;
+    apply({ ...before, settings: next });
+    // Serialize settings so rapid language/currency changes cannot arrive out of order.
+    settingQueue.current = settingQueue.current.catch(() => {}).then(async () => {
+      try {
+        const result = await backend.saveSettings(next, before.ledgerId);
+        confirmedSettings.current.set(scope, validateSettings(result.settings));
+        if (settingWrites.current.get(scope)?.id !== id) return;
+        settingWrites.current.delete(scope);
+        const current = currentProfile.current;
+        if (backend === service.current && `${current?.user.id}:${current?.ledgerId}` === scope) apply({ ...result, expenses: current.expenses });
+      } catch (error) {
+        if (settingWrites.current.get(scope)?.id !== id) return;
+        settingWrites.current.delete(scope);
+        const current = currentProfile.current;
+        if (backend === service.current && `${current?.user.id}:${current?.ledgerId}` === scope) {
+          apply({ ...current, settings: confirmedSettings.current.get(scope) || before.settings }); showError(error);
+        }
+      } finally { epoch.current++; }
+    });
+  }
   const startEditing = () => { setEditingType(draft.type); setEditing(structuredClone(categories)); navigate('manage'); };
-  async function saveCategories(e) { e.preventDefault(); const p = await run(() => service.current.saveSettings({ ...settingsRef.current, [editingType === 'income' ? 'incomeCategories' : 'categories']: editing }), 'categoriesSaved'); if (p) navigate('record'); }
+  async function saveCategories(e) {
+    e.preventDefault();
+    const backend = service.current, scope = currentProfile.current.ledgerId;
+    const categoryPatch = { [editingType === 'income' ? 'incomeCategories' : 'categories']: structuredClone(editing) };
+    const p = await run(async () => {
+      await settingQueue.current;
+      if (backend !== service.current || currentProfile.current.ledgerId !== scope) throw new Error('errorLedgerChanged');
+      return backend.saveSettings({ ...settingsRef.current, ...categoryPatch }, scope);
+    }, 'categoriesSaved');
+    if (p) navigate('record');
+  }
   const switchCircle = async id => { const p = await run(() => service.current.switchCircle(id)); if (p) { setPicker(false); navigate('record'); } };
   const copy = async value => { try { await navigator.clipboard.writeText(value); notify('codeCopied'); } catch { showError(new Error('errorCopy')); } };
   async function login(credential) {
@@ -213,7 +314,7 @@ export default function App() {
     setProfile(next);
   }, []);
   const todayEntries = expenses.filter(e => e.dayKey === today && e.currency === settings.currency);
-  const total = (list, type) => list.filter(e => (e.type || 'expense') === type).reduce((sum, e) => sum + e.amountMinor, 0);
+  const total = (list, type) => list.filter(e => isBudgetEntry(e) && (e.type || 'expense') === type).reduce((sum, e) => sum + e.amountMinor, 0);
   const todayExpense = total(todayEntries, 'expense'), todayIncome = total(todayEntries, 'income');
   const history = useMemo(() => expenses.filter(e => e.currency === historyCurrency && (period === 'all' || e.dayKey.startsWith(today.slice(0,7)))).sort((a,b) => (b.occurredAt || b.createdAt).localeCompare(a.occurredAt || a.createdAt)), [expenses, historyCurrency, period, today]);
   const historyExpense = total(history, 'expense'), historyIncome = total(history, 'income');
@@ -228,13 +329,13 @@ export default function App() {
       <Button className="profile-trigger" mode="plain" id="open-settings" aria-label={t('settingsTitle')} onClick={() => navigate('settings')} disabled={busy}><Avatar person={profile?.user}/></Button>
     </header>
 
-    <main key={view} ref={pageRef} id={`${view}-view`} className="page">{view !== 'record' && <div className="page-heading"><h1 id={`${view}-title`} tabIndex={-1}>{t(titleKey)}</h1>{secondary && <Button mode="plain" size="s" className="text-button" onClick={() => navigate(view === 'settings' ? 'record' : 'settings')}>{t('back')}</Button>}</div>}
-    {view === 'record' && <><div className="today-strip"><span className="today-icon" aria-hidden="true"><Icon name="arrowDown"/></span><div><span>{t('todayTotal')}</span><strong id="today-total">{money(todayExpense)}</strong></div><Button id="edit-draft-time" mode="plain" className={`date-label date-button ${draft.occurredAt ? 'has-custom-time' : ''}`} aria-label={t('editEntryTime')} disabled={disabled} onClick={() => setTimeEditor({})}><Icon name="clock"/>{new Intl.DateTimeFormat(locale, { month:'short',day:'numeric', ...(draft.occurredAt ? { hour:'2-digit',minute:'2-digit',hourCycle:'h23' } : {}) }).format(new Date(draft.occurredAt || Date.now()))}</Button><Button id="open-ai-import" mode="plain" className="ai-quick-trigger" aria-label={t('aiImportTitle')} title={t('aiImportTitle')} disabled={busy} onClick={() => navigate('ai-import')}><Icon name="spark"/></Button></div><div className="record-layout"><section ref={stageRef} className={`amount-stage ${draft.raw.length >= 6 ? 'long-amount' : ''} ${draft.type === 'income' ? 'is-income' : ''}`} aria-label={t('amountInput')}><div className="amount-meta"><div className="type-toggle-pill" role="group" aria-label={t('transactionType')}>{['expense','income'].map(type => <Tappable Component="button" type="button" key={type} className={`type-pill-btn ${draft.type === type ? `active type-${type}` : ''}`} aria-pressed={draft.type === type} disabled={disabled} onClick={() => { editDraft({ type, selected:null }); haptic(); }}>{t(type)}</Tappable>)}</div><Select id="currency" className="currency-control" aria-label={t('currency')} value={settings.currency} disabled={disabled} onChange={e => updateSettings({ currency: e.target.value })}>{Object.keys(CURRENCIES).map(c => <option key={c} value={c}>{c}</option>)}</Select></div><div className="amount-line"><span className="currency-symbol">{draft.type === 'income' ? '+' : ''}{CURRENCIES[settings.currency].symbol}</span><output id="amount-display" data-length={draft.raw.length < 6 ? 'short' : draft.raw.length > 9 ? 'long' : draft.raw.length} aria-label={t('currentAmount')} style={{ '--amount-chars':amount.length }}>{amount}</output><span className="input-caret" aria-hidden="true"/></div><div className="amount-bottom"><span>{draft.selected ? categoryLabel(categories.find(c => c.id === draft.selected) || {}, settings.language) : ''}</span></div><PocketMascot mascotRef={mascotRef} t={t} onTap={haptic} canConfirm={Boolean(!disabled && amountMinor && draft.selected && draft.consumer)} busy={busy} confirmLabel={saveLabel} onConfirm={save}/></section>
+    {failedCount > 0 && <button type="button" className="sync-retry-banner" onClick={retryWrites}>{t('retryUnconfirmed', { n: failedCount })}</button>}<main key={view} ref={pageRef} id={`${view}-view`} className="page">{view !== 'record' && <div className="page-heading"><h1 id={`${view}-title`} tabIndex={-1}>{t(titleKey)}</h1>{secondary && <Button mode="plain" size="s" className="text-button" onClick={() => navigate(view === 'settings' ? 'record' : 'settings')}>{t('back')}</Button>}</div>}
+    {view === 'record' && <><div className="today-strip"><span className="today-icon" aria-hidden="true"><Icon name="arrowDown"/></span><div><span>{t('todayTotal')}</span><strong id="today-total">{money(todayExpense)}</strong></div><Button id="edit-draft-time" mode="plain" className={`date-label date-button ${draft.occurredAt ? 'has-custom-time' : ''}`} aria-label={t('editEntryTime')} disabled={disabled} onClick={() => setTimeEditor({})}><Icon name="clock"/>{new Intl.DateTimeFormat(locale, { month:'short',day:'numeric', ...(draft.occurredAt ? { hour:'2-digit',minute:'2-digit',hourCycle:'h23' } : {}) }).format(new Date(draft.occurredAt || Date.now()))}</Button><Button id="open-ai-import" mode="plain" className="ai-quick-trigger" aria-label={t('aiImportTitle')} title={t('aiImportTitle')} disabled={busy} onClick={() => navigate('ai-import')}><Icon name="spark"/></Button></div><div className="record-layout"><section ref={stageRef} className={`amount-stage ${draft.raw.length >= 6 ? 'long-amount' : ''} ${draft.type === 'income' ? 'is-income' : ''}`} aria-label={t('amountInput')}><div className="amount-meta"><div className="type-toggle-pill" role="group" aria-label={t('transactionType')}>{['expense','income'].map(type => <Tappable Component="button" type="button" key={type} className={`type-pill-btn ${draft.type === type ? `active type-${type}` : ''}`} aria-pressed={draft.type === type} disabled={disabled} onClick={() => { editDraft({ type, selected:null }); haptic(); }}>{t(type)}</Tappable>)}</div><Select id="currency" className="currency-control" aria-label={t('currency')} value={settings.currency} disabled={disabled} onChange={e => updateSettings({ currency: e.target.value })}>{Object.keys(CURRENCIES).map(c => <option key={c} value={c}>{c}</option>)}</Select></div><div className="amount-line"><span className="currency-symbol">{draft.type === 'income' ? '+' : ''}{CURRENCIES[settings.currency].symbol}</span><output id="amount-display" data-length={draft.raw.length < 6 ? 'short' : draft.raw.length > 9 ? 'long' : draft.raw.length} aria-label={t('currentAmount')} style={{ '--amount-chars':amount.length }}>{amount}</output><span className="input-caret" aria-hidden="true"/></div><div className="amount-bottom"><span>{draft.selected ? categoryLabel(categories.find(c => c.id === draft.selected) || {}, settings.language) : ''}</span></div><PocketMascot mascotRef={mascotRef} t={t} onTap={haptic} canConfirm={Boolean(!disabled && amountMinor && draft.selected && draft.consumer)} busy={busy} celebrate={celebration} confirmLabel={saveLabel} onConfirm={save}/></section>
       <section className="purposes"><div className="section-heading"><h2>{t('categories')}</h2>{(!circle || circle.isAdmin) && <Button className="text-button" id="edit-categories" mode="plain" size="s" disabled={disabled} onClick={startEditing}>{t('editCategories')}</Button>}</div><Categories categories={categories} lang={settings.language} selected={draft.selected} disabled={disabled} onSelect={id => { editDraft({ selected:id }); haptic(); }}/></section>
       <section id="keypad" className="keypad" aria-label={t('keypad')}>{['1','2','3','4','5','6','7','8','9',digits ? '.' : 'clear','0','backspace'].map(key => <Tappable Component="button" type="button" className={`key ${key.length > 1 || key === '.' ? 'key-secondary' : ''}`} key={key} data-key={key} disabled={disabled} aria-label={key === 'clear' ? t('clear') : key === 'backspace' ? t('backspace') : key === '.' ? t('decimal') : key} onPointerDown={event => { if (!disabled) { event.currentTarget.setAttribute('data-pressed', 'true'); stageRef.current?.setAttribute('data-press', 'true'); haptic(); } }} onPointerUp={event => event.currentTarget.removeAttribute('data-pressed')} onPointerCancel={event => event.currentTarget.removeAttribute('data-pressed')} onPointerLeave={event => event.currentTarget.removeAttribute('data-pressed')} onClick={() => pushKey(key)}>{key === 'clear' ? 'C' : key === 'backspace' ? <Icon name="backspace"/> : key === '.' ? decimal : key}</Tappable>)}</section>
       <section className="finish" aria-label={t('save')}><div className="entry-actions">{circle && settings.consumers.length > 1 && <div className="consumer-buttons" role="group" aria-label={t(draft.type === 'income' ? 'incomeOwner' : 'consumer')}>{settings.consumers.map(c => <Tappable Component="button" type="button" className={`consumer-chip consumer-color-${c.color}`} key={c.id} aria-pressed={draft.consumer === c.id} disabled={disabled} onClick={() => { editDraft({ consumer:c.id }); haptic(); }}><Avatar person={c}/><span>{c.name}</span></Tappable>)}</div>}<Button id="edit-note" mode="plain" className={`note-trigger ${draft.note ? "has-note" : ""}`} aria-label={t('note')} title={draft.note || t('note')} disabled={disabled} onClick={() => setNoteEditor(true)}><Icon name="edit"/></Button></div></section></div>
       </>}
-    {view === 'history' && <><div className="history-controls"><SegmentedControl className="period-tabs" aria-label={t('period')}>{['month','all'].map(p => <SegmentedControl.Item key={p} selected={period === p} onClick={() => setPeriod(p)}>{t(p)}</SegmentedControl.Item>)}</SegmentedControl><Select id="history-currency" className="history-currency" aria-label={t('ledgerCurrency')} value={historyCurrency} onChange={e => setHistoryCurrency(e.target.value)}>{Object.keys(CURRENCIES).map(c => <option key={c}>{c}</option>)}</Select></div><section className="history-summary"><div className="history-summary-amount"><span>{t('netBalance')}</span><strong id="history-total">{money(historyIncome - historyExpense, historyCurrency)}</strong><small id="history-total-count">{countText(history.length, settings.language, historyCurrency)}</small></div><div className="balance-details"><div><span>{t('expense')}</span><strong>{money(historyExpense,historyCurrency)}</strong></div><div><span>{t('income')}</span><strong className="income-value">+{money(historyIncome,historyCurrency)}</strong></div></div></section><AiSummary t={t} profile={profile} settings={settings} currency={historyCurrency} busy={busy} run={run} service={service.current} isRemote={isRemote} config={config} onAccount={() => navigate('account')}/><div className="history-list">{!history.length && <Placeholder className="empty-state" header={t('emptyTitle')} description={t('emptyText')}><span className="empty-face">◡</span><Button mode="filled" onClick={() => navigate('record')}>{t('newEntry')}</Button></Placeholder>}{days.map(day => <section key={day}><div className="history-day">{day === today ? t('today') : new Intl.DateTimeFormat(locale,{ timeZone:'UTC',month:'short',day:'numeric' }).format(new Date(`${day}T12:00:00Z`))}</div>{history.filter(e => e.dayKey === day).map(e => <Cell Component="article" readOnly multiline key={e.id} className={`expense-row ${e.type === 'income' ? 'is-income' : ''}`} before={<span className="category-icon" style={{ background:`var(--${e.category.color})` }}><Icon name={e.category.icon}/></span>} subtitle={<span className="expense-meta"><span className={`consumer-badge consumer-color-${e.member?.color || 'blue'}`}><i/>{e.member?.name || settings.consumers.find(c => c.id === e.consumer)?.name || t('unknownConsumer')}</span><button type="button" className="entry-time" aria-label={t('editEntryTime')} disabled={busy || e.canDelete === false} onClick={() => setTimeEditor({ entry:e, ledgerId:profile.ledgerId })}><time dateTime={e.occurredAt || e.createdAt}>{new Intl.DateTimeFormat(locale,{timeZone:e.timezone || timezone,hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(new Date(e.occurredAt || e.createdAt))}</time></button></span>} description={e.note ? <span className="expense-note">{e.note}</span> : undefined} after={<div className="expense-actions"><span className="expense-money">{e.type === 'income' ? '+' : '−'}{money(e.amountMinor,e.currency)}</span>{e.canDelete !== false && <Button className="delete-expense" mode="plain" size="s" disabled={busy} data-delete={e.id} aria-label={t('deleteExpense',{category:categoryLabel(e.category,settings.language),amount:money(e.amountMinor,e.currency)})} onClick={() => removeEntry(e)}><Icon name="trash"/></Button>}</div>}><strong>{categoryLabel(e.category,settings.language)}</strong></Cell>)}</section>)}</div><div className="today-balance"><span>{t('todayBalance')}</span><strong>{money(todayIncome - todayExpense)}</strong></div></>}
+    {view === 'history' && <><div className="history-controls"><SegmentedControl className="period-tabs" aria-label={t('period')}>{['month','all'].map(p => <SegmentedControl.Item key={p} selected={period === p} onClick={() => setPeriod(p)}>{t(p)}</SegmentedControl.Item>)}</SegmentedControl><Select id="history-currency" className="history-currency" aria-label={t('ledgerCurrency')} value={historyCurrency} onChange={e => setHistoryCurrency(e.target.value)}>{Object.keys(CURRENCIES).map(c => <option key={c}>{c}</option>)}</Select></div><section className="history-summary"><div className="history-summary-amount"><span>{t('netBalance')}</span><strong id="history-total">{money(historyIncome - historyExpense, historyCurrency)}</strong><small id="history-total-count">{countText(history.length, settings.language, historyCurrency)}</small></div><div className="balance-details"><div><span>{t('expense')}</span><strong>{money(historyExpense,historyCurrency)}</strong></div><div><span>{t('income')}</span><strong className="income-value">+{money(historyIncome,historyCurrency)}</strong></div></div></section><AiSummary t={t} profile={profile} settings={settings} currency={historyCurrency} busy={busy} run={run} service={service.current} isRemote={isRemote} config={config} onAccount={() => navigate('account')}/><div className="history-list">{!history.length && <Placeholder className="empty-state" header={t('emptyTitle')} description={t('emptyText')}><span className="empty-face">◡</span><Button mode="filled" onClick={() => navigate('record')}>{t('newEntry')}</Button></Placeholder>}{days.map(day => <section key={day}><div className="history-day">{day === today ? t('today') : new Intl.DateTimeFormat(locale,{ timeZone:'UTC',month:'short',day:'numeric' }).format(new Date(`${day}T12:00:00Z`))}</div>{history.filter(e => e.dayKey === day).map(e => <Cell Component="article" readOnly multiline key={e.id} className={`expense-row ${e.type === 'income' ? 'is-income' : ''}`} before={<span className="category-icon" style={{ background:`var(--${e.category.color})` }}><Icon name={e.category.icon}/></span>} subtitle={<span className="expense-meta"><span className={`consumer-badge consumer-color-${e.member?.color || 'blue'}`}><i/>{e.member?.name || settings.consumers.find(c => c.id === e.consumer)?.name || t('unknownConsumer')}</span><button type="button" className="entry-time" aria-label={t('editEntryTime')} disabled={busy || e.canDelete === false} onClick={() => setTimeEditor({ entry:e, ledgerId:profile.ledgerId })}><time dateTime={e.occurredAt || e.createdAt}>{new Intl.DateTimeFormat(locale,{timeZone:e.timezone || timezone,hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(new Date(e.occurredAt || e.createdAt))}</time></button></span>} description={e.note ? <span className="expense-note">{e.note}</span> : undefined} after={<div className="expense-actions"><span className="expense-money">{e.type === 'income' ? '+' : '−'}{money(e.amountMinor,e.currency)}</span>{e.canDelete !== false && <Button className="delete-expense" mode="plain" size="s" disabled={busy} data-delete={e.id} aria-label={t('deleteExpense',{category:categoryLabel(e.category,settings.language),amount:money(e.amountMinor,e.currency)})} onClick={() => removeEntry(e)}><Icon name="trash"/></Button>}</div>}><strong>{categoryLabel(e.category,settings.language)}</strong>{!isBudgetEntry(e) && <small className="entry-kind">{t(e.recordKind === 'transfer' ? 'recordKindTransfer' : 'recordKindReimbursement')}</small>}</Cell>)}</section>)}</div><div className="today-balance"><span>{t('todayBalance')}</span><strong>{money(todayIncome - todayExpense)}</strong></div></>}
     {view === 'settings' && <div className="settings-home">{[['profile','myProfile'],['circles','circlesTitle'],['account','accountTitle'],['ai-import','aiImportTitle']].map(([v,key]) => <Button key={v} mode="plain" className="settings-row" onClick={() => navigate(v)} disabled={!ready}>{v === 'profile' ? <Avatar person={profile?.user}/> : <Icon name={v === 'circles' ? 'users' : v === 'ai-import' ? 'spark' : 'card'}/>}<span>{t(key)}</span><span aria-hidden="true">›</span></Button>)}<label className="settings-language"><span>{t('language')}</span><Select id="language" className="language-control" aria-label={t('language')} value={settings.language} disabled={disabled} onChange={e => updateSettings({ language:e.target.value })}><option value="zh">中文</option><option value="en">English</option><option value="uk">Українська</option></Select></label></div>}
     {view === 'profile' && profile && <ProfileEditor key={profile.user.id} user={profile.user} t={t} busy={busy} run={run} service={service.current}/>}
     {view === 'account' && profile && <AccountPage t={t} profile={profile} isRemote={isRemote} config={config} language={settings.language} busy={busy} run={run} service={service.current} onGoogle={login} onLogout={logout} copy={copy}/>}
@@ -245,6 +346,6 @@ export default function App() {
     </div>{picker && profile && <CirclePicker profile={profile} t={t} busy={busy} onSwitch={switchCircle} onManage={() => navigate('circles')} onClose={() => setPicker(false)}/>}
     {noteEditor && <Sheet title={t('note')} onClose={() => setNoteEditor(false)}><form className="note-form" onSubmit={e => { e.preventDefault(); setNoteEditor(false); }}><Input id="note" className="note-field" autoFocus aria-label={t('note')} placeholder={t('notePlaceholder')} value={draft.note} maxLength={160} disabled={disabled} onChange={e => editDraft({ note:e.target.value })}/><Button type="submit" className="compact-save" aria-label={t('confirm')}><Icon name="check"/></Button></form></Sheet>}
     {timeEditor && <TimeEditor value={timeEditor.entry ? timeEditor.entry.occurredAt || timeEditor.entry.createdAt : draft.occurredAt} isDraft={!timeEditor.entry} t={t} busy={busy} onSave={saveTime} onClose={() => setTimeEditor(null)}/>}
-    {notice && <Snackbar className={`notice ${notice.error ? 'error' : ''}`} key={notice.id} role="status" duration={notice.error || notice.undoId ? 2147480000 : 2200} onClose={() => setNotice(current => current?.id === notice.id ? null : current)} after={<span className="notice-actions">{notice.undoId && <Snackbar.Button id="undo-button" disabled={busy} onClick={undo}>{t('undo')}</Snackbar.Button>}<Snackbar.Button id="dismiss-notice" aria-label={t('closeNotice')} onClick={() => setNotice(null)}>×</Snackbar.Button></span>}><span id="notice-text">{notice.error ? translateError(notice.error,settings.language) : t(notice.key,notice.values)}</span></Snackbar>}
+    {notice && <Snackbar className={`notice ${notice.error ? 'error' : ''}`} key={notice.id} role="status" duration={notice.error || notice.undoId ? 2147480000 : 2200} onClose={() => setNotice(current => current?.id === notice.id ? null : current)} after={<span className="notice-actions">{notice.retryWrites && <Snackbar.Button onClick={retryWrites}>{t('retry')}</Snackbar.Button>}{notice.undoId && <Snackbar.Button id="undo-button" disabled={busy} onClick={undo}>{t('undo')}</Snackbar.Button>}<Snackbar.Button id="dismiss-notice" aria-label={t('closeNotice')} onClick={() => setNotice(null)}>×</Snackbar.Button></span>}><span id="notice-text">{notice.error ? translateError(notice.error,settings.language) : t(notice.key,notice.values)}</span></Snackbar>}
   </AppRoot>;
 }

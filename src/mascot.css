@@ -11,10 +11,11 @@
    persistent green selection frame around the illustration. */
 .for-root .mascot-toy:is(:focus,:focus-visible) { outline:none!important; outline-offset:0; box-shadow:none!important; }
 .for-root .amount-meta { z-index:4; }
-.cloud-motion,.cloud-touch,.cloud-shell,.stop-sign-rest { display:block; width:100%; height:100%; }
+.cloud-motion,.cloud-touch,.cloud-cash-motion,.cloud-shell,.stop-sign-rest { display:block; width:100%; height:100%; }
 .cloud-motion { transform:translate3d(0,0,0) rotate(-8deg); transform-origin:50% 80%; transition:transform 180ms var(--ease-out),opacity 180ms var(--ease-out); backface-visibility:hidden; }
 .cloud-touch { transform:translate3d(0,0,0); transform-origin:50% 80%; transition:transform 110ms var(--ease-out); will-change:transform; }
 .cloud-shell { contain:layout; will-change:transform; }
+.cloud-cash-motion { transform-origin:50% 78%; }
 .for-root .mascot-toy .mascot { position:static; width:100%; height:100%; transform:none; pointer-events:none; overflow:visible; opacity:1; }
 .mascot-toy .mascot { shape-rendering:geometricPrecision; }
 .mascot-toy .mascot-body { fill:#f9c678; }
@@ -67,7 +68,7 @@
 .for-root .mascot-stack .mascot-toy,.for-root .mascot-stack .mascot-confirm { pointer-events:auto; }
 .for-root .mascot-confirm { position:absolute; z-index:4; right:-3px; bottom:-3px; width:29px; height:29px; min-width:29px; min-height:29px; padding:0; display:grid; place-items:center; border:2px solid var(--sage); border-radius:50%; background:var(--confirm,#f4c771); color:var(--ink); box-shadow:0 3px 9px #333a3024; font-size:17px; font-weight:900; line-height:1; animation:cloud-confirm-in 220ms var(--ease-out); }
 .for-root .mascot-confirm>h6 { display:flex; align-items:center; justify-content:center; margin:0; font-size:17px; line-height:1; }
-.for-root .mascot-confirm:not(:disabled):hover { transform:scale(1.08) rotate(-4deg); box-shadow:0 5px 12px #333a3030; }
+@media(hover:hover) and (pointer:fine) { .for-root .mascot-confirm:not(:disabled):hover { transform:scale(1.08) rotate(-4deg); box-shadow:0 5px 12px #333a3030; } }
 .for-root .mascot-confirm:not(:disabled):active { transform:scale(.88)!important; box-shadow:0 1px 4px #333a3018; }
 .for-root .mascot-confirm:disabled { opacity:.58; }
 @keyframes cloud-confirm-in { from { opacity:0; transform:scale(.68) rotate(-10deg); } 70% { opacity:1; transform:scale(1.08) rotate(3deg); } to { opacity:1; transform:scale(1) rotate(0); } }
@@ -79,6 +80,150 @@
 @keyframes cloud-soft-pop { 0% {opacity:1;transform:rotate(0) scale(1.1)} 35% {opacity:1;transform:rotate(-3deg) scale(1.2,.92)} 100% {opacity:0;transform:rotate(3deg) scale(1.15)} }
 @keyframes cloud-pop-word { 0% {opacity:0;transform:translate(-50%,-50%) rotate(-8deg) scale(.94)} 35% {opacity:1;transform:translate(-50%,-65%) rotate(-8deg)} 100% {opacity:0;transform:translate(-50%,-90%) rotate(-8deg)} }
 @keyframes cloud-puff { 0% {opacity:.9;transform:translate(-50%,-50%) scale(.95)} 100% {opacity:0;transform:translate(-50%,-50%) translate(var(--puff-x),var(--puff-y)) scale(1.1)} }
+/* A saved entry has three small beats: draw / send / settle, or fall / catch /
+   tuck. Only the decorative layers move; the amount and controls stay still. */
+.money-celebration { position:absolute; inset:0; z-index:5; pointer-events:none; }
+.money-bundle-flight { position:absolute; left:26%; top:58%; width:43%; aspect-ratio:56 / 38; transform-origin:50% 65%; will-change:transform,opacity; }
+.money-bundle { display:block; width:100%; height:100%; overflow:visible; stroke:#899b69; stroke-width:1.5; stroke-linejoin:round; }
+.money-sheet-back { fill:#c7d6ae; }
+.money-sheet-middle { fill:#d5dfbf; }
+.money-sheet-front { fill:#e3e9cc; }
+.money-print { fill:none; stroke:#81915e; stroke-width:1.4; stroke-linecap:round; }
+.money-celebration.is-expense .money-bundle-flight { animation:money-send var(--cash-duration) linear both; }
+.money-celebration.is-income .money-bundle-flight { animation:money-catch var(--cash-duration) linear both; }
+.money-streaks { position:absolute; left:40%; top:10%; width:54%; height:70%; fill:none; stroke:#bccb9d; stroke-width:2; stroke-linecap:round; animation:money-send-trail var(--cash-duration) linear both; }
+.money-streaks path:nth-child(2) { stroke-width:1.5; }
+.money-streaks path:nth-child(3) { stroke-width:1; }
+.money-celebration.is-income .money-streaks { display:none; }
+.money-cotton-tuck { position:absolute; left:30%; top:68%; width:42%; height:17%; fill:#f9c678; animation:money-tuck var(--cash-duration) linear both; }
+.mascot-stack[data-mood="5"] .money-cotton-tuck { fill:#f5b47e; }
+.mascot-stack[data-mood="6"] .money-cotton-tuck { fill:#f09c79; }
+.cloud-cash-hands { fill:none; stroke:#635b3c; stroke-width:2.6; stroke-linecap:round; }
+.cloud-cash-hands path { transform-box:fill-box; }
+.cloud-cash-hand-left { transform-origin:0% 15%; }
+.cloud-cash-hand-right { transform-origin:100% 15%; }
+.cloud-cash-hands.is-expense .cloud-cash-hand-left { animation:cloud-cash-draw 860ms var(--ease-out) both; }
+.cloud-cash-hands.is-expense .cloud-cash-hand-right { animation:cloud-cash-throw 860ms var(--ease-out) both; }
+.cloud-cash-hands.is-income .cloud-cash-hand-left { animation:cloud-cash-reach-left 1040ms var(--ease-out) both; }
+.cloud-cash-hands.is-income .cloud-cash-hand-right { animation:cloud-cash-reach-right 1040ms var(--ease-out) both; }
+.mascot-stack[data-cash] .cloud-eyes { animation:none; }
+.cloud-expense-brows { fill:none; stroke:#635b3c; stroke-width:2.5; stroke-linecap:round; }
+.cloud-expense-look,.cloud-expense-cry,.cloud-expense-recover { transform-origin:62px 70px; }
+.cloud-expense-look { animation:cloud-expense-worry var(--cash-duration) linear both; }
+.cloud-expense-cry { animation:cloud-expense-cry var(--cash-duration) linear both; }
+.cloud-expense-recover { animation:cloud-expense-recover var(--cash-duration) linear both; }
+.cloud-expense-open-mouth { fill:#986d55; transform-origin:64px 82px; animation:cloud-expense-sob var(--cash-duration) linear both; }
+.cloud-expense-lip { transform-origin:62px 81px; animation:cloud-expense-lip var(--cash-duration) linear both; }
+.cloud-expense-tear { fill:#8cb9ce; stroke:none; transform-origin:0 0; }
+.cloud-expense-tear.tear-left { animation:cloud-tear-left var(--cash-duration) linear both; }
+.cloud-expense-tear.tear-right { animation:cloud-tear-right var(--cash-duration) linear both; }
+.cloud-expense-tear.tear-last { animation:cloud-tear-last var(--cash-duration) linear both; }
+@keyframes cloud-expense-worry {
+  0%,17% { opacity:1; transform:translate3d(0,0,0) rotate(0); }
+  27% { opacity:0; transform:translate3d(0,1px,0) rotate(-2deg); }
+  100% { opacity:0; transform:translate3d(0,1px,0) rotate(-2deg); }
+}
+@keyframes cloud-expense-cry {
+  0%,17% { opacity:0; transform:translate3d(0,0,0) scale(.97); }
+  30% { opacity:1; transform:translate3d(0,1px,0) scale(1); }
+  44% { opacity:1; transform:translate3d(-.5px,1px,0) scale(1.02,.98); }
+  56% { opacity:1; transform:translate3d(.5px,1px,0) scale(.99,1.02); }
+  66% { opacity:1; transform:translate3d(0,1px,0) scale(1); }
+  80%,100% { opacity:0; transform:translate3d(0,1px,0) scale(.99); }
+}
+@keyframes cloud-expense-recover {
+  0%,66% { opacity:0; transform:translate3d(0,1px,0) rotate(-1deg); }
+  82% { opacity:1; transform:translate3d(0,.5px,0) rotate(0); }
+  100% { opacity:1; transform:translate3d(0,0,0) rotate(0); }
+}
+@keyframes cloud-expense-sob {
+  0%,28% { transform:scale(1); }
+  42% { transform:scale(.97,1.13); }
+  53% { transform:scale(1.04,.98); }
+  64% { transform:scale(.98,1.08); }
+  80%,100% { transform:scale(1); }
+}
+@keyframes cloud-expense-lip {
+  0%,72% { transform:translate3d(0,0,0); }
+  80% { transform:translate3d(0,.7px,0); }
+  87% { transform:translate3d(0,-.3px,0); }
+  94%,100% { transform:translate3d(0,0,0); }
+}
+@keyframes cloud-tear-left {
+  0%,20% { opacity:0; transform:translate3d(0,-1px,0) scale(.96); }
+  28% { opacity:1; transform:translate3d(0,1px,0) scale(1); }
+  50% { opacity:.95; transform:translate3d(-2px,12px,0) scale(1); }
+  63%,100% { opacity:0; transform:translate3d(-3px,22px,0) scale(.96); }
+}
+@keyframes cloud-tear-right {
+  0%,35% { opacity:0; transform:translate3d(0,-1px,0) scale(.96); }
+  43% { opacity:1; transform:translate3d(0,1px,0) scale(1); }
+  65% { opacity:.95; transform:translate3d(2px,12px,0) scale(1); }
+  80%,100% { opacity:0; transform:translate3d(3px,22px,0) scale(.96); }
+}
+@keyframes cloud-tear-last {
+  0%,59% { opacity:0; transform:translate3d(0,-1px,0) scale(.96); }
+  67% { opacity:.95; transform:translate3d(0,1px,0) scale(1); }
+  85% { opacity:.8; transform:translate3d(-1px,12px,0) scale(1); }
+  100% { opacity:0; transform:translate3d(-2px,21px,0) scale(.96); }
+}
+@keyframes money-send {
+  0% { opacity:0; transform:translate3d(-6%,20%,0) rotate(12deg) scale(.94); }
+  15% { opacity:1; transform:translate3d(0,0,0) rotate(-8deg) scale(1); }
+  31% { opacity:1; transform:translate3d(-12%,-12%,0) rotate(-13deg) scale(1); }
+  48% { opacity:1; transform:translate3d(45%,-72%,0) rotate(3deg) scale(1); }
+  70% { opacity:.95; transform:translate3d(145%,-200%,0) rotate(20deg) scale(.97); }
+  87%,100% { opacity:0; transform:translate3d(224%,-330%,0) rotate(30deg) scale(.94); }
+}
+@keyframes money-send-trail {
+  0%,37% { opacity:0; transform:translate3d(-20%,24%,0) rotate(5deg) scale(.94); }
+  51% { opacity:.8; transform:translate3d(0,0,0) rotate(0) scale(1); }
+  76% { opacity:.45; transform:translate3d(32%,-30%,0) rotate(-3deg) scale(1); }
+  90%,100% { opacity:0; transform:translate3d(46%,-44%,0) rotate(-3deg) scale(1); }
+}
+@keyframes money-catch {
+  0% { opacity:0; transform:translate3d(65%,-360%,0) rotate(18deg) scale(.96); }
+  12% { opacity:1; transform:translate3d(52%,-307%,0) rotate(14deg) scale(.98); }
+  30% { opacity:1; transform:translate3d(26%,-191%,0) rotate(5deg) scale(1); }
+  49% { opacity:1; transform:translate3d(-8%,-33%,0) rotate(-9deg) scale(1); }
+  59% { opacity:1; transform:translate3d(-13%,4%,0) rotate(-7deg) scale(1.02,.98); }
+  73% { opacity:1; transform:translate3d(-2%,25%,0) rotate(5deg) scale(.97); }
+  87%,100% { opacity:0; transform:translate3d(-4%,42%,0) rotate(4deg) scale(.94); }
+}
+@keyframes money-tuck {
+  0%,49% { opacity:0; transform:translate3d(0,10%,0) scale(.96); }
+  62% { opacity:1; transform:translate3d(0,0,0) scale(1); }
+  84% { opacity:1; transform:translate3d(0,2%,0) scale(1); }
+  97%,100% { opacity:0; transform:translate3d(0,6%,0) scale(.98); }
+}
+@keyframes cloud-cash-draw {
+  0% { opacity:0; transform:translate3d(0,2px,0) rotate(8deg); }
+  18% { opacity:1; transform:translate3d(0,0,0) rotate(-10deg); }
+  34% { opacity:1; transform:translate3d(0,0,0) rotate(-20deg); }
+  58% { opacity:1; transform:translate3d(0,0,0) rotate(6deg); }
+  92%,100% { opacity:0; transform:translate3d(0,1px,0) rotate(0); }
+}
+@keyframes cloud-cash-throw {
+  0% { opacity:0; transform:translate3d(0,2px,0) rotate(-8deg); }
+  18% { opacity:1; transform:translate3d(0,0,0) rotate(12deg); }
+  33% { opacity:1; transform:translate3d(0,0,0) rotate(30deg); }
+  50% { opacity:1; transform:translate3d(1px,-1px,0) rotate(-42deg); }
+  92%,100% { opacity:0; transform:translate3d(0,1px,0) rotate(0); }
+}
+@keyframes cloud-cash-reach-left {
+  0% { opacity:0; transform:translate3d(0,1px,0) rotate(0); }
+  25% { opacity:1; transform:translate3d(0,-1px,0) rotate(-29deg); }
+  51% { opacity:1; transform:translate3d(0,0,0) rotate(-18deg); }
+  74% { opacity:1; transform:translate3d(1px,1px,0) rotate(8deg); }
+  95%,100% { opacity:0; transform:translate3d(0,0,0) rotate(0); }
+}
+@keyframes cloud-cash-reach-right {
+  0% { opacity:0; transform:translate3d(0,1px,0) rotate(0); }
+  25% { opacity:1; transform:translate3d(0,-1px,0) rotate(32deg); }
+  51% { opacity:1; transform:translate3d(0,0,0) rotate(20deg); }
+  74% { opacity:1; transform:translate3d(-1px,1px,0) rotate(-10deg); }
+  95%,100% { opacity:0; transform:translate3d(0,0,0) rotate(0); }
+}
 @media(min-width:601px) {
  .for-root .amount-stage { container-type:inline-size; }
  .for-root #amount-display[data-length] { font-size:min(100px,calc((100cqw - 146px) / (var(--amount-chars,1) * .64))); }

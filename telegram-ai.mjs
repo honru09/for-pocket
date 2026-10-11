@@ -25,6 +25,9 @@ const MAX_PREVIEW_ITEMS = 50;
 const DEFAULT_TIMEZONE = process.env.APP_TIMEZONE || 'Asia/Tokyo';
 const TELEGRAM_ID = /^\d{1,20}$/;
 const DEFAULT_AUTO_CONFIRM = /^(1|true|yes|on)$/i.test(String(process.env.TELEGRAM_AI_AUTO_CONFIRM || ''));
+class DeliveryBlockedError extends Error {
+  constructor(cause) { super('Telegram delivery blocked by persistence failure', { cause }); }
+}
 
 const atMillis = value => {
   const result = typeof value === 'function' ? value() : value;
@@ -271,6 +274,7 @@ export function createTelegramHandler({
   now = () => Date.now(),
   limit,
   callTelegram,
+  beforeDeliver,
   downloadFile,
   timezone = DEFAULT_TIMEZONE,
   maxDrafts = 32,
@@ -280,6 +284,12 @@ export function createTelegramHandler({
   const telegram = callTelegram || makeInternalTelegramCall(token);
   const botCall = async (method, parameters = {}) => {
     if (!telegram) throw new Error('Telegram is not configured');
+    // This hook runs outside store.run callbacks. Safe deployments persist
+    // drafts/reply checkpoints before any visible Bot API side effect.
+    if (typeof beforeDeliver === 'function' && ['sendMessage', 'editMessageText', 'editMessageReplyMarkup'].includes(method)) {
+      try { await beforeDeliver(method, parameters); }
+      catch (error) { throw new DeliveryBlockedError(error); }
+    }
     return telegram(method, parameters);
   };
   const inflight = new Map(), imageCache = new Map();
@@ -370,7 +380,8 @@ export function createTelegramHandler({
     if (chatId === undefined || messageId === undefined) return sendMessage(chatId, text, extra);
     try {
       return await botCall('editMessageText', { chat_id: chatId, message_id: messageId, text, ...extra });
-    } catch {
+    } catch (error) {
+      if (error instanceof DeliveryBlockedError) throw error;
       // Editing can fail when a user presses a stale button. A small follow-up
       // keeps the ledger action visible without exposing the Bot API error.
       return sendMessage(chatId, text, extra);
@@ -460,6 +471,8 @@ export function createTelegramHandler({
     const splitParticipants = Array.isArray(item?.splitParticipants)
       ? [...new Set(item.splitParticipants.filter(id => allowedMembers.has(id)))] : [];
     const splitMode = type === 'expense' && item?.splitMode === 'equal' && splitParticipants.length ? 'equal' : 'none';
+    const recordKind = ['purchase', 'transfer', 'reimbursement', 'refund', 'gift', 'other'].includes(item?.recordKind)
+      ? item.recordKind : 'purchase';
     const expense = {
         id: randomUUID(),
         type,
@@ -472,6 +485,7 @@ export function createTelegramHandler({
         timezone: itemTimezone,
         splitMode,
         splitParticipants: splitMode === 'equal' ? splitParticipants : [],
+        recordKind,
       };
     try { validateExpense(expense, profile.settings); } catch { return null; }
     return {
@@ -481,8 +495,8 @@ export function createTelegramHandler({
       payerName: members.find(member => member.id === consumer)?.name || '',
       splitNames: splitMode === 'equal' ? members.filter(member => splitParticipants.includes(member.id)).map(member => member.name) : [],
       confidence: Number.isFinite(Number(item?.confidence)) ? Math.max(0, Math.min(1, Number(item.confidence))) : null,
-      needsReview: item?.needsReview === true || ['transfer', 'reimbursement'].includes(item?.recordKind),
-      recordKind: safeString(item?.recordKind, 32),
+      needsReview: item?.needsReview === true || ['transfer', 'reimbursement'].includes(recordKind),
+      recordKind,
       reviewReason: safeString(item?.reviewReason, 160),
     };
   }
@@ -583,8 +597,8 @@ export function createTelegramHandler({
     }
     invokeLimit(`telegram-ai:${context.telegramId}`, 12);
     const input = { text, image, file, timezone: validTimezone(timezone), telegramUserId: context.telegramId, enhanced, now: context.at,
-      language: context.language, ...(isAudio ? { defaultCurrency: 'JPY' } : {}) };
-    const retryId = (image || file) && !enhanced ? cacheImage(context, message.chat.id, input) : null;
+      language: context.language, defaultConsumer: defaultConsumer(context.profile, context.uid), ...(isAudio ? { defaultCurrency: 'JPY' } : {}) };
+    const retryId = (image || file) && !isAudio && !enhanced ? cacheImage(context, message.chat.id, input) : null;
     let parsed;
     try {
       parsed = await aiParser.parse(input, { ...context.profile.settings, language: context.language,

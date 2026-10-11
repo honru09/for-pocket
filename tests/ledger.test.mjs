@@ -22,7 +22,7 @@ async function fixture(t, options = {}) {
   const start = async () => { server = createApp({ token, dataDir, googleClientId: clientId, now: () => time, verifyGoogle: async credential => { if (!/^verified-[ab]$/.test(credential)) throw new Error('Invalid signature fixture'); return { sub: credential, name: credential, email: `${credential}@example.test`, aud: clientId, iss: 'https://accounts.google.com', exp: Math.floor(time / 1000) + 3600 }; }, ...options }); server.listen(0, '127.0.0.1'); await once(server, 'listening'); base = `http://127.0.0.1:${server.address().port}`; };
   await start();
   t.after(async () => { await new Promise(r => server.close(r)); assert.equal(path.dirname(dataDir), path.resolve(os.tmpdir())); assert.ok(path.basename(dataDir).startsWith('for-v05-test-')); await rm(dataDir, { recursive:true, force:true }); });
-  return { dataDir, advance: n => { time += n; }, restart: async () => { await new Promise(r => server.close(r)); await start(); },
+  return { dataDir, flush: () => server.flushStore(), advance: n => { time += n; }, restart: async () => { await new Promise(r => server.close(r)); await start(); },
     request: async (route, { user = 101, session, body, method = body ? 'POST' : 'GET', origin, headers = {} } = {}) => {
       const response = await fetch(base + '/api' + route, { method, headers: { 'Content-Type':'application/json', ...(session ? { Authorization:`Bearer ${session}` } : user ? { 'X-Telegram-Init-Data':signed(user, time) } : {}), ...(origin ? { Origin:origin } : {}), ...headers }, body: body ? JSON.stringify(body) : undefined });
       return { status:response.status, data:await response.json() };
@@ -254,6 +254,7 @@ test('legacy files migrate without deleting entries or retaining fake default me
   const f=await fixture(t,{dataDir}), p=(await f.request('/profile')).data;
   assert.deepEqual(p.settings.consumers.map(c=>c.name),['Actual user']); assert.equal(p.expenses[0].member.name,'Liia');
   assert.deepEqual(JSON.parse(await readFile(path.join(dataDir,'101.json'),'utf8')),legacy);
+  await f.flush();
   assert.equal(JSON.parse(await readFile(path.join(dataDir,'_pocket-v2.json'),'utf8')).version,2);
   await f.restart(); assert.equal((await f.request('/profile')).data.expenses[0].member.name,'Liia');
   assert.equal((await f.request('/profile',{session:'unsafe'})).status,401);

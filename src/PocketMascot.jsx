@@ -6,25 +6,66 @@ const BODY = 'M24 53C16 18 48 7 68 18C86-1 121 23 107 52C130 74 113 107 87 101C7
 const MOODS = ['cloudHappy', 'cloudSmile', 'cloudShy', 'cloudQuestion', 'cloudSigh', 'cloudGrumpy', 'cloudFurious'];
 const EYES = ['M45 58v7m28-10v7', 'M39 63q6-9 12 0m18-2q6-9 12 0', 'M40 63q5-6 10 0m20-2q5-6 10 0', 'M45 58v7m28-10v7', 'M40 61h12m18-2h12', 'M45 62v5m29-7v5', 'M41 58l10 5-9 3m39-10-10 5 9 3'];
 const MOUTHS = ['M50 78q10 10 20-3', 'M50 78q10 10 20-3', 'M56 79q5 5 10-1', 'M60 79a3 4 0 1 0 6 0a3 4 0 1 0-6 0', 'M56 83q7-3 13-1', 'M54 84q9-9 17-2', 'M52 81q12-7 23-2l-2 10q-12 5-20-1Z'];
+const CASH_DURATION = { expense: 860, income: 1040 };
+const TEAR = 'M0-5C-2-2-4 0-4 3A4 4 0 0 0 4 3C4 0 2-2 0-5Z';
 
-function Cloud({ mood }) {
+function ExpenseFace() {
+  return <g className="cloud-expense-face" style={{ '--cash-duration':`${CASH_DURATION.expense}ms` }}>
+    <g className="cloud-expense-look">
+      <path className="cloud-expense-brows" d="M39 55q6 0 11-5m20-1q4 5 10 5"/>
+      <path className="face-eyes" d="M45 61v6m29-8v6"/>
+      <path className="face-mouth" d="M55 83q8-7 16-2"/>
+    </g>
+    <g className="cloud-expense-cry">
+      <path className="cloud-expense-brows" d="M39 54q6 0 11-5m20-1q4 5 10 5"/>
+      <path className="face-eyes" d="M40 61l10 5-10 3m41-10-10 5 10 3"/>
+      <path className="face-mouth cloud-expense-open-mouth" d="M53 84q10-11 21-2q-9 8-21 2Z"/>
+    </g>
+    <g className="cloud-expense-recover">
+      <path className="cloud-expense-brows" d="M40 55q5 0 10-3m20-1q4 3 10 3"/>
+      <path className="face-eyes" d="M40 63q5 4 11-1m20-1q5 3 10-2"/>
+      <path className="face-mouth cloud-expense-lip" d="M56 82q6-4 13-1"/>
+    </g>
+    <g className="cloud-expense-tears">
+      <g transform="translate(40 69)"><path className="cloud-expense-tear tear-left" d={TEAR}/><path className="cloud-expense-tear tear-last" d={TEAR}/></g>
+      <g transform="translate(81 67)"><path className="cloud-expense-tear tear-right" d={TEAR}/></g>
+    </g>
+  </g>;
+}
+
+function Cloud({ mood, cashAction, cashId }) {
+  const faceMood = cashAction === 'income' ? 1 : mood;
   return <svg className="mascot" id="mascot" viewBox="0 0 130 126" aria-hidden="true">
     <path className="mascot-body" d={BODY}/>
     <g className="cloud-face-idle">
       <g className="cloud-face">
-      {mood >= 5 && <path className="cloud-brows" d={mood === 6 ? 'M39 48l15 8m30-10-16 9' : 'M40 51l13 5m29-7-12 5'}/>}
-      <g className="cloud-eyes"><path d={EYES[mood]} className="face-eyes"/></g>
-      <path d={MOUTHS[mood]} className={`face-mouth ${mood === 6 ? 'cloud-angry-mouth' : ''}`}/>
+      {mood >= 5 && !cashAction && <path className="cloud-brows" d={mood === 6 ? 'M39 48l15 8m30-10-16 9' : 'M40 51l13 5m29-7-12 5'}/>}
+      {cashAction !== 'expense' && <><g className="cloud-eyes"><path d={EYES[faceMood]} className="face-eyes"/></g><path d={MOUTHS[faceMood]} className={`face-mouth ${faceMood === 6 ? 'cloud-angry-mouth' : ''}`}/></>}
       <ellipse className="cloud-blush" cx="35" cy="74" rx={mood === 2 ? 11 : 7} ry={mood === 2 ? 6 : 4}/>
       <ellipse className="cloud-blush" cx="88" cy="72" rx={mood === 2 ? 11 : 7} ry={mood === 2 ? 6 : 4}/>
       {mood === 2 && <g className="cloud-blush-lines"><path d="m30 72 2 4m3-5 2 4m45-5 2 4m3-5 2 4"/></g>}
+      {cashAction === 'expense' && <ExpenseFace key={cashId}/>}
       </g>
     </g>
-    {mood === 3 && <text className="cloud-question" x="101" y="32">?</text>}
-    {mood === 4 && <><path className="cloud-sigh" d="M89 83q12-11 19-4q4 7-4 9q-8 1-9-3m11-12q8-2 9 5"/><path className="cloud-teardrop" d="M92 54q5 7 0 11q-5-4 0-11Z"/></>}
-    {mood >= 5 && <path className="cloud-vein" d="M94 34v5h-5m9-1v6h6"/>}
-    {mood === 6 && <g className="cloud-steam"><path d="M24 33q-9-6-4-12m79 3q10-6 6-13"/><path className="cloud-spark" d="m20 47 3 2m-1-5-1 4m91 5 3-2m-1 5-1-4"/></g>}
+    {cashAction && <g key={cashId} className={`cloud-cash-hands is-${cashAction}`}><path className="cloud-cash-hand-left" d="M34 91q4 10 17 7"/><path className="cloud-cash-hand-right" d="M93 88q-1 11-14 10"/></g>}
+    {mood === 3 && !cashAction && <text className="cloud-question" x="101" y="32">?</text>}
+    {mood === 4 && !cashAction && <><path className="cloud-sigh" d="M89 83q12-11 19-4q4 7-4 9q-8 1-9-3m11-12q8-2 9 5"/><path className="cloud-teardrop" d="M92 54q5 7 0 11q-5-4 0-11Z"/></>}
+    {mood >= 5 && !cashAction && <path className="cloud-vein" d="M94 34v5h-5m9-1v6h6"/>}
+    {mood === 6 && !cashAction && <g className="cloud-steam"><path d="M24 33q-9-6-4-12m79 3q10-6 6-13"/><path className="cloud-spark" d="m20 47 3 2m-1-5-1 4m91 5 3-2m-1 5-1-4"/></g>}
   </svg>;
+}
+
+function CashCelebration({ event, cloudVisible }) {
+  return <span key={event.id} className={`money-celebration is-${event.type}`} style={{ '--cash-duration':`${CASH_DURATION[event.type]}ms` }} aria-hidden="true">
+    <svg className="money-streaks" viewBox="0 0 70 76"><path d="M17 61 39 27"/><path d="m30 66 20-30"/><path d="m12 42 9-14"/></svg>
+    <span className="money-bundle-flight"><svg className="money-bundle" viewBox="0 0 56 38">
+      <rect className="money-sheet-back" x="4" y="3" width="40" height="24" rx="4" transform="rotate(-13 24 15)"/>
+      <rect className="money-sheet-middle" x="8" y="7" width="40" height="24" rx="4" transform="rotate(-5 28 19)"/>
+      <rect className="money-sheet-front" x="11" y="10" width="40" height="24" rx="4"/>
+      <path className="money-print" d="M20 15h-4v14h4m22-14h4v14h-4m-19-12 7 6 7-6m-7 6v7m-5-5h10m-10 3h10"/>
+    </svg></span>
+    {event.type === 'income' && cloudVisible && <svg className="money-cotton-tuck" viewBox="0 0 60 28"><path d="M3 22C-2 17 2 7 11 9C13 1 23 1 29 6C35 0 44 4 46 10C56 5 63 15 56 22C51 29 39 27 31 25C22 31 9 29 3 22Z"/></svg>}
+  </span>;
 }
 
 function StopSign() {
@@ -38,11 +79,13 @@ function StopSign() {
   </svg>;
 }
 
-export default function PocketMascot({ mascotRef, t, onTap, canConfirm = false, busy = false, confirmLabel, onConfirm }) {
+export default function PocketMascot({ mascotRef, t, onTap, canConfirm = false, busy = false, confirmLabel, onConfirm, celebrate = null }) {
   const [step, setStep] = useState(0), [phase, setPhase] = useState('cloud');
-  const [signTaps, setSignTaps] = useState(0), [flight, setFlight] = useState(null);
+  const [signTaps, setSignTaps] = useState(0), [flight, setFlight] = useState(null), [celebration, setCelebration] = useState(null);
   const stepRef = useRef(0), tapsRef = useRef(0), buttonRef = useRef(null), flightRef = useRef(null);
-  const motionRef = useRef(null), deadlineRef = useRef(0), lastPhase = useRef('cloud');
+  const motionRef = useRef(null), cashMotionRef = useRef(null), cashAnimationRef = useRef(null), deadlineRef = useRef(0), lastPhase = useRef('cloud');
+  const celebrationRef = useRef(celebrate?.id), celebrationTimer = useRef(null);
+  const celebrationId = celebrate?.id, celebrationType = celebrate?.type;
   const reset = useCallback(() => {
     stepRef.current = 0; tapsRef.current = 0;
     setStep(0); setSignTaps(0); setFlight(null); setPhase('cloud');
@@ -55,6 +98,45 @@ export default function PocketMascot({ mascotRef, t, onTap, canConfirm = false, 
     const restore = setTimeout(reset, Math.max(0, deadlineRef.current - Date.now()));
     return () => { clearTimeout(landing); clearTimeout(restore); };
   }, [step, reset]);
+
+  useEffect(() => {
+    if (celebrationId == null || celebrationId === celebrationRef.current || !Object.hasOwn(CASH_DURATION, celebrationType)) return;
+    celebrationRef.current = celebrationId;
+    clearTimeout(celebrationTimer.current);
+    setCelebration({ id: celebrationId, type: celebrationType });
+    celebrationTimer.current = setTimeout(() => setCelebration(null), CASH_DURATION[celebrationType]);
+  }, [celebrationId, celebrationType]);
+
+  useEffect(() => () => {
+    clearTimeout(celebrationTimer.current);
+    cashAnimationRef.current?.cancel();
+  }, []);
+
+  // This layer adds a cash gesture without changing the toy's mood or deadline.
+  // A new save picks up the current pose; a poke immediately returns to the toy.
+  useLayoutEffect(() => {
+    const node = cashMotionRef.current;
+    if (!node || !celebration || phase !== 'cloud') { cashAnimationRef.current?.cancel(); return; }
+    const current = getComputedStyle(node).transform;
+    cashAnimationRef.current?.cancel();
+    const poses = celebration.type === 'income' ? [
+      { transform:current, offset:0 },
+      { transform:'translate3d(0,-2%,0) rotate(3deg) scale(.98,1.03)', offset:.2 },
+      { transform:'translate3d(0,-1%,0) rotate(2deg)', offset:.43 },
+      { transform:'translate3d(0,2%,0) rotate(-2deg) scale(1.055,.945)', offset:.59 },
+      { transform:'translate3d(0,0,0) rotate(.5deg) scale(1.02,.99)', offset:.78 },
+      { transform:'translate3d(0,0,0) rotate(0) scale(1)', offset:1 },
+    ] : [
+      { transform:current, offset:0 },
+      { transform:'translate3d(0,2%,0) rotate(0) scale(1.055,.94)', offset:.16 },
+      { transform:'translate3d(-1%,-1%,0) rotate(-7deg) scale(.99,1.04)', offset:.32 },
+      { transform:'translate3d(-3%,1%,0) rotate(4deg) scale(.95,1.035)', offset:.46 },
+      { transform:'translate3d(0,.7%,0) rotate(-1deg) scale(1.012,.99)', offset:.7 },
+      { transform:'translate3d(0,0,0) rotate(0) scale(1)', offset:1 },
+    ];
+    const easing = getComputedStyle(node).getPropertyValue('--ease-out').trim();
+    cashAnimationRef.current = node.animate(poses.map(pose => ({ ...pose, easing })), { duration:CASH_DURATION[celebration.type], easing:'linear' });
+  }, [celebration, phase]);
 
   useLayoutEffect(() => {
     if (phase !== 'falling') return;
@@ -85,6 +167,8 @@ export default function PocketMascot({ mascotRef, t, onTap, canConfirm = false, 
 
   const tap = () => {
     if (phase === 'burst' || phase === 'falling') return;
+    clearTimeout(celebrationTimer.current);
+    setCelebration(null);
     onTap?.();
     if (phase === 'sign') {
       const next = ++tapsRef.current;
@@ -99,13 +183,14 @@ export default function PocketMascot({ mascotRef, t, onTap, canConfirm = false, 
   const moodKey = step === 7 ? 'cloudPopped' : MOODS[step];
   const label = sign ? t(signTaps ? 'cloudRestoreAgain' : 'cloudRestore') : t('cloudTap', { mood:t(moodKey) });
   return <>
-    <span className="mascot-stack">
+    <span className="mascot-stack" data-cash={celebration?.type} data-mood={Math.min(step,6)}>
       <Tappable Component="button" type="button" interactiveAnimation="opacity" ref={buttonRef} className="mascot-toy" data-phase={phase} data-mood={Math.min(step,6)} data-sign-taps={signTaps} aria-label={label} aria-disabled={phase === 'burst' || phase === 'falling'} onClick={tap}>
-        {!sign && <span ref={node => { motionRef.current = node; }} className="cloud-motion"><span ref={node => { if (mascotRef) mascotRef.current = node; }} className="cloud-touch"><span className="cloud-shell"><Cloud mood={Math.min(step,6)}/></span></span></span>}
+        {!sign && <span ref={node => { motionRef.current = node; }} className="cloud-motion"><span ref={node => { if (mascotRef) mascotRef.current = node; }} className="cloud-touch"><span ref={cashMotionRef} className="cloud-cash-motion"><span className="cloud-shell"><Cloud mood={Math.min(step,6)} cashAction={phase === 'cloud' ? celebration?.type : null} cashId={celebration?.id}/></span></span></span></span>}
         {phase === 'burst' && <span className="cloud-pop" aria-hidden="true"><span className="cloud-pop-word">{t('cloudPopSound')}</span>{Array.from({length:6},(_,i) => <i key={i} style={{ '--puff-x':`${Math.cos(i * Math.PI / 3) * 32}px`, '--puff-y':`${Math.sin(i * Math.PI / 3) * 27}px` }}/>)}</span>}
         {sign && <span className="stop-sign-rest" data-hidden={phase === 'falling'}><StopSign/></span>}
       </Tappable>
       {canConfirm && <Tappable Component="button" type="button" interactiveAnimation="opacity" className="mascot-confirm" aria-label={confirmLabel || t('save')} title={confirmLabel || t('save')} aria-busy={busy} disabled={busy} onClick={event => { event.stopPropagation(); onConfirm?.(); }}><span aria-hidden="true">✓</span></Tappable>}
+      {celebration && <CashCelebration event={celebration} cloudVisible={phase === 'cloud'}/>}
     </span>
     <span className="cloud-announcement" role="status" aria-live="polite">{step ? t(moodKey) : ''}</span>
     {flight && phase === 'falling' && createPortal(<span ref={flightRef} className="cloud-sign-flight" style={flight}><StopSign/></span>,document.body)}

@@ -1,4 +1,4 @@
-import { readFile, writeFile, mkdir, rename, readdir } from 'node:fs/promises';
+import { readFile, writeFile, mkdir, rename, readdir, unlink } from 'node:fs/promises';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { initialSettings, validateSettings } from './public/shared.mjs';
@@ -7,9 +7,15 @@ export const emptyState = () => ({ version: 2, revision: 0, users: {}, identitie
 
 // All related changes (identity, circle membership and ledger) commit together.
 // The original v1 files remain untouched as a recovery copy after migration.
-export function createStore(dataDir) {
+export function createStore(dataDir, { debounceMs = 40, logger = console } = {}) {
   const file = path.join(dataDir, '_pocket-v2.json');
-  let state, needsPersist = false, queue = Promise.resolve();
+  let state;
+  let needsPersist = false;
+  let dirty = false;
+  let queue = Promise.resolve();
+  let flushTimer = null;
+  let flushing = null;
+
   async function load() {
     if (state) return state;
     try {
@@ -19,6 +25,7 @@ export function createStore(dataDir) {
       if (error.code !== 'ENOENT') throw error;
       state = await migrate();
       needsPersist = true;
+      dirty = true;
     }
     return state;
   }
@@ -72,7 +79,90 @@ export function createStore(dataDir) {
     }
     return db;
   }
-  return {
+
+  async function writeSnapshot(snapshot) {
+    await mkdir(dataDir, { recursive: true });
+    const temp = `${file}.${randomUUID()}.tmp`;
+    try {
+      await writeFile(temp, JSON.stringify(snapshot), { mode: 0o600 });
+      // Antivirus scanners and readers can briefly hold the destination on
+      // Windows. Retry the atomic swap without exposing a partial JSON file.
+      for (let attempt = 0; ; attempt++) {
+        try { await rename(temp, file); break; }
+        catch (error) {
+          if (!['EPERM', 'EACCES', 'EBUSY'].includes(error.code) || attempt >= 4) throw error;
+          await new Promise(resolve => setTimeout(resolve, 5 * (attempt + 1)));
+        }
+      }
+    } catch (error) {
+      try { await unlink(temp); } catch {}
+      throw error;
+    }
+  }
+
+  // Flush the latest in-memory snapshot. A snapshot is immutable because each
+  // run clones the current state before applying mutations. If a new mutation
+  // arrives while the write is in flight, the loop writes the newer revision.
+  async function flushLoop({ waitForQueue = true } = {}) {
+    if (waitForQueue) await queue.catch(() => {});
+    while (dirty) {
+      const snapshot = state;
+      dirty = false;
+      try {
+        await writeSnapshot(snapshot);
+      } catch (error) {
+        dirty = true;
+        throw error;
+      }
+    }
+  }
+  function startFlush(waitForQueue) {
+    if (flushing) return flushing;
+    const work = flushLoop({ waitForQueue });
+    flushing = work;
+    work.finally(() => { if (flushing === work) flushing = null; }).catch(() => {});
+    return work;
+  }
+  async function flush({ waitForQueue = true } = {}) {
+    if (flushTimer) { clearTimeout(flushTimer); flushTimer = null; }
+    // A queued callback may not have marked dirty yet. Explicit flush/close
+    // waits for it before deciding whether any snapshot needs writing.
+    if (waitForQueue) await queue.catch(() => {});
+    if (flushTimer) { clearTimeout(flushTimer); flushTimer = null; }
+    if (flushing) {
+      try { await flushing; } catch (error) {
+        if (!dirty) throw error;
+      }
+    }
+    if (!dirty) return;
+    return startFlush(waitForQueue);
+  }
+
+  function scheduleFlush() {
+    if (flushTimer) return;
+    if (debounceMs <= 0) {
+      // A microtask starts the write before the caller's await continuation,
+      // while still coalescing mutations made in the same turn.
+      queueMicrotask(() => {
+        flushTimer = null;
+        void flush({ waitForQueue: false }).catch(error => {
+          try { logger.error?.('Store persistence failed:', error); } catch {}
+        });
+      });
+      flushTimer = true;
+      return;
+    }
+    flushTimer = setTimeout(() => {
+      flushTimer = null;
+      void flush({ waitForQueue: false }).catch(error => {
+        // Keep dirty=true so a later request or graceful shutdown retries.
+        try { logger.error?.('Store persistence failed:', error); } catch {}
+      });
+    }, Math.max(0, debounceMs));
+    flushTimer.unref?.();
+  }
+
+  const store = {
     async run(callback) {
       const task = queue.catch(() => {}).then(async () => {
         const current = await load();
@@ -81,15 +171,20 @@ export function createStore(dataDir) {
         // Read-only polls do not rewrite the database or increment its revision.
         if (needsPersist || JSON.stringify(current) !== JSON.stringify(next)) {
           next.revision = current.revision + 1;
-          await mkdir(dataDir, { recursive: true });
-          const temp = `${file}.${randomUUID()}.tmp`;
-          await writeFile(temp, JSON.stringify(next), { mode: 0o600 });
-          await rename(temp, file); state = next; needsPersist = false;
+          state = next;
+          needsPersist = false;
+          dirty = true;
+          scheduleFlush();
         }
         return result;
       });
       queue = task;
       return task;
     },
+    // Explicitly await all queued mutations and finish pending disk writes.
+    // HTTP servers call this during close; tests and backup jobs may call it too.
+    flush,
+    async close() { await flush(); },
   };
+  return store;
 }

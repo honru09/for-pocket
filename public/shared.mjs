@@ -11,6 +11,10 @@ export const CONSUMER_COLORS = ['milk', 'blue', 'pink', 'mint', 'peach', 'yellow
 export const DEFAULT_CONSUMERS = [];
 export const CONSUMERS = {};
 export const MAX_CIRCLE_MEMBERS = 99;
+// Keep transfers and repayments visible without inflating everyday spending.
+export function isBudgetEntry(entry) {
+  return !['transfer', 'reimbursement'].includes(entry?.recordKind);
+}
 export function validateUserProfile(value) {
   const name = typeof value?.name === 'string' ? value.name.trim() : '';
   if (!name || Array.from(name).length > 24) throw new Error('角色名称需为 1–24 个字。');
@@ -133,10 +137,12 @@ export function validateExpense(value, settings) {
   if (typeof value.note !== 'string' || value.note.length > 160) throw new Error('备注最多 160 个字符。');
   if (typeof value.timezone !== 'string' || value.timezone.length > 80) throw new Error('时区格式有误。');
   dateKey(new Date(), value.timezone);
+  const recordKinds = ['purchase', 'transfer', 'reimbursement', 'refund', 'gift', 'other'];
+  const recordKind = recordKinds.includes(value.recordKind) ? value.recordKind : 'purchase';
   const occurredAt = value.occurredAt == null ? null : validateEntryTime(value.occurredAt, value.timezone).occurredAt;
   return { id: value.id, type, amountMinor: value.amountMinor, currency: value.currency, occurredAt,
     categoryId: category.id, category: structuredClone(category), consumer: value.consumer, note: value.note.trim(), timezone: value.timezone,
-    splitMode, splitParticipants: [...splitParticipants] };
+    splitMode, splitParticipants: [...splitParticipants], recordKind };
 }
 export function validateEntryTime(value, timezone) {
   if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/.test(value)) throw new Error('errorEntryTime');
