@@ -1,7 +1,19 @@
+import { normalizeLocation } from './location.mjs';
+
 export const CURRENCIES = {
   JPY: { symbol: '¥', name: '日元', digits: 0 },
   CNY: { symbol: '¥', name: '人民币', digits: 2 },
   USD: { symbol: '$', name: '美元', digits: 2 },
+  UAH: { symbol: '₴', name: '格里夫纳', digits: 2 },
+  EUR: { symbol: '€', name: '欧元', digits: 2 },
+  GBP: { symbol: '£', name: '英镑', digits: 2 },
+  KRW: { symbol: '₩', name: '韩元', digits: 0 },
+  TWD: { symbol: 'NT$', name: '新台币', digits: 2 },
+  HKD: { symbol: 'HK$', name: '港元', digits: 2 },
+  SGD: { symbol: 'S$', name: '新加坡元', digits: 2 },
+  AUD: { symbol: 'A$', name: '澳元', digits: 2 },
+  CAD: { symbol: 'C$', name: '加元', digits: 2 },
+  CHF: { symbol: 'CHF', name: '瑞士法郎', digits: 2 },
 };
 export const ICONS = ['bowl', 'book', 'bag', 'game', 'plane', 'spark', 'heart', 'coffee', 'wallet', 'coins', 'gift', 'receipt', 'piggy', 'card', 'transfer', 'users', 'google', 'sprout', 'flower', 'star'];
 export const COLORS = ['peach', 'blue', 'mint', 'pink', 'yellow', 'lavender'];
@@ -140,9 +152,10 @@ export function validateExpense(value, settings) {
   const recordKinds = ['purchase', 'transfer', 'reimbursement', 'refund', 'gift', 'other'];
   const recordKind = recordKinds.includes(value.recordKind) ? value.recordKind : 'purchase';
   const occurredAt = value.occurredAt == null ? null : validateEntryTime(value.occurredAt, value.timezone).occurredAt;
+  const location = normalizeLocation(value.location);
   return { id: value.id, type, amountMinor: value.amountMinor, currency: value.currency, occurredAt,
     categoryId: category.id, category: structuredClone(category), consumer: value.consumer, note: value.note.trim(), timezone: value.timezone,
-    splitMode, splitParticipants: [...splitParticipants], recordKind };
+    splitMode, splitParticipants: [...splitParticipants], recordKind, ...(location ? { location } : {}) };
 }
 export function validateEntryTime(value, timezone) {
   if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/.test(value)) throw new Error('errorEntryTime');

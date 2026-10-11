@@ -7,6 +7,8 @@ import { MAX_IMPORT_FILE_BYTES, MAX_IMPORT_TEXT, IMPORT_MIME_TYPES, IMAGE_MIME_T
 import { OAuth2Client } from 'google-auth-library';
 import { validateInitData } from './auth.mjs';
 import { createStore } from './store.mjs';
+import { createLocationResolver } from './location.mjs';
+import { normalizeLocation, currencyForCountry } from './public/location.mjs';
 import { RequestError, fail, hash, ensureUser, issueSession, googleLogin, handleDomain } from './domain.mjs';
 import { CURRENCIES, resolveLanguage } from './public/shared.mjs';
 import { AiError, createExpenseParser, createExpenseSummarizer } from './ai.mjs';
@@ -25,11 +27,12 @@ function decodeBase64File(data, mimeType) {
   return { data, mimeType, bytes: Buffer.from(data, 'base64') };
 }
 
-export function createApp({ token = process.env.BOT_TOKEN || '', dataDir = path.resolve(root, process.env.DATA_DIR || 'data'), publicUrl = process.env.PUBLIC_URL || '', maxAgeSeconds = Number(process.env.AUTH_MAX_AGE_SECONDS || 86400), googleClientId = process.env.GOOGLE_CLIENT_ID || '', verifyGoogle, aiParser = createExpenseParser(), aiSummarizer = createExpenseSummarizer(), webhookSecret = process.env.TELEGRAM_WEBHOOK_SECRET || '', callTelegram, now = () => Date.now(), asyncPersist = process.env.STORE_ASYNC_PERSIST === 'true' || !process.env.K_SERVICE, storeOptions } = {}) {
+export function createApp({ token = process.env.BOT_TOKEN || '', dataDir = path.resolve(root, process.env.DATA_DIR || 'data'), publicUrl = process.env.PUBLIC_URL || '', maxAgeSeconds = Number(process.env.AUTH_MAX_AGE_SECONDS || 86400), googleClientId = process.env.GOOGLE_CLIENT_ID || '', verifyGoogle, resolveLocation, aiParser = createExpenseParser(), aiSummarizer = createExpenseSummarizer(), webhookSecret = process.env.TELEGRAM_WEBHOOK_SECRET || '', callTelegram, now = () => Date.now(), asyncPersist = process.env.STORE_ASYNC_PERSIST === 'true' || !process.env.K_SERVICE, storeOptions } = {}) {
   if (!Number.isSafeInteger(maxAgeSeconds) || maxAgeSeconds < 60) throw new Error('Invalid AUTH_MAX_AGE_SECONDS');
   const resolvedWebhookSecret = token ? deriveTelegramWebhookSecret(token, webhookSecret) : '';
   const store = createStore(dataDir, storeOptions), google = new OAuth2Client(), attempts = new Map();
-  const telegramHandler = createTelegramHandler({ store, token, publicUrl, now, limit, callTelegram,
+  const locationResolver = resolveLocation || createLocationResolver({ publicUrl });
+  const telegramHandler = createTelegramHandler({ store, token, publicUrl, now, limit, callTelegram, resolveLocation: locationResolver,
     beforeDeliver: asyncPersist ? undefined : () => store.flush(),
     aiParser: { ...aiParser, summarize: (input, profile) => summarizeExpenses(input, profile, aiSummarizer, now()) } });
   function limit(key, max = 12) {
@@ -124,6 +127,7 @@ export function createApp({ token = process.env.BOT_TOKEN || '', dataDir = path.
       }
       if (!text && !normalizedFile) fail('errorAiInput', 400);
       return { text, file: normalizedFile, image: normalizedFile && IMAGE_MIME_TYPES.has(normalizedFile.mimeType) ? normalizedFile : null, timezone, enhanced: Boolean(normalizedFile && body.enhanced === true), now: now(), textTruncated: originalText.length > MAX_IMPORT_TEXT,
+        ...(!normalizedFile ? { locationContext: normalizeLocation(body.locationContext), currency: body.currency, categoryId: body.categoryId, type: body.type } : {}),
         ledgerId: typeof body?.ledgerId === 'string' ? body.ledgerId.trim() : String(queryLedgerId || '').trim(),
         telegramUserId: typeof body?.telegramUserId === 'string' || typeof body?.telegramUserId === 'number' ? String(body.telegramUserId).trim() : '' };
     }
@@ -168,6 +172,27 @@ export function createApp({ token = process.env.BOT_TOKEN || '', dataDir = path.
         const aiRoute = url.pathname === '/api/ai/parse-expense' && req.method === 'POST';
         const telegramAiRoute = url.pathname === '/api/ai/telegram-parse' && req.method === 'POST';
         const body = aiRoute || telegramAiRoute ? null : ['POST', 'PUT'].includes(req.method) ? await bodyOf(req, url.pathname === '/api/expenses/import' ? 131072 : 32768) : {};
+        if (url.pathname === '/api/location/reverse' && req.method === 'POST') {
+          limit(`location-ip:${req.socket.remoteAddress}`, 30);
+          const context = token || googleClientId ? await store.run(db => {
+            const uid = resolveAuth(db, req);
+            const profile = handleDomain(db, uid, '/profile', 'GET', {}, { now: now(), limit });
+            if (body.ledgerId && body.ledgerId !== profile.ledgerId) fail('errorLedgerChanged', 409);
+            return { uid, ledgerId: profile.ledgerId, language: profile.settings.language };
+          }) : { language: resolveLanguage(body.language) };
+          if (context.uid) limit(`location-user:${context.uid}`, 12);
+          const input = normalizeLocation(body.location);
+          let location = input;
+          if (input?.lat !== undefined) {
+            try { location = normalizeLocation(await locationResolver({ ...input, accuracy: body.location?.accuracy }, { language: context.language })) || input; } catch {}
+          }
+          if (context.uid) await store.run(db => {
+            const profile = handleDomain(db, context.uid, '/profile', 'GET', {}, { now: now(), limit });
+            if (profile.ledgerId !== context.ledgerId) fail('errorLedgerChanged', 409);
+          });
+          await send(res, 200, { location: location || null, suggestedCurrency: currencyForCountry(location?.countryCode) || null });
+          return;
+        }
         if (aiRoute) {
           limit(`ai-ip:${req.socket.remoteAddress}`, 60);
           const uid = await store.run(db => resolveAuth(db, req));

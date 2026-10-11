@@ -42,6 +42,13 @@ export function localService(defaultLang = 'zh') {
     updateEntryTime: async (id, value) => mutate(p => { const e = p.expenses.find(e => e.id === id && !e.deletedAt); if (!e) throw new Error('errorMissing'); Object.assign(e, validateEntryTime(value.occurredAt, value.timezone), { updatedAt: new Date().toISOString() }); return e; }),
     deleteExpense: async id => mutate(p => { const e = p.expenses.find(e => e.id === id); if (!e) throw new Error('errorMissing'); e.deletedAt = new Date().toISOString(); return e; }),
     restoreExpense: async id => mutate(p => { const e = p.expenses.find(e => e.id === id); if (!e) throw new Error('errorMissing'); delete e.deletedAt; return e; }),
+    resolveLocation: async location => {
+      try {
+        const response = await fetch('/api/location/reverse', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({location, language:defaultLang}), signal:AbortSignal.timeout(7000) });
+        if (response.ok) return await response.json();
+      } catch {}
+      return { location };
+    },
     aiParseExpense: async () => { throw new Error('errorAiNeedLogin'); },
     aiSummary: async () => { throw new Error('errorAiNeedLogin'); },
   };
@@ -77,7 +84,7 @@ export function remoteService(telegram) {
     await request('/auth/telegram', 'POST', {}, { includeInitData: true });
     lastInitData = raw;
   }
-  async function aiParseExpense({ text = '', file = null, files = [], enhanced = false, timezone = Intl.DateTimeFormat().resolvedOptions().timeZone, ledgerId: requestedLedgerId } = {}) {
+  async function aiParseExpense({ text = '', file = null, files = [], enhanced = false, locationContext, currency, categoryId, type, timezone = Intl.DateTimeFormat().resolvedOptions().timeZone, ledgerId: requestedLedgerId } = {}) {
     await exchangeTelegram();
     const ledger = requestedLedgerId || ledgerId;
     const baseHeaders = {};
@@ -99,7 +106,7 @@ export function remoteService(telegram) {
         response = await fetch('/api/ai/parse-expense', {
           method: 'POST',
           headers: { ...baseHeaders, 'Content-Type': 'application/json', 'X-AI-Language': language },
-          body: JSON.stringify({ text: String(includeText).slice(0, 12000), ...(attachment ? { file: attachment } : {}), enhanced: enhanced === true, timezone, language, ledgerId: ledger }),
+          body: JSON.stringify({ locationContext, currency, categoryId, type, text: String(includeText).slice(0, 12000), ...(attachment ? { file: attachment } : {}), enhanced: enhanced === true, timezone, language, ledgerId: ledger }),
           signal: AbortSignal.timeout(60000),
         });
       } catch (error) {
@@ -151,6 +158,7 @@ export function remoteService(telegram) {
     updateEntryTime: (id, value, scope = ledgerId) => request(`/expenses/${encodeURIComponent(id)}`, 'PUT', { ...value, ledgerId: scope }),
     deleteExpense: (id, scope = ledgerId) => request(`/expenses/${encodeURIComponent(id)}?ledgerId=${encodeURIComponent(scope)}`, 'DELETE'),
     restoreExpense: (id, scope = ledgerId) => request(`/expenses/${encodeURIComponent(id)}/restore`, 'POST', { ledgerId: scope }),
+    resolveLocation: location => request('/location/reverse', 'POST', { location, ledgerId }, { timeout: 7000 }),
     aiParseExpense,
     aiSummary: async input => { await exchangeTelegram(); return request('/ai/summary', 'POST', { ledgerId, ...input }, { timeout: 60000 }); },
     loginWithGoogle: async (credential, link = false, language) => {

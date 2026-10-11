@@ -7,6 +7,12 @@ export const hash = value => createHash('sha256').update(value).digest('hex');
 const codeChars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const newCode = () => Array.from({ length: 6 }, () => codeChars[randomInt(codeChars.length)]).join('');
 const memberId = id => `u_${id}`;
+function forgetPendingLocations(db, ...uids) {
+  if (!db.telegram) return;
+  const affected = new Set(uids);
+  for (const [key, session] of Object.entries(db.telegram.locations || {})) if (affected.has(session?.uid)) delete db.telegram.locations[key];
+  for (const update of Object.values(db.telegram.updates || {})) if (affected.has(update?.locationEntry?.uid)) delete update.locationEntry;
+}
 function cleanCode(value) { const c = String(value || '').trim().toUpperCase(); if (!/^[A-Z2-9]{6}$/.test(c)) fail('errorInvalidCode'); return c; }
 export function member(db, id) { const u = db.users[id]; return { id: memberId(id), name: u.name, color: u.color, avatar: u.avatar }; }
 export function ensureUser(db, identity, info = {}) {
@@ -22,7 +28,10 @@ function circleFor(db, uid, id = db.users[uid].activeCircleId) {
   const c = db.circles[id]; if (!c?.members.includes(uid)) fail('errorMembership', 403); return c;
 }
 function context(db, uid) {
-  if (db.users[uid].activeCircleId && !db.circles[db.users[uid].activeCircleId]?.members.includes(uid)) db.users[uid].activeCircleId = null;
+  if (db.users[uid].activeCircleId && !db.circles[db.users[uid].activeCircleId]?.members.includes(uid)) {
+    db.users[uid].activeCircleId = null;
+    forgetPendingLocations(db, uid);
+  }
   const circle = circleFor(db, uid), ledgerId = circle?.ledgerId || uid;
   db.ledgers[ledgerId] ||= { settings: initialSettings(), expenses: [] };
   return { circle, ledgerId, ledger: db.ledgers[ledgerId], consumers: (circle?.members || [uid]).map(id => member(db, id)) };
@@ -87,6 +96,7 @@ function mergeAccounts(db, source, target) {
   db.users[target].googleEmail ||= db.users[source].googleEmail;
   db.users[target].activeCircleId ||= db.users[source].activeCircleId;
   for (const [key, item] of Object.entries(db.links)) if ([source, target].includes(item.userId)) delete db.links[key];
+  forgetPendingLocations(db, source, target);
   delete db.ledgers[source]; delete db.users[source];
 }
 export function googleLogin(db, payload, { link, uid, now }) {
@@ -128,9 +138,10 @@ export function handleDomain(db, uid, route, method, body, { now, limit, ledgerQ
     const previous = context(db, uid), id = `cir_${randomUUID()}`;
     db.circles[id] = { id, name, ledgerId: id, members: [uid], admins: [uid], invite: null };
     db.ledgers[id] = { settings: structuredClone(previous.ledger.settings), expenses: [] };
+    forgetPendingLocations(db, uid);
     db.users[uid].activeCircleId = id; return visible(db, uid);
   }
-  if (route === '/circles/switch' && method === 'POST') { if (body.circleId) circleFor(db, uid, body.circleId); db.users[uid].activeCircleId = body.circleId || null; return visible(db, uid); }
+  if (route === '/circles/switch' && method === 'POST') { if (body.circleId) circleFor(db, uid, body.circleId); forgetPendingLocations(db, uid); db.users[uid].activeCircleId = body.circleId || null; return visible(db, uid); }
   if (route === '/circles/invite' && method === 'POST') {
     const c = circleFor(db, uid, body.circleId); if (!c) fail('errorMembership', 403);
     if (body.renew) requireAdmin(c, uid);
@@ -147,6 +158,7 @@ export function handleDomain(db, uid, route, method, body, { now, limit, ledgerQ
     if (route === '/circles/preview') return { circle: viewCircle(db, c, uid), expiresAt: c.invite.expiresAt, alreadyMember: c.members.includes(uid) };
     if (body.confirm !== true) fail('errorConfirm');
     if (!c.members.includes(uid)) { if (c.members.length >= MAX_CIRCLE_MEMBERS) fail('errorCircleFull', 409); c.members.push(uid); }
+    forgetPendingLocations(db, uid);
     db.users[uid].activeCircleId = c.id; return visible(db, uid);
   }
   if (['/circles/rename', '/circles/admin', '/circles/remove', '/circles/leave'].includes(route) && method === 'POST') {
@@ -162,6 +174,7 @@ export function handleDomain(db, uid, route, method, body, { now, limit, ledgerQ
       if (body.confirm !== true) fail('errorConfirm');
       const departing = route === '/circles/leave' ? uid : c.members.find(id => memberId(id) === body.memberId);
       if (!departing) fail('errorMembership', 403);
+      forgetPendingLocations(db, departing);
       c.members = c.members.filter(id => id !== departing); c.admins = c.admins.filter(id => id !== departing);
       if (c.members.length && !c.admins.length) c.admins = [c.members[0]];
       if (db.users[departing].activeCircleId === c.id) db.users[departing].activeCircleId = null;

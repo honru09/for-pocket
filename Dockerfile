@@ -27,7 +27,7 @@ RUN npm ci --omit=dev
 # Copy compiled frontend and application backend modules
 COPY --from=builder /app/dist ./dist
 COPY public ./public
-COPY auth.mjs bot.mjs bot-i18n.mjs telegram-ai.mjs telegram-config.mjs ai.mjs ai-summary.mjs expense-category.mjs expense-time.mjs import-files.mjs domain.mjs store.mjs server.mjs ./
+COPY auth.mjs bot.mjs bot-i18n.mjs telegram-ai.mjs telegram-config.mjs ai.mjs ai-summary.mjs expense-category.mjs expense-time.mjs location.mjs import-files.mjs domain.mjs store.mjs server.mjs ./
 
 # Operational scripts are available in the deployed container as well.
 COPY scripts ./scripts

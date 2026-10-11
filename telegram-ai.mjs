@@ -10,6 +10,7 @@ import { ensureUser, handleDomain, RequestError, visible } from './domain.mjs';
 import { botLanguage, botText } from './bot-i18n.mjs';
 import { categoryLabel } from './public/i18n.mjs';
 import { extractImportText } from './import-files.mjs';
+import { normalizeLocation, currencyForCountry, locationLabel } from './public/location.mjs';
 
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
 const MAX_IMPORT_FILE_BYTES = MAX_IMAGE_BYTES;
@@ -18,6 +19,8 @@ const MAX_AUDIO_SECONDS = 60;
 const MAX_IMPORT_TEXT = 12000;
 const MAX_TEXT = MAX_IMPORT_TEXT;
 const DRAFT_TTL = 15 * 60 * 1000;
+const LOCATION_TTL = 10 * 60 * 1000;
+const LOCATION_RESOLVE_TIMEOUT = 2500;
 const UPDATE_TTL = 24 * 60 * 60 * 1000;
 const UPDATE_LEASE = 3 * 60 * 1000;
 const MAX_RETRY_CACHE_BYTES = 32 * 1024 * 1024;
@@ -105,6 +108,37 @@ function contentLanguage(value, fallback = 'zh') {
   if (/[\u3400-\u9fff]/u.test(text)) return 'zh';
   if (/[a-z]/i.test(text)) return 'en';
   return botLanguage(fallback);
+}
+
+function locationAmount(value, currency) {
+  let text = String(value || '').normalize('NFKC').trim();
+  if (!/^[\d.,\s]+$/u.test(text) || !/\d/u.test(text) || text.length > 32) return null;
+  // Accept common thousands separators and a decimal comma without treating
+  // "850,50" as 85,050. Ambiguous/malformed amounts stay editable by the user.
+  if (/\s/u.test(text)) {
+    if (!/^\d{1,3}(?:\s\d{3})+(?:[.,]\d{1,2})?$/u.test(text)) return null;
+    text = text.replace(/\s/gu, '');
+  }
+  if (/^\d{1,3}(?:,\d{3})+(?:\.\d{1,2})?$/.test(text)) text = text.replace(/,/g, '');
+  else if (/^\d{1,3}(?:\.\d{3})+(?:,\d{1,2})?$/.test(text)) text = text.replace(/\./g, '').replace(',', '.');
+  else if (/^\d+(?:,\d{1,2})?$/.test(text)) text = text.replace(',', '.');
+  else if (!/^\d+(?:\.\d{1,2})?$/.test(text)) return null;
+  const digits = CURRENCIES[currency]?.digits ?? 0;
+  const fraction = text.split('.')[1] || '';
+  if (fraction.length > digits && /[1-9]/.test(fraction.slice(digits))) return null;
+  const amount = Number(text), amountMinor = Math.round(amount * 10 ** digits);
+  if (!Number.isSafeInteger(amountMinor) || amountMinor <= 0 || amountMinor > 10 ** (8 + digits) - 1) return null;
+  return { text: String(amount), amountMinor, currency };
+}
+
+function locationFromMessage(message) {
+  const venue = message?.venue;
+  const coordinates = venue?.location || message?.location;
+  if (!coordinates || typeof coordinates.latitude !== 'number' || typeof coordinates.longitude !== 'number'
+    || !Number.isFinite(coordinates.latitude) || !Number.isFinite(coordinates.longitude)
+    || Math.abs(coordinates.latitude) > 90 || Math.abs(coordinates.longitude) > 180) return null;
+  return normalizeLocation({ lat: coordinates.latitude, lng: coordinates.longitude,
+    ...(venue ? { name: venue.title, address: venue.address } : {}) });
 }
 
 function parsedLanguage(parsed, fallback) {
@@ -236,6 +270,7 @@ function ensureTelegramState(db) {
   if (!db.telegram.updates || typeof db.telegram.updates !== 'object') db.telegram.updates = {};
   if (!db.telegram.drafts || typeof db.telegram.drafts !== 'object') db.telegram.drafts = {};
   if (!db.telegram.preferences || typeof db.telegram.preferences !== 'object') db.telegram.preferences = {};
+  if (!db.telegram.locations || typeof db.telegram.locations !== 'object') db.telegram.locations = {};
   return db.telegram;
 }
 
@@ -244,9 +279,18 @@ function pruneTelegramState(state, at, maxDrafts) {
   for (const [id, item] of Object.entries(state.updates)) {
     const timestamp = updateAt(item);
     if (!Number.isFinite(timestamp) || at - timestamp > UPDATE_TTL) delete state.updates[id];
+    else if (item?.locationEntry?.expiresAt <= at) delete item.locationEntry;
   }
   for (const [id, draft] of Object.entries(state.drafts)) {
     if (!draft || draft.expiresAt <= at) delete state.drafts[id];
+  }
+  for (const [id, location] of Object.entries(state.locations)) {
+    if (!location || !Number.isFinite(location.expiresAt) || location.expiresAt <= at) delete state.locations[id];
+  }
+  const locations = Object.entries(state.locations);
+  if (locations.length > 256) {
+    locations.sort((a, b) => Number(a[1]?.createdAt || 0) - Number(b[1]?.createdAt || 0));
+    for (const [id] of locations.slice(0, locations.length - 256)) delete state.locations[id];
   }
   const entries = Object.entries(state.drafts);
   if (entries.length > maxDrafts) {
@@ -289,6 +333,8 @@ export function createTelegramHandler({
   callTelegram,
   beforeDeliver,
   downloadFile,
+  resolveLocation,
+  locationResolveTimeout = LOCATION_RESOLVE_TIMEOUT,
   timezone = DEFAULT_TIMEZONE,
   maxDrafts = 32,
   autoConfirm = DEFAULT_AUTO_CONFIRM,
@@ -305,7 +351,7 @@ export function createTelegramHandler({
     }
     return telegram(method, parameters);
   };
-  const inflight = new Map(), imageCache = new Map();
+  const inflight = new Map(), imageCache = new Map(), locationLookups = new Map();
   let cachedImageBytes = 0;
 
   function deleteCachedImage(id) {
@@ -358,7 +404,7 @@ export function createTelegramHandler({
       if (previous?.status === 'processing' && previous.leaseUntil > at) return { busy: true };
       state.updates[key] = { ...previous, at: previous?.at ?? at, status: 'processing', lease, leaseUntil: at + UPDATE_LEASE };
       pruneTelegramState(state, at, maxDrafts);
-      return { key, lease, action: previous?.action || null };
+      return { key, lease, action: previous?.action || null, locationEntry: previous?.locationEntry || null };
     });
   }
 
@@ -410,6 +456,133 @@ export function createTelegramHandler({
 
   const reply = (context, chatId, key, result, extra = {}) => deliverReply(context.operation,
     { type: 'reply', chatId, text: botText(context.language, key), extra, result });
+
+  const locationSessionKey = (context, chatId) => `${context.uid}:${String(chatId)}`;
+
+  async function clearPendingLocation(context, chatId) {
+    await store.run(db => {
+      const locations = ensureTelegramState(db).locations, key = locationSessionKey(context, chatId);
+      // Webhook deliveries can arrive out of order. An older unrelated
+      // message must not erase the venue shared by a newer update.
+      if (locations[key]?.sourceUpdate > Number(context.operation?.key)) return;
+      delete locations[key];
+    });
+  }
+
+  async function resolvePendingLocation(context, key, id) {
+    if (locationLookups.has(id)) return locationLookups.get(id);
+    const work = (async () => {
+      const pending = await store.run(db => {
+        const current = ensureTelegramState(db).locations[key];
+        if (current?.id !== id || current.uid !== context.uid || current.telegramId !== context.telegramId
+          || current.expiresAt <= atMillis(now) || visible(db, context.uid).ledgerId !== current.ledgerId) return null;
+        return structuredClone(current);
+      });
+      if (!pending) return null;
+      if (pending.status !== 'resolving') return pending.location;
+      let resolved;
+      if (typeof resolveLocation === 'function') {
+        let timer;
+        try {
+          resolved = await Promise.race([
+            Promise.resolve().then(() => resolveLocation({ ...pending.location,
+              ...(pending.accuracy !== undefined ? { accuracy: pending.accuracy } : {}) }, { language: pending.language })),
+            new Promise(resolve => { timer = setTimeout(() => resolve(null), Math.max(1, Math.min(5000, Number(locationResolveTimeout) || LOCATION_RESOLVE_TIMEOUT))); }),
+          ]);
+        } catch {} finally { clearTimeout(timer); }
+      }
+      // Preserve the explicitly shared venue and coordinates. The lookup can
+      // add its country/area, never substitute a neighboring merchant.
+      const enriched = normalizeLocation({ ...normalizeLocation(resolved), ...pending.location });
+      return store.run(db => {
+        const state = ensureTelegramState(db), current = state.locations[key];
+        if (current?.id !== id) return null;
+        if (current.expiresAt <= atMillis(now) || visible(db, context.uid).ledgerId !== current.ledgerId) {
+          delete state.locations[key]; return null;
+        }
+        current.location = enriched;
+        current.status = 'ready';
+        delete current.accuracy;
+        return enriched;
+      });
+    })();
+    locationLookups.set(id, work);
+    try { return await work; }
+    finally { if (locationLookups.get(id) === work) locationLookups.delete(id); }
+  }
+
+  async function rememberLocation(context, message) {
+    const chatId = message.chat.id, key = locationSessionKey(context, chatId);
+    const location = locationFromMessage(message);
+    if (!location) {
+      await clearPendingLocation(context, chatId);
+      return reply(context, chatId, 'locationUnavailable', { ok: false, reason: 'invalid-location' });
+    }
+    invokeLimit(`telegram-location:${context.telegramId}`, 12);
+    const id = randomUUID(), at = atMillis(now);
+    const accuracy = (message.venue?.location || message.location)?.horizontal_accuracy;
+    const accepted = await store.run(db => {
+      const state = ensureTelegramState(db);
+      if (visible(db, context.uid).ledgerId !== context.profile.ledgerId) return 'ledger-changed';
+      const sourceUpdate = Number(context.operation.key);
+      if (state.locations[key]?.sourceUpdate > sourceUpdate) return 'superseded';
+      // Reserve before lookup. A slow older reverse-geocoding response must
+      // never replace a newer location (or an already consumed amount).
+      state.locations[key] = { id, uid: context.uid, telegramId: context.telegramId, chatId: String(chatId),
+        ledgerId: context.profile.ledgerId, location, language: context.language, sourceUpdate, status: 'resolving',
+        ...(typeof accuracy === 'number' && Number.isFinite(accuracy) && accuracy >= 0 ? { accuracy } : {}),
+        createdAt: at, expiresAt: at + LOCATION_TTL };
+      const preference = state.preferences[context.uid];
+      const editing = state.drafts[preference?.editingDraftId];
+      if (editing?.status === 'editing') editing.status = 'pending';
+      if (preference) { delete preference.editingDraftId; delete preference.editingChatId; }
+      pruneTelegramState(state, at, maxDrafts);
+      return 'saved';
+    });
+    if (accepted === 'ledger-changed') return reply(context, chatId, 'ledgerChanged', { ok: false, reason: 'ledger-changed' });
+    if (accepted === 'superseded') return { ok: true, kind: 'location-superseded' };
+    const enriched = await resolvePendingLocation(context, key, id);
+    if (!enriched) return { ok: true, kind: 'location-superseded' };
+    const name = escapeTelegramText(locationLabel(enriched)) || botText(context.language, 'locationHere');
+    return deliverReply(context.operation, { type: 'reply', chatId,
+      text: botText(context.language, 'locationReceived', { name }),
+      result: { ok: true, kind: 'location', expiresAt: at + LOCATION_TTL } });
+  }
+
+  async function takePendingLocation(context, message) {
+    const key = locationSessionKey(context, message.chat.id);
+    const resolvingId = await store.run(db => {
+      const pending = ensureTelegramState(db).locations[key];
+      return pending?.status === 'resolving' && pending.sourceUpdate < Number(context.operation.key) ? pending.id : null;
+    });
+    // A quickly typed amount waits for the same bounded lookup, outside the
+    // store transaction. After a restart, the resolving session is resumed.
+    // This keeps a foreign decimal amount from being checked as JPY first.
+    if (resolvingId) await resolvePendingLocation(context, key, resolvingId);
+    return store.run(db => {
+      const state = ensureTelegramState(db);
+      const checkpoint = state.updates[context.operation?.key];
+      const pending = checkpoint?.locationEntry || state.locations[key];
+      if (!pending) return null;
+      if (pending.sourceUpdate >= Number(context.operation.key)) return null;
+      if (pending.uid !== context.uid || pending.telegramId !== context.telegramId || pending.chatId !== String(message.chat.id)
+        || pending.expiresAt <= atMillis(now) || pending.ledgerId !== visible(db, context.uid).ledgerId) {
+        delete state.locations[key];
+        if (checkpoint) delete checkpoint.locationEntry;
+        return { stale: true };
+      }
+      const recommended = currencyForCountry(pending.location?.countryCode);
+      const currency = Object.hasOwn(CURRENCIES, recommended) ? recommended : context.profile.settings.currency || 'JPY';
+      const amount = locationAmount(message.text, currency);
+      if (!amount) return { invalid: true, currency };
+      const entry = { ...pending, ...amount };
+      delete state.locations[key];
+      // The location is consumed once across concurrent messages, while a
+      // delivery/persistence retry of this same update retains its context.
+      if (checkpoint?.lease === context.operation?.lease) checkpoint.locationEntry = entry;
+      return entry;
+    });
+  }
 
   async function downloadTelegramFile(fileId, maximum = MAX_IMAGE_BYTES) {
     if (typeof downloadFile === 'function') {
@@ -468,7 +641,7 @@ export function createTelegramHandler({
     return mimeType ? { fileId: document.file_id, mimeType, fileSize: Number(document.file_size) || 0, name: safeString(document.file_name, 160), kind: importKind(mimeType) } : { fileId: document.file_id, mimeType: '', fileSize: Number(document.file_size) || 0, name: safeString(document.file_name, 160), kind: '' };
   }
 
-  function toDraftItem(item, profile, uid, sourceTimezone, language = profile.settings.language) {
+  function toDraftItem(item, profile, uid, sourceTimezone, language = profile.settings.language, locationContext) {
     const type = item?.type === 'income' ? 'income' : 'expense';
     const currency = Object.hasOwn(CURRENCIES, item?.currency) ? item.currency : (profile.settings.currency || 'JPY');
     const category = chooseCategory(item, type, profile.settings);
@@ -499,6 +672,7 @@ export function createTelegramHandler({
         splitMode,
         splitParticipants: splitMode === 'equal' ? splitParticipants : [],
         recordKind,
+        ...(normalizeLocation(locationContext) ? { location: normalizeLocation(locationContext) } : {}),
       };
     try { validateExpense(expense, profile.settings); } catch { return null; }
     return {
@@ -529,6 +703,7 @@ export function createTelegramHandler({
       if (item.payerName) lines.push(`   ${botText(language, 'previewPayer')}: ${escapeTelegramText(item.payerName)}`);
       if (item.splitNames?.length) lines.push(`   ${botText(language, 'previewSplit')}: ${item.splitNames.map(escapeTelegramText).join(' / ')}`);
       if (expense.note && expense.note !== item.merchant) lines.push(`   ${botText(language, 'previewNote')}: ${escapeTelegramText(expense.note)}`);
+      if (locationLabel(expense.location)) lines.push(`   📍 ${escapeTelegramText(locationLabel(expense.location))}`);
       if (item.needsReview) lines.push(`   ${botText(language, 'reviewNeeded')}${item.reviewReason ? `: ${escapeTelegramText(item.reviewReason)}` : ''}`);
     }
     lines.push('', botText(language, 'previewHint'));
@@ -537,11 +712,11 @@ export function createTelegramHandler({
     return lines.join('\n');
   }
 
-  async function saveDraft(context, chatId, parsed, { retryId = null, replaceDraftId = null, inputTruncated = false } = {}) {
+  async function saveDraft(context, chatId, parsed, { retryId = null, replaceDraftId = null, inputTruncated = false, locationContext } = {}) {
     const sourceTimezone = validTimezone(parsed?.timezone, timezone);
     const raw = normaliseItems(parsed);
     if (!raw.length || raw.length > MAX_PREVIEW_ITEMS) return null;
-    const items = raw.map(item => toDraftItem(item, context.profile, context.uid, sourceTimezone, context.language));
+    const items = raw.map(item => toDraftItem(item, context.profile, context.uid, sourceTimezone, context.language, locationContext));
     if (items.some(item => !item)) return null;
     const id = randomUUID();
     const at = atMillis(now);
@@ -570,7 +745,10 @@ export function createTelegramHandler({
       state.drafts[id] = draft;
       if (replaceDraftId && state.drafts[replaceDraftId]?.uid === context.uid) state.drafts[replaceDraftId].status = 'replaced';
       const operation = context.operation;
-      if (state.updates[operation?.key]?.lease === operation?.lease) state.updates[operation.key].action = { type: 'draft', draftId: id };
+      if (state.updates[operation?.key]?.lease === operation?.lease) {
+        state.updates[operation.key].action = { type: 'draft', draftId: id };
+        delete state.updates[operation.key].locationEntry;
+      }
       pruneTelegramState(state, at, maxDrafts);
       return true;
     });
@@ -597,37 +775,49 @@ export function createTelegramHandler({
     return { ok: true, kind: 'draft', draftId: draft.id, count: draft.items.length };
   }
 
-  async function parseMessage(context, message, attachment, { enhanced = false, replaceDraftId = null, previousRecords = null } = {}) {
+  async function parseMessage(context, message, attachment, { enhanced = false, replaceDraftId = null, previousRecords = null, locationEntry = null, locationContext = null } = {}) {
     if (!aiParser || typeof aiParser.parse !== 'function') {
       return reply(context, message.chat.id, 'unavailable', { ok: false, reason: 'unavailable' });
     }
     const image = attachment?.image || null;
     const file = attachment?.file || null;
     const isAudio = AUDIO_MIME_TYPES.has(file?.mimeType);
-    const text = firstText(attachment?.text !== undefined ? attachment.text : (message.text || message.caption || ''));
+    const text = locationEntry?.text || firstText(attachment?.text !== undefined ? attachment.text : (message.text || message.caption || ''));
+    const location = normalizeLocation(locationEntry?.location || locationContext);
+    const defaultCurrency = locationEntry?.currency || (location ? currencyForCountry(location.countryCode) : null) || (isAudio ? 'JPY' : null);
     if (!text && !image && !file) {
       return reply(context, message.chat.id, 'noInput', { ok: false, reason: 'no-input' });
     }
     invokeLimit(`telegram-ai:${context.telegramId}`, 12);
     const input = { text, image, file, timezone: validTimezone(timezone), telegramUserId: context.telegramId, enhanced, now: messageAnchor(message, context.at),
       language: context.language, defaultConsumer: defaultConsumer(context.profile, context.uid),
-      ...(previousRecords ? { previousRecords } : {}), ...(isAudio ? { defaultCurrency: 'JPY' } : {}) };
+      ...(previousRecords ? { previousRecords } : {}), ...(defaultCurrency ? { defaultCurrency } : {}),
+      ...(location ? { locationContext: location } : {}) };
     const retryId = (image || file) && !isAudio && !enhanced ? cacheImage(context, message.chat.id, input) : null;
     let parsed;
     try {
       parsed = await aiParser.parse(input, { ...context.profile.settings, language: context.language,
-        ...(isAudio ? { currency: 'JPY' } : {}), currentConsumer: context.profile.user.id });
-      context.language = parsedLanguage(parsed, context.language);
+        ...(defaultCurrency ? { currency: defaultCurrency } : {}), currentConsumer: context.profile.user.id });
+      if (!locationEntry) context.language = parsedLanguage(parsed, context.language);
     } catch (error) {
       const key = enhanced ? 'enhanceFailed' : AUDIO_MIME_TYPES.has(file?.mimeType) ? 'audioNoResult' : error?.message === 'errorAiResult' ? 'noResult' : 'unavailable';
       return reply(context, message.chat.id, key, { ok: false, reason: key }, retryMarkup(retryId, context.language));
     }
-    const draft = await saveDraft(context, message.chat.id, parsed, { retryId, replaceDraftId, inputTruncated: attachment?.truncated === true });
+    if (locationEntry && normaliseItems(parsed).length) {
+      // A numeric reply contains one exact amount. The model supplies category
+      // and merchant suggestions, never a replacement amount, date or currency.
+      parsed = { timezone: validTimezone(timezone), items: [{ ...normaliseItems(parsed)[0],
+        amountMinor: locationEntry.amountMinor, currency: locationEntry.currency, type: 'expense',
+        occurredAt: new Date(messageAnchor(message, context.at)).toISOString(),
+        merchant: location.name || normaliseItems(parsed)[0]?.merchant || '',
+      }] };
+    }
+    const draft = await saveDraft(context, message.chat.id, parsed, { retryId, replaceDraftId, inputTruncated: attachment?.truncated === true, locationContext: location });
     if (!draft) {
       return reply(context, message.chat.id, enhanced ? 'enhanceFailed' : AUDIO_MIME_TYPES.has(file?.mimeType) ? 'audioNoResult' : 'noResult', { ok: false, reason: 'no-result' }, retryMarkup(retryId, context.language));
     }
     if (retryId) { const cached = getCachedImage(retryId); if (cached) { cached.draftId = draft.id; cached.input.language = context.language; } }
-    if (context.autoConfirm && !draft.needsReview && !replaceDraftId) return autoConfirmDraft(context, draft);
+    if (context.autoConfirm && !draft.needsReview && !replaceDraftId && !location) return autoConfirmDraft(context, draft);
     return deliverDraft(draft);
   }
 
@@ -665,6 +855,7 @@ export function createTelegramHandler({
 
   async function startDraftEdit(context, query, draftId) {
     const chatId = query.message.chat.id;
+    await clearPendingLocation(context, chatId);
     const outcome = await store.run(db => {
       const state = ensureTelegramState(db);
       const draft = state.drafts[draftId];
@@ -700,8 +891,10 @@ export function createTelegramHandler({
         categoryLabel: label, consumer: expense.consumer, note: expense.note, merchant,
         occurredAt: expense.occurredAt, timezone: expense.timezone,
         splitMode: expense.splitMode, splitParticipants: [...expense.splitParticipants], recordKind: expense.recordKind,
+        ...(expense.location ? { location: expense.location } : {}),
       }));
-      return { id: draft.id, language: draft.language, previousRecords };
+      return { id: draft.id, language: draft.language, previousRecords,
+        locationContext: draft.items.length === 1 ? normalizeLocation(draft.items[0]?.expense?.location) : undefined };
     });
   }
 
@@ -750,6 +943,9 @@ export function createTelegramHandler({
       }
       const preference = state.preferences[context.uid];
       if (preference) { delete preference.editingDraftId; delete preference.editingChatId; }
+      for (const [id, location] of Object.entries(state.locations)) {
+        if (location.uid === context.uid && !(location.sourceUpdate > Number(context.operation?.key))) delete state.locations[id];
+      }
       return changed;
     });
     for (const [id, cached] of imageCache) if (cached.uid === context.uid) deleteCachedImage(id);
@@ -863,6 +1059,17 @@ export function createTelegramHandler({
     if (!context) return { ok: false, reason: 'invalid-user' };
     context.language = contentLanguage(message.text || message.caption || '', context.language);
     const text = firstText(message.text || '');
+    if (message.location || message.venue) return rememberLocation(context, message);
+    const numericOnly = /^[\d.,\s]+$/u.test(String(message.text || '').normalize('NFKC').trim())
+      && /\d/u.test(String(message.text || '').normalize('NFKC'))
+      && !message.voice && !message.audio && !message.photo && !message.document;
+    let locationEntry = null;
+    if (numericOnly) {
+      locationEntry = await takePendingLocation(context, message);
+      if (locationEntry?.stale) return reply(context, message.chat.id, 'locationExpired', { ok: false, reason: 'location-expired' });
+      if (locationEntry?.invalid) return reply(context, message.chat.id, 'locationAmountInvalid', { ok: false, reason: 'location-amount-invalid' });
+      if (locationEntry?.language) context.language = locationEntry.language;
+    } else await clearPendingLocation(context, message.chat.id);
     const command = /^\/(start|help|cancel|month|week|auto|manual)(?:@[^\s]+)?(?:\s+([\s\S]*))?$/i.exec(text);
     if (command) {
       const name = command[1].toLowerCase();
@@ -928,9 +1135,9 @@ export function createTelegramHandler({
       await completeDraftEdit(context, editing.id);
       return reply(context, message.chat.id, 'ledgerChanged', { ok: false, reason: 'ledger-changed' });
     }
-    if (!editing) return parseMessage(context, message, attachment);
+    if (!editing) return parseMessage(context, message, attachment, { locationEntry });
     try {
-      return await parseMessage(context, message, attachment, { replaceDraftId: editing.id, previousRecords: editing.previousRecords });
+      return await parseMessage(context, message, attachment, { replaceDraftId: editing.id, previousRecords: editing.previousRecords, locationContext: editing.locationContext });
     } finally {
       await completeDraftEdit(context, editing.id);
     }
@@ -955,7 +1162,7 @@ export function createTelegramHandler({
       } else if (update.callback_query) result = await callbackUpdate(update, operation);
       else if (update.message) result = await messageUpdate(update, operation);
       else result = { ok: true, kind: 'ignored' };
-      await updateOperation(operation, { status: 'done', leaseUntil: 0, action: null });
+      await updateOperation(operation, { status: 'done', leaseUntil: 0, action: null, locationEntry: null });
       return result;
     } catch (error) {
       // Keep the durable draft/reply checkpoint so a delivery retry never
@@ -979,7 +1186,7 @@ export function createTelegramHandler({
     try { return await promise; } finally { inflight.delete(key); }
   }
 
-  return { handle, close: () => { for (const id of imageCache.keys()) deleteCachedImage(id); }, constants: { maxImageBytes: MAX_IMAGE_BYTES, maxImportFileBytes: MAX_IMPORT_FILE_BYTES, maxImportText: MAX_IMPORT_TEXT, maxAudioBytes: MAX_AUDIO_BYTES, maxAudioSeconds: MAX_AUDIO_SECONDS, draftTtl: DRAFT_TTL } };
+  return { handle, close: () => { for (const id of imageCache.keys()) deleteCachedImage(id); }, constants: { maxImageBytes: MAX_IMAGE_BYTES, maxImportFileBytes: MAX_IMPORT_FILE_BYTES, maxImportText: MAX_IMPORT_TEXT, maxAudioBytes: MAX_AUDIO_BYTES, maxAudioSeconds: MAX_AUDIO_SECONDS, draftTtl: DRAFT_TTL, locationTtl: LOCATION_TTL } };
 }
 
-export { MAX_IMAGE_BYTES, MAX_IMPORT_FILE_BYTES, MAX_IMPORT_TEXT, MAX_AUDIO_BYTES, MAX_AUDIO_SECONDS, DRAFT_TTL };
+export { MAX_IMAGE_BYTES, MAX_IMPORT_FILE_BYTES, MAX_IMPORT_TEXT, MAX_AUDIO_BYTES, MAX_AUDIO_SECONDS, DRAFT_TTL, LOCATION_TTL };

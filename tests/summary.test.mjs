@@ -173,7 +173,7 @@ test('summary API returns local totals when the provider fails and rejects malfo
   assert.equal(result.data.stats.expenseMinor, 100);
   assert.deepEqual([result.data.generated, result.data.text], [false, '']);
   assert.ok(!JSON.stringify(result.data).includes('PRIVATE_PROVIDER_DETAIL'));
-  const invalidBodies = [null, [], { period: 'year' }, { currency: 'EUR' }, { timezone: 'not/a-zone' }, { question: { text: 'bad input' } }];
+  const invalidBodies = [null, [], { period: 'year' }, { currency: 'NOT_A_CURRENCY' }, { timezone: 'not/a-zone' }, { question: { text: 'bad input' } }];
   const invalidStatuses = [];
   for (const body of invalidBodies) invalidStatuses.push((await f.request('/ai/summary', { body })).status);
   assert.deepEqual(invalidStatuses, invalidBodies.map(() => 400), `invalid report parameters: ${JSON.stringify(invalidBodies)}`);
