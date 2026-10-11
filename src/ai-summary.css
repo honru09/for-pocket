@@ -1,6 +1,6 @@
 .ai-recap{margin:0 0 22px;border:1px solid var(--line);border-radius:18px;background:#f3f2e9;overflow:hidden}
 .ai-recap-toggle{display:flex;align-items:center;gap:9px;width:100%;min-height:54px;padding:11px 15px;border:0;background:transparent;text-align:left;font-size:13px;font-weight:750}
-.ai-recap-mark{display:grid;place-items:center;flex:none;width:28px;height:28px;border-radius:10px;background:#e9e4d5;color:#9b8766}
+.ai-recap-mark{display:grid;place-items:center;flex:none;width:28px;height:28px;border-radius:10px;background:var(--milk);color:var(--muted)}
 .ai-recap-mark svg{width:17px;height:17px}
 .ai-recap-toggle>svg{width:16px;height:16px;margin-left:auto;color:var(--muted);transition:transform 200ms cubic-bezier(.16,1,.3,1)}
 .ai-recap.is-open .ai-recap-toggle>svg{transform:rotate(180deg)}
@@ -38,5 +38,5 @@
 .ai-recap-breakdown li{display:flex;justify-content:space-between;gap:9px;font-size:11px;line-height:1.5}
 .ai-recap-breakdown li span{overflow-wrap:anywhere;min-width:0}
 .ai-recap-breakdown li strong{flex:none;font-weight:650;font-variant-numeric:tabular-nums}
-@keyframes ai-recap-reveal{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
+@keyframes ai-recap-reveal{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
 @media(max-width:600px){.ai-recap{margin-bottom:18px;border-radius:16px}.ai-recap-toggle{min-height:50px;padding:10px 13px}.ai-recap-body{padding:0 13px 13px}.ai-recap-question textarea{font-size:16px}.ai-recap-actions>span{flex-basis:100%}.ai-recap-breakdown{grid-template-columns:1fr;gap:13px}.ai-recap-totals strong{font-size:18px}}

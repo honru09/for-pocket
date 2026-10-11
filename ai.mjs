@@ -295,8 +295,8 @@ export function createExpenseParser(options = {}) {
   };
 }
 
-// The summary model receives only server-computed aggregates. Raw notes and
-// receipt text never leave the service for a monthly report.
+// Cheese's recap receives only server-computed aggregates. Raw notes, receipt
+// text and location never leave the service for a report; the card arrives whole.
 export function createExpenseSummarizer(options = {}) {
   const projectId = options.projectId || process.env.VERTEX_PROJECT_ID || process.env.GOOGLE_CLOUD_PROJECT || '';
   const location = options.location || process.env.VERTEX_LOCATION || DEFAULT_LOCATION;
@@ -310,7 +310,7 @@ export function createExpenseSummarizer(options = {}) {
     try {
       const resolvedProject = projectId || await (projectPromise ||= new GoogleAuth().getProjectId());
       const vertex = options.vertex || new VertexAI({ project: resolvedProject, location, ...(location === 'global' ? { apiEndpoint: 'aiplatform.googleapis.com' } : {}) });
-      const next = vertex.getGenerativeModel({ model: modelName, generationConfig: { temperature: 0.35, maxOutputTokens: 600 } }, { timeout: 25000 });
+      const next = vertex.getGenerativeModel({ model: modelName, generationConfig: { temperature: 0.2, maxOutputTokens: 600 } }, { timeout: 25000 });
       models.set(modelName, next);
       return next;
     } catch { throw new AiError('errorAiUnavailable', 503); }

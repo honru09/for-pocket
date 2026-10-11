@@ -42,7 +42,11 @@ test('private text becomes a persisted preview and confirmation saves once acros
   assert.equal(f.aiCalls.length, 1);
   assert.equal((await f.database()).ledgers['101'].expenses.length, 0);
   const preview = f.calls.find(call => call.method === 'sendMessage');
-  assert.match(preview.params.text, /188/);
+  assert.match(preview.params.text, /JPY ¥188/);
+  assert.match(preview.params.text, /时间:|Time:/);
+  assert.match(preview.params.text, /Ramen/);
+  assert.equal(preview.params.reply_markup.inline_keyboard[0][0].text, BOT_COPY.zh.confirm);
+  assert.equal(preview.params.reply_markup.inline_keyboard[0][1].text, BOT_COPY.zh.edit);
   assert.equal(preview.params.reply_markup.inline_keyboard[0][0].callback_data, `fp:confirm:${draft.draftId}`);
   assert.equal((await f.handler.handle(message(1))).duplicate, true);
   assert.equal(f.aiCalls.length, 1);
@@ -198,18 +202,18 @@ test('reply and preview languages follow the submitted text and detected spoken 
   } } });
   const chinese = await f.handler.handle(message(170, '午饭 1200 日元', 101, 'en'));
   assert.equal(chinese.kind, 'draft');
-  assert.match(f.calls.at(-1).params.text, /先看一眼/);
+  assert.ok(f.calls.at(-1).params.text.startsWith(BOT_COPY.zh.previewTitle));
   const english = await f.handler.handle(message(171, 'lunch 1200 yen', 101, 'zh'));
-  assert.match(f.calls.at(-1).params.text, /A quick look/);
+  assert.ok(f.calls.at(-1).params.text.startsWith(BOT_COPY.en.previewTitle));
   assert.equal((await f.handler.handle(callback(172, english.draftId))).kind, 'confirmed');
   assert.match(f.calls.at(-1).params.text, /Saved/);
   const ukrainian = await f.handler.handle(message(173, 'обід 1200 єн', 101, 'en'));
   assert.equal(ukrainian.kind, 'draft');
-  assert.match(f.calls.at(-1).params.text, /Швидкий перегляд/);
+  assert.ok(f.calls.at(-1).params.text.startsWith(BOT_COPY.uk.previewTitle));
   const voice = message(174, '', 101, 'zh');
   voice.message.voice = { file_id: 'voice-language', mime_type: 'audio/ogg', duration: 5, file_size: 50 };
   assert.equal((await f.handler.handle(voice)).kind, 'draft');
-  assert.match(f.calls.at(-1).params.text, /Швидкий перегляд/);
+  assert.ok(f.calls.at(-1).params.text.startsWith(BOT_COPY.uk.previewTitle));
 });
 
 test('spoken expenses default to JPY even when the active ledger uses another currency', async t => {
@@ -303,7 +307,7 @@ test('transfers and uncertain records always require review even with automatic 
   ]; } } });
   const draft = await f.handler.handle(message(176, '朋友转账 500 日元'));
   assert.equal(draft.kind, 'draft');
-  assert.match(f.calls.at(-1).params.text, /请核对/);
+  assert.ok(f.calls.at(-1).params.text.includes(BOT_COPY.zh.reviewMovement));
   assert.equal((await f.database()).ledgers['101'].expenses.length, 0);
   assert.equal((await f.handler.handle(callback(177, draft.draftId))).kind, 'confirmed');
   const db = await f.database();
@@ -365,8 +369,9 @@ test('voice recognition failures ask for a new recording without an image retry 
 });
 
 test('confirmation and help messages cover the same text, voice, and document flow in every language', () => {
-  assert.equal(BOT_COPY.zh.confirm, '✅ 确认记入账本');
-  assert.equal(BOT_COPY.en.confirm, '✅ Confirm in ledger');
+  assert.equal(BOT_COPY.zh.confirm, '✅ 记下');
+  assert.equal(BOT_COPY.zh.edit, '✏️ 改一下');
+  assert.equal(BOT_COPY.en.confirm, '✅ Save it');
   for (const language of ['zh', 'en', 'uk']) {
     assert.match(BOT_COPY[language].confirm, /^✅ /);
     assert.match(BOT_COPY[language].help, /60/);
@@ -445,7 +450,7 @@ test('summary commands use the shared AI summarizer and bot copy follows the acc
   const summaries = [];
   const f = await fixture(t, { aiParser: { async summarize(input, profile) { summaries.push({ input, profile }); return { text: '☁️ Weekly summary' }; } } });
   assert.equal((await f.handler.handle(message(50, '/start', 303, 'uk'))).kind, 'start');
-  assert.match(f.calls.at(-1).params.text, /Маленькі витрати/);
+  assert.equal(f.calls.at(-1).params.text, BOT_COPY.uk.welcome);
   assert.equal((await f.handler.handle(message(51, '/week', 303, 'uk'))).kind, 'summary');
   assert.equal(summaries[0].input.period, 'week');
   assert.equal(summaries[0].profile.user.id, 'u_303');
@@ -507,7 +512,7 @@ test('failed preview delivery resumes from a persisted checkpoint without repars
   await restartedStore.flush();
   assert.equal(resumed.draftId, draftId);
   assert.equal(parses, 1);
-  assert.equal(sent.filter(item => item.text.includes('先看一眼，再记下')).length, 1);
+  assert.equal(sent.filter(item => item.text.startsWith(BOT_COPY.zh.previewTitle)).length, 1);
   assert.equal((await f.database()).telegram.updates['80'].status, 'done');
   assert.equal((await restarted.handle(callback(81, draftId))).count, 25);
   await restartedStore.close(); restarted.close();

@@ -84,7 +84,7 @@ export default function AiSummary({ t, profile, settings, currency = settings?.c
 
   return <section className={`ai-recap ${open ? 'is-open' : ''}`}>
     <Tappable Component="button" type="button" className="ai-recap-toggle" aria-expanded={open} aria-controls={panelId} onClick={() => setOpen(value => !value)}>
-      <span className="ai-recap-mark"><Icon name="spark"/></span><span>{t('aiSummaryTitle')}</span><Icon name="chevronDown"/>
+      <span className="ai-recap-mark"><Icon name="book"/></span><span>{t('aiSummaryTitle')}</span><Icon name="chevronDown"/>
     </Tappable>
     {open && <div id={panelId} className="ai-recap-body">
       {!isRemote ? <div className="ai-recap-gate"><p>{t('aiSummaryNeedLogin')}</p>{onAccount && <Button type="button" mode="plain" onClick={onAccount}>{t('signIn')}</Button>}</div>

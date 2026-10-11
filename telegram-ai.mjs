@@ -699,14 +699,17 @@ export function createTelegramHandler({
       const merchant = item.merchant ? ` · ${escapeTelegramText(item.merchant)}` : '';
       const locale = { zh: 'zh-CN', en: 'en-US', uk: 'uk-UA' }[language] || 'en-US';
       const time = expense.occurredAt ? new Date(expense.occurredAt).toLocaleString(locale, { timeZone: expense.timezone, dateStyle: 'short', timeStyle: 'short' }) : botText(language, 'timeMissing');
-      lines.push(`${index + 1}. ${kind} ${expense.currency} ${amount} · ${category}${merchant}\n   ${botText(language, 'previewTime')}: ${time}`);
+      lines.push(`${items.length > 1 ? `${index + 1}. ` : ''}${kind} ${expense.currency} ${amount} · ${category}${merchant}\n   ${botText(language, 'previewTime')}: ${time}`);
       if (item.payerName) lines.push(`   ${botText(language, 'previewPayer')}: ${escapeTelegramText(item.payerName)}`);
       if (item.splitNames?.length) lines.push(`   ${botText(language, 'previewSplit')}: ${item.splitNames.map(escapeTelegramText).join(' / ')}`);
       if (expense.note && expense.note !== item.merchant) lines.push(`   ${botText(language, 'previewNote')}: ${escapeTelegramText(expense.note)}`);
       if (locationLabel(expense.location)) lines.push(`   📍 ${escapeTelegramText(locationLabel(expense.location))}`);
-      if (item.needsReview) lines.push(`   ${botText(language, 'reviewNeeded')}${item.reviewReason ? `: ${escapeTelegramText(item.reviewReason)}` : ''}`);
+      if (item.needsReview) {
+        const reviewKey = ['transfer', 'reimbursement'].includes(item.recordKind) ? 'reviewMovement' : 'reviewNeeded';
+        lines.push(`   ${botText(language, reviewKey)}${item.reviewReason ? `: ${escapeTelegramText(item.reviewReason)}` : ''}`);
+      }
     }
-    lines.push('', botText(language, 'previewHint'));
+    if (botText(language, 'previewHint')) lines.push('', botText(language, 'previewHint'));
     if (draft.needsTime) lines.push(botText(language, 'timeMissingHint'));
     if (draft.inputTruncated) lines.push(botText(language, 'inputTruncated'));
     return lines.join('\n');

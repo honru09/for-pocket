@@ -1,6 +1,7 @@
 import React, { memo } from 'react';
 
 const paths = {
+  clip: 'M8 13 15 6a3 3 0 0 1 4 4L9 20a5 5 0 0 1-7-7L12 3m-7 12 9-9',
   pin: 'M19 10c0 5-7 11-7 11S5 15 5 10a7 7 0 1 1 14 0ZM15 10a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z',
   home: 'm3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1V10Z',
   more: 'M5 12h.01M12 12h.01M19 12h.01',
@@ -9,7 +10,8 @@ const paths = {
   bag: 'M5 8h14l2 13H3L5 8Zm3 0V6a4 4 0 0 1 8 0v2M9 13v1m6-1v1m-6 3q3 2 6 0',
   game: 'M7 7h10c4 0 5 5 5 10 0 4-4 2-6-1H8c-2 3-6 5-6 1 0-5 1-10 5-10ZM6 11v4m-2-2h4m7-1h.1m3 2h.1M12 3v4',
   plane: 'm21 3-6 18-4-8-8-4 18-6Zm0 0L11 13M3 16l3-1m1 6 1-3',
-  spark: 'm12 2 2.5 7.5L22 12l-7.5 2.5L12 22l-2.5-7.5L2 12l7.5-2.5L12 2Zm7 0v4m-2-2h4M3 19v3m-1.5-1.5h3',
+  // Legacy category IDs keep their stored value, but render as a paper note.
+  spark: 'M5 3h14v15l-4 3H5V3Zm4 5h6m-6 4h6m0 9v-4h4',
   heart: 'M12 20C-5 10 5-3 12 6c7-9 17 4 0 14Z',
   coffee: 'M4 9h13v7a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5V9Zm13 1h2a3 3 0 0 1 0 6h-2M7 2c-2 2 2 3 0 5m5-5c-2 2 2 3 0 5',
   trash: 'M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7m4-7v7',

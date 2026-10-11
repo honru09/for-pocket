@@ -5,3 +5,11 @@
 @media(max-width:600px){.ai-import{gap:15px;margin-bottom:20px}.ai-import-text textarea{font-size:16px;min-height:84px}.ai-import-file-row{align-items:flex-start;flex-wrap:wrap}.ai-import-file-ready{padding-top:13px}.ai-import-grid{grid-template-columns:1fr 1fr;gap:7px}.ai-import-grid .settings-input input,.ai-import-grid .editor-select select{font-size:16px!important}.ai-import-results-header h2{font-size:15px}.ai-import-item{padding:10px;border-radius:14px}.ai-import-save{width:auto;max-width:100%;justify-content:center}}
 .ai-import-file-row{flex-wrap:wrap}.ai-import-file-list{display:flex;align-items:center;gap:7px;min-width:0;max-width:100%;overflow-x:auto;padding:2px}.ai-import-preview{flex:none;max-width:220px}.ai-import-file-type{width:38px;height:38px;border-radius:9px;display:grid;place-items:center;background:#e6eadb;color:#79866a;font-size:9px;font-weight:900}.ai-import-review-reason{margin:0;padding:8px 10px;border-radius:10px;background:#fff1e8;color:#a2634d;font-size:11px;line-height:1.45}
 .ai-import-filename{min-width:0;max-width:145px}.ai-import-file-remove{border:0;background:transparent;padding:5px;color:var(--muted);font-size:18px;line-height:1}.for-root .ai-import-add-file{padding:4px;font-size:11px;min-height:32px}.ai-import-source>small{font-size:10px;color:var(--muted)}
+.ai-import-preview .ai-import-file-media{position:relative;display:block;flex:none;width:38px;height:38px;overflow:visible}
+.ai-import-preview .ai-import-paperclip{position:absolute;top:-3px;right:-4px;display:grid;place-items:center;width:16px;height:20px;border-radius:6px;background:var(--milk);color:var(--muted);transform:rotate(16deg);pointer-events:none}
+.ai-import-paperclip svg{width:13px;height:16px}
+.ai-import-results{animation:ai-import-paper-arrive 220ms var(--spring-gentle) both}
+.ai-import-enhanced-label{display:inline-flex;align-items:center;gap:4px;font-size:11px;line-height:1.5;white-space:normal}
+.for-root .ai-import-grid>div:has(>.settings-input){display:flex;flex-direction:column;gap:4px}
+.for-root .ai-import-grid>div:has(>.settings-input)>label+*{position:static;order:-1;max-width:none;margin:0 2px;padding:0;background:transparent;color:var(--muted);font-size:10px;line-height:1.4;font-weight:650}
+@keyframes ai-import-paper-arrive{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}

@@ -400,7 +400,7 @@ export default function AiImportPage({ t, profile, settings, busy = false, run, 
   return <section className="ai-import" aria-label={t('aiImportTitle')}>
     <div className="ai-import-intro">
       <p className="quiet-copy">{t('aiImportIntro')}</p>
-      <p className="ai-import-hint"><Icon name="spark"/><span>{t('aiImportHint')}</span></p>
+      <p className="ai-import-hint"><Icon name="edit"/><span>{t('aiImportHint')}</span></p>
     </div>
 
     {!isRemote && <div className="ai-import-gate"><p>{t('aiImportNeedLogin')}</p><Button type="button" mode="outline" onClick={onAccount}>{t('signIn')}</Button></div>}
@@ -418,7 +418,10 @@ export default function AiImportPage({ t, profile, settings, busy = false, run, 
             const key = `${file.name}:${file.size}:${file.lastModified}`;
             const preview = previewUrls[key];
             return <div role="listitem" key={key} className="ai-import-preview">
-              {preview ? <img src={preview} alt=""/> : <span className="ai-import-file-type">{fileTypeLabel(file)}</span>}
+              <span className="ai-import-file-media">
+                {preview ? <img src={preview} alt=""/> : <span className="ai-import-file-type">{fileTypeLabel(file)}</span>}
+                <span className="ai-import-paperclip"><Icon name="clip"/></span>
+              </span>
               <span className="ai-import-filename">{sourceLabel(file, t)}</span><button type="button" className="ai-import-file-remove" aria-label={t('aiImportRemoveFile', { name: file.name })} disabled={working || busy} onClick={() => updateFiles(files.filter(item => item !== file))}>×</button>
             </div>;
           })}
@@ -430,7 +433,7 @@ export default function AiImportPage({ t, profile, settings, busy = false, run, 
         <Button type="submit" className="panel-primary" disabled={!canParse}>{operation === 'parse' ? t('aiImportParsing') : t('aiImportParse')}</Button>
         {(text || files.length || items.length) && <Button type="button" mode="plain" className="text-button" disabled={working || busy} onClick={clear}>{t('aiImportClear')}</Button>}
       </div>
-      {files.some(file => IMAGE_TYPES.has(fileMime(file))) && imageAttempted && <div className="ai-import-enhanced"><span>{t('aiImportEnhancedHint')}</span><Button type="button" mode="plain" className="ai-import-enhanced-button" disabled={!canParse} onClick={event => parse(event, true)}><Icon name="spark"/>{operation === 'enhanced' ? t('aiImportEnhancing') : t('aiImportEnhanced')}</Button></div>}
+      {files.some(file => IMAGE_TYPES.has(fileMime(file))) && imageAttempted && <div className="ai-import-enhanced"><span>{t('aiImportEnhancedHint')}</span><Button type="button" mode="plain" className="ai-import-enhanced-button" disabled={!canParse} onClick={event => parse(event, true)}><span className="ai-import-enhanced-label"><Icon name="receipt"/>{operation === 'enhanced' ? t('aiImportEnhancing') : t('aiImportEnhanced')}</span></Button></div>}
     </form>
 
     {(status || error) && <div className={`ai-import-status ${error ? 'is-error' : ''}`} role="status"><span>{error || status}</span></div>}
