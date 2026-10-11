@@ -63,12 +63,13 @@
 .mascot-toy[data-sign-taps="1"] .stop-sign-rest { transform:rotate(7deg); }
 .cloud-sign-flight { position:fixed; display:block; z-index:12; pointer-events:none; transform-origin:50% 95%; }
 .cloud-announcement { position:absolute; width:1px; height:1px; padding:0; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
-.for-root .mascot-stack { --cloud-size:108px; position:absolute; z-index:3; right:15px; bottom:25px; width:var(--cloud-size); height:var(--cloud-size); display:block; pointer-events:none; }
+.for-root .mascot-stack { --cloud-size:108px; position:absolute; z-index:3; right:34px; bottom:25px; width:var(--cloud-size); height:var(--cloud-size); display:block; pointer-events:none; }
 .for-root .mascot-stack .mascot-toy { position:relative; inset:auto; width:100%; height:100%; }
 .for-root .mascot-stack .mascot-toy,.for-root .mascot-stack .mascot-confirm { pointer-events:auto; }
-/* Keep the small badge, with a stable touch target that does not shrink
-   when its visible badge springs in or responds to a press. */
-.for-root .mascot-confirm { --confirm-size:29px; --confirm-target:44px; --confirm-bottom:-3px; position:absolute; z-index:4; right:calc(-3px - (var(--confirm-target) - var(--confirm-size))/2); bottom:calc(var(--confirm-bottom) - (var(--confirm-target) - var(--confirm-size))/2); width:var(--confirm-target); height:var(--confirm-target); min-width:var(--confirm-target); min-height:var(--confirm-target); padding:0; display:grid; place-items:center; border:0; border-radius:50%; background:transparent; color:var(--ink); box-shadow:none; font-size:17px; font-weight:900; line-height:1; }
+/* Keep the small badge, but leave its entire 44px touch target inside the
+   clipped amount card. The cloud sits 34px from the edge and this target
+   extends 24px beside it, preserving a 10px inset and the cloud's toy area. */
+.for-root .mascot-confirm { --confirm-size:29px; --confirm-target:44px; position:absolute; z-index:4; right:-24px; bottom:0; width:var(--confirm-target); height:var(--confirm-target); min-width:var(--confirm-target); min-height:var(--confirm-target); padding:0; display:grid; place-items:center; border:0; border-radius:50%; background:transparent; color:var(--ink); box-shadow:none; font-size:17px; font-weight:900; line-height:1; }
 .for-root .mascot-confirm>span { width:var(--confirm-size); height:var(--confirm-size); display:grid; place-items:center; border:2px solid var(--sage); border-radius:50%; background:var(--confirm,#f4c771); box-shadow:0 3px 9px #333a3024; pointer-events:none; animation:cloud-confirm-in 220ms var(--ease-out); transition:transform 320ms var(--spring),box-shadow 240ms ease; }
 @media(hover:hover) and (pointer:fine) { .for-root .mascot-confirm:not(:disabled):hover>span { transform:scale(1.08) rotate(-4deg); box-shadow:0 5px 12px #333a3030; } }
 .for-root .mascot-confirm:not(:disabled):active { transform:none!important; }
@@ -232,7 +233,7 @@
  .for-root #amount-display[data-length] { font-size:min(100px,calc((100cqw - 146px) / (var(--amount-chars,1) * .64))); }
 }
 @media(max-width:600px) {
- .for-root .mascot-stack { --cloud-size:62px; right:12px; bottom:8px; }
+ .for-root .mascot-stack { --cloud-size:62px; right:34px; bottom:8px; }
  .for-root #record-view #amount-display[data-length] { font-size:min(clamp(40px,64cqh,82px),calc((100cqw - 94px) / (var(--amount-chars,1) * .64))); }
  @container (max-height:76px) {
   .for-root .mascot-toy { --cloud-size:44px; bottom:4px; }
