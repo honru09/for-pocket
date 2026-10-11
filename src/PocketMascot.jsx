@@ -34,10 +34,13 @@ function ExpenseFace() {
   </g>;
 }
 
-function Cloud({ mood, cashAction, cashId }) {
+function Cloud({ mood, cashAction, cashId, environment }) {
   const faceMood = cashAction === 'income' ? 1 : mood;
   return <svg className="mascot" id="mascot" viewBox="0 0 130 126" aria-hidden="true">
     <path className="mascot-body" d={BODY}/>
+    {environment === 'rain' && <g className="cloud-weather cloud-rain"><path d="M25 22h42"/><path d="M36 21q6-13 12 0q6-13 12 0"/><path d="M38 23v8m12-8v8m12-8v8"/></g>}
+    {environment === 'sun' && <g className="cloud-weather cloud-sun"><path d="M40 31h48"/><path d="M48 32l8 11m16-11-8 11"/><path d="M51 35h14m6 0h14"/></g>}
+    {environment === 'night' && <g className="cloud-weather cloud-night"><path d="M38 25q12-10 24 0v12H38Z"/><path d="M38 28q12-7 24 0"/><text x="87" y="25">Zzz</text></g>}
     <g className="cloud-face-idle">
       <g className="cloud-face">
       {mood >= 5 && !cashAction && <path className="cloud-brows" d={mood === 6 ? 'M39 48l15 8m30-10-16 9' : 'M40 51l13 5m29-7-12 5'}/>}
@@ -80,7 +83,7 @@ function StopSign() {
   </svg>;
 }
 
-export default function PocketMascot({ mascotRef, t, onTap, canConfirm = false, busy = false, confirmLabel, onConfirm, celebrate = null }) {
+export default function PocketMascot({ mascotRef, t, onTap, canConfirm = false, busy = false, confirmLabel, onConfirm, celebrate = null, environment = null }) {
   const [step, setStep] = useState(0), [phase, setPhase] = useState('cloud');
   const [signTaps, setSignTaps] = useState(0), [flight, setFlight] = useState(null), [celebration, setCelebration] = useState(null);
   const stepRef = useRef(0), tapsRef = useRef(0), buttonRef = useRef(null), flightRef = useRef(null);
@@ -186,7 +189,7 @@ export default function PocketMascot({ mascotRef, t, onTap, canConfirm = false, 
   return <>
     <span className="mascot-stack" data-cash={celebration?.type} data-mood={Math.min(step,6)}>
       <Tappable Component="button" type="button" interactiveAnimation="opacity" ref={buttonRef} className="mascot-toy" data-phase={phase} data-mood={Math.min(step,6)} data-sign-taps={signTaps} aria-label={label} aria-disabled={phase === 'burst' || phase === 'falling'} onClick={tap}>
-        {!sign && <span ref={node => { motionRef.current = node; }} className="cloud-motion"><span ref={node => { if (mascotRef) mascotRef.current = node; }} className="cloud-touch"><span ref={cashMotionRef} className="cloud-cash-motion"><span className="cloud-shell"><Cloud mood={Math.min(step,6)} cashAction={phase === 'cloud' ? celebration?.type : null} cashId={celebration?.id}/></span></span></span></span>}
+        {!sign && <span ref={node => { motionRef.current = node; }} className="cloud-motion"><span ref={node => { if (mascotRef) mascotRef.current = node; }} className="cloud-touch"><span ref={cashMotionRef} className="cloud-cash-motion"><span className="cloud-shell"><Cloud mood={Math.min(step,6)} cashAction={phase === 'cloud' ? celebration?.type : null} cashId={celebration?.id} environment={environment}/></span></span></span></span>}
         {phase === 'burst' && <span className="cloud-pop" aria-hidden="true"><span className="cloud-pop-word">{t('cloudPopSound')}</span>{Array.from({length:6},(_,i) => <i key={i} style={{ '--puff-x':`${Math.cos(i * Math.PI / 3) * 32}px`, '--puff-y':`${Math.sin(i * Math.PI / 3) * 27}px` }}/>)}</span>}
         {sign && <span className="stop-sign-rest" data-hidden={phase === 'falling'}><StopSign/></span>}
       </Tappable>

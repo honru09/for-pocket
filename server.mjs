@@ -33,6 +33,7 @@ export function createApp({ token = process.env.BOT_TOKEN || '', dataDir = path.
   if (!Number.isSafeInteger(maxAgeSeconds) || maxAgeSeconds < 60) throw new Error('Invalid AUTH_MAX_AGE_SECONDS');
   const resolvedWebhookSecret = token ? deriveTelegramWebhookSecret(token, webhookSecret) : '';
   const store = createStore(dataDir, storeOptions), google = new OAuth2Client(), attempts = new Map();
+  const ratesCache = new Map();
   // Scheduler authentication is intentionally independent from the Telegram
   // webhook secret. If CRON_SECRET is omitted, generate a per-process secret;
   // production deployments should set the env var so Scheduler can retain it
@@ -170,6 +171,21 @@ export function createApp({ token = process.env.BOT_TOKEN || '', dataDir = path.
     try {
       const url = new URL(req.url, 'http://localhost');
       if (url.pathname === '/api/config' && req.method === 'GET') { await send(res, 200, { ...release, mode: token || googleClientId ? 'remote' : 'local', googleClientId, telegramEnabled: Boolean(token), aiEnabled: Boolean(aiParser?.enabled || aiChat?.enabled || aiSummarizer?.enabled) }); return; }
+      if (url.pathname === '/api/rates' && req.method === 'GET') {
+        const base = String(url.searchParams.get('base') || 'JPY').toUpperCase();
+        const symbols = [...new Set(String(url.searchParams.get('symbols') || 'JPY').split(',').map(item => item.trim().toUpperCase()).filter(item => Object.hasOwn(CURRENCIES, item)))].slice(0, 8);
+        if (!Object.hasOwn(CURRENCIES, base) || !symbols.length) fail('errorAiInput', 400);
+        const key = `${base}:${symbols.join(',')}`, cached = ratesCache.get(key);
+        if (cached && cached.expiresAt > now()) { await send(res, 200, cached.value); return; }
+        try {
+          const response = await fetch(`https://api.frankfurter.app/latest?from=${encodeURIComponent(base)}&to=${encodeURIComponent(symbols.join(','))}`, { signal: AbortSignal.timeout(4500) });
+          if (!response.ok) throw new Error('rate upstream');
+          const data = await response.json();
+          const value = { base, rates: { [base]: 1, ...(data.rates || {}) }, date: data.date || new Date(now()).toISOString().slice(0, 10) };
+          ratesCache.set(key, { value, expiresAt: now() + 3600000 });
+          await send(res, 200, value); return;
+        } catch { fail('errorNetwork', 503); }
+      }
       if (url.pathname.startsWith('/api/')) {
         checkOrigin(req);
         if (['/api/telegram/webhook', '/api/telegram-webhook'].includes(url.pathname) && req.method === 'POST') {

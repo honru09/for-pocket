@@ -30,6 +30,15 @@
 .cloud-sigh { fill:var(--paper); stroke:#a3a58a; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
 .cloud-teardrop { fill:#9ec7da; stroke:#8eb5c4; stroke-width:1.5; stroke-linejoin:round; }
 .cloud-steam { fill:none; stroke:#d5d5b8; stroke-width:4; stroke-linecap:round; opacity:.62; }
+.cloud-weather { fill:none; stroke:#817b60; stroke-width:2.5; stroke-linecap:round; stroke-linejoin:round; opacity:.9; transform-origin:50% 50%; pointer-events:none; }
+.cloud-rain { stroke:#d5a76d; animation:weather-umbrella 3.8s ease-in-out infinite; }
+.cloud-rain path:last-child { stroke:#86adc0; stroke-width:2; stroke-dasharray:5 5; }
+.cloud-sun { stroke:#5b624e; animation:weather-shades 5.5s ease-in-out infinite; }
+.cloud-night { stroke:#877b68; animation:weather-night 4.5s ease-in-out infinite; }
+.cloud-night text { fill:#8e856f; stroke:none; font:800 13px system-ui,sans-serif; }
+@keyframes weather-umbrella { 0%,100% { transform:translateY(0) rotate(-2deg); } 50% { transform:translateY(-2px) rotate(2deg); } }
+@keyframes weather-shades { 0%,100% { transform:translateY(0); } 50% { transform:translateY(1px) rotate(-1deg); } }
+@keyframes weather-night { 0%,100% { transform:translateY(0); opacity:.78; } 50% { transform:translateY(-2px); opacity:1; } }
 .cloud-spark { stroke:#f4c771; stroke-width:2.5; }
 .cloud-angry-mouth { fill:#8e6047; }
 .mascot-toy[data-mood="1"] .cloud-motion { transform:translate3d(0,-1px,0) rotate(-6deg) scale(1.05,.97); }

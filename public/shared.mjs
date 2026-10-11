@@ -26,6 +26,7 @@ export const DEFAULT_CONSUMERS = [];
 export const CONSUMERS = {};
 export const MAX_CIRCLE_MEMBERS = 99;
 export const MAX_CUSTOM_AVATAR_LENGTH = 256 * 1024;
+export const MAX_RECURRING_EXPENSES = 64;
 export function isCustomAvatar(value) {
   return typeof value === 'string' && value.length <= MAX_CUSTOM_AVATAR_LENGTH
     && /^data:image\/(?:png|jpe?g|webp|gif);base64,[A-Za-z0-9+/]+={0,2}$/i.test(value);
@@ -72,7 +73,52 @@ export function initialSettings(lang = 'zh') {
     categories: structuredClone(DEFAULT_CATEGORIES),
     incomeCategories: structuredClone(DEFAULT_INCOME_CATEGORIES),
     consumers: structuredClone(DEFAULT_CONSUMERS),
+    recurringExpenses: [],
+    soundPack: 'off',
+    theme: 'matcha',
   };
+}
+
+/**
+ * Parse a small, deliberately constrained addition expression.  The amount
+ * keypad accepts digits, one decimal point per term, and plus signs only;
+ * this keeps the feature predictable and avoids evaluating user input.
+ */
+export function parseAmountExpression(raw, currency = 'JPY') {
+  const digits = CURRENCIES[currency]?.digits;
+  if (!Number.isInteger(digits) || typeof raw !== 'string') return { valid: false, minor: 0, expression: '' };
+  const expression = raw.replace(/[\uFF0B＋]/g, '+').replace(/[\uFF0E．]/g, '.').replace(/\s+/g, '');
+  if (!expression || expression.length > 96 || !/^\d+(?:\.\d*)?(?:\+\d+(?:\.\d*)?)*$/.test(expression)) {
+    return { valid: false, minor: 0, expression };
+  }
+  const terms = expression.split('+');
+  let minor = 0;
+  for (const term of terms) {
+    const [whole, fraction = ''] = term.split('.');
+    if (fraction.length > digits || !/^\d+$/.test(whole) || digits === 0 && fraction.length) return { valid: false, minor: 0, expression };
+    const termMinor = Number(whole) * 10 ** digits + Number((fraction || '').padEnd(digits, '0') || 0);
+    if (!Number.isSafeInteger(termMinor) || termMinor < 0 || minor > Number.MAX_SAFE_INTEGER - termMinor) return { valid: false, minor: 0, expression };
+    minor += termMinor;
+  }
+  return { valid: Number.isSafeInteger(minor) && minor > 0, minor, expression, terms };
+}
+
+function validateRecurringExpense(item, settings, index) {
+  if (!item || typeof item !== 'object' || Array.isArray(item)) throw new Error('固定支出格式有误。');
+  const id = typeof item.id === 'string' && /^[a-zA-Z0-9_-]{8,128}$/.test(item.id) ? item.id : `recurring_${index + 1}`;
+  const day = Number(item.day);
+  if (!Number.isInteger(day) || day < 1 || day > 31) throw new Error('固定支出日期需为 1–31。');
+  if (!Object.hasOwn(CURRENCIES, item.currency || settings.currency) || !Number.isSafeInteger(item.amountMinor) || item.amountMinor < 1) throw new Error('固定支出金额有误。');
+  const currency = item.currency || settings.currency;
+  const pool = settings.categories || DEFAULT_CATEGORIES;
+  const category = pool.find(c => c.id === item.categoryId) || pool.find(c => c.id === 'other') || pool[0];
+  if (!category) throw new Error('固定支出用途有误。');
+  const consumers = Array.isArray(settings.consumers) ? settings.consumers : DEFAULT_CONSUMERS;
+  const consumer = consumers.some(c => c.id === item.consumer) ? item.consumer : consumers[0]?.id;
+  if (!consumer) throw new Error('固定支出角色有误。');
+  const note = typeof item.note === 'string' ? item.note.trim() : '';
+  if (note.length > 160) throw new Error('备注最多 160 个字符。');
+  return { id, day, amountMinor: item.amountMinor, currency, categoryId: category.id, consumer, note };
 }
 export function validateSettings(value) {
   // Existing six-category ledgers remain intact. New ledgers use the thirty
@@ -124,6 +170,17 @@ export function validateSettings(value) {
     return { id, name, color, avatar };
   });
 
+  const rawRecurring = Array.isArray(input.recurringExpenses) ? input.recurringExpenses : [];
+  if (rawRecurring.length > MAX_RECURRING_EXPENSES) throw new Error('固定支出最多 64 条。');
+  const recurringIds = new Set();
+  const recurringExpenses = rawRecurring.map((item, index) => {
+    const normalized = validateRecurringExpense(item, { ...input, categories, consumers }, index);
+    if (recurringIds.has(normalized.id)) throw new Error('固定支出编号不能重复。');
+    recurringIds.add(normalized.id);
+    return normalized;
+  });
+  const soundPack = ['off', 'water', 'wood'].includes(input.soundPack) ? input.soundPack : 'off';
+  const theme = ['matcha', 'cheese', 'peach', 'sea'].includes(input.theme) ? input.theme : 'matcha';
   return {
     currency: input.currency,
     timezone,
@@ -132,6 +189,9 @@ export function validateSettings(value) {
     categories,
     incomeCategories,
     consumers,
+    recurringExpenses,
+    soundPack,
+    theme,
   };
 }
 export function dateKey(date = new Date(), timezone = Intl.DateTimeFormat().resolvedOptions().timeZone) {
@@ -165,10 +225,12 @@ export function validateExpense(value, settings) {
   const occurredAt = value.occurredAt == null ? null : validateEntryTime(value.occurredAt, value.timezone).occurredAt;
   const suggestion = type === 'expense' && recordKind === 'purchase' ? normalizeCategorySuggestion(value.categorySuggestion) : undefined;
   const location = normalizeLocation(value.location);
+  const recurringId = value.recurringId === undefined || value.recurringId === null || value.recurringId === '' ? undefined : value.recurringId;
+  if (recurringId !== undefined && (typeof recurringId !== 'string' || !/^[a-zA-Z0-9_-]{8,128}$/.test(recurringId))) throw new Error('固定支出编号有误。');
   return { id: value.id, type, amountMinor: value.amountMinor, currency: value.currency, occurredAt,
     categoryId: category.id, category: structuredClone(category), consumer: value.consumer, note: value.note.trim(), timezone: value.timezone,
     splitMode, splitParticipants: [...splitParticipants], recordKind,
-    ...(suggestion ? { categorySuggestion: suggestion } : {}), ...(location ? { location } : {}) };
+    ...(suggestion ? { categorySuggestion: suggestion } : {}), ...(location ? { location } : {}), ...(recurringId ? { recurringId } : {}) };
 }
 export function validateEntryTime(value, timezone) {
   if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/.test(value)) throw new Error('errorEntryTime');

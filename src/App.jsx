@@ -1,6 +1,6 @@
 import React, { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { AppRoot, Button, Cell, Input, Placeholder, SegmentedControl, Select, Snackbar, Tappable } from '@telegram-apps/telegram-ui';
-import { CURRENCIES, COLORS, ICONS, DEFAULT_CATEGORIES, DEFAULT_INCOME_CATEGORIES, MAX_CATEGORIES, sortCategoriesByUsage, initialSettings, validateSettings, dateKey, resolveLanguage, isBudgetEntry } from '../public/shared.mjs';
+import { CURRENCIES, COLORS, ICONS, DEFAULT_CATEGORIES, DEFAULT_INCOME_CATEGORIES, MAX_CATEGORIES, sortCategoriesByUsage, initialSettings, validateSettings, parseAmountExpression, dateKey, resolveLanguage, isBudgetEntry } from '../public/shared.mjs';
 import { LOCALES, translate, translateError, categoryLabel, categoryDisplayLabel } from '../public/i18n.mjs';
 import { PREVIEW_KEY, SESSION_KEY, localService, remoteService } from './services.mjs';
 import { Avatar, CirclePicker, ProfileEditor, AccountPage, CirclesPage, Sheet } from './AccountViews.jsx';
@@ -17,19 +17,48 @@ import { LocationSheet, Footprints } from './LocationViews.jsx';
 import CategorySuggestions from './CategorySuggestions.jsx';
 import { deviceTimezone } from '../public/timezone.mjs';
 import { bindForegroundRefresh } from './foreground-refresh.mjs';
+import { parseClipboardExpense } from '../public/clipboard.mjs';
 
 const telegram = window.Telegram?.WebApp;
 const language = resolveLanguage(telegram?.initDataUnsafe?.user?.language_code || navigator.language);
 const blankDraft = () => ({ raw: '0', selected: null, consumer: null, note: '', type: 'expense', occurredAt: null });
 const OUTBOX_KEY = 'for-pocket.unconfirmed.v1';
+const THEME_OPTIONS = ['matcha', 'cheese', 'peach', 'sea'];
+const SOUND_OPTIONS = ['off', 'water', 'wood'];
 function haptic(kind = 'selection') { try { if (!telegram?.isVersionAtLeast?.('6.1')) return; kind === 'success' ? telegram.HapticFeedback.notificationOccurred(kind) : telegram.HapticFeedback.selectionChanged(); } catch {} }
+function playKeySound(pack) {
+  if (!pack || pack === 'off') return;
+  try {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContext) return;
+    const context = playKeySound.context || (playKeySound.context = new AudioContext());
+    const oscillator = context.createOscillator(), gain = context.createGain();
+    oscillator.type = pack === 'wood' ? 'triangle' : 'sine';
+    oscillator.frequency.value = pack === 'wood' ? 185 : 760;
+    gain.gain.setValueAtTime(pack === 'wood' ? 0.035 : 0.022, context.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + (pack === 'wood' ? 0.075 : 0.11));
+    oscillator.connect(gain).connect(context.destination); oscillator.start(); oscillator.stop(context.currentTime + 0.12);
+  } catch {}
+}
+function minorToRaw(minor, currency) {
+  const digits = CURRENCIES[currency]?.digits ?? 0;
+  const value = minor / 10 ** digits;
+  return digits ? value.toFixed(digits).replace(/0+$/, '').replace(/\.$/, '') : String(Math.round(value));
+}
 function countText(n, lang, currency) {
   const plural = new Intl.PluralRules(LOCALES[lang]).select(n);
   const unit = lang === 'zh' ? '笔' : lang === 'en' ? plural === 'one' ? 'entry' : 'entries' : ({ one: 'запис', few: 'записи', many: 'записів', other: 'записів' }[plural]);
   return `${n} ${unit} · ${currency}`;
 }
 const Categories = memo(function Categories({ categories, lang, selected, disabled, onSelect }) {
-  const drawerRef = useRef(null), gesture = useRef(null);
+  const drawerRef = useRef(null), gesture = useRef(null), blockClick = useRef(false), pointerSelection = useRef(null);
+  const clearClickBlock = useCallback(() => {
+    // A native horizontal touch scroll may dispatch a click after pointerup.
+    // Suppress only that synthetic click, then release the guard immediately
+    // so the next deliberate tap remains responsive while momentum scrolling.
+    blockClick.current = true;
+    window.setTimeout(() => { blockClick.current = false; }, 0);
+  }, []);
   useEffect(() => {
     const drawer = drawerRef.current;
     const active = [...(drawer?.children || [])].find(node => node.dataset.category === selected);
@@ -40,10 +69,73 @@ const Categories = memo(function Categories({ categories, lang, selected, disabl
   }, [selected, categories]);
   const moved = event => {
     const start = gesture.current;
-    if (start && (Math.abs(event.clientX - start.x) > 8 || Math.abs(event.clientY - start.y) > 8)) start.dragged = true;
+    if (start && (Math.abs(event.clientX - start.x) > 8 || Math.abs(event.clientY - start.y) > 8)) { start.dragged = true; blockClick.current = true; }
   };
-  return <div ref={drawerRef} className="categories category-drawer" id="categories" role="group" aria-label={translate(lang, 'categories')} onPointerDownCapture={event => { gesture.current = { x:event.clientX, y:event.clientY, dragged:false }; }} onPointerMoveCapture={moved} onPointerUpCapture={moved} onPointerCancelCapture={() => { if (gesture.current) gesture.current.dragged = true; }} onClickCapture={event => { if (gesture.current?.dragged && event.detail > 0) { event.preventDefault(); event.stopPropagation(); } gesture.current = null; }}>{categories.map(c => <Tappable Component="button" type="button" className={`category category-pill ${selected === c.id ? 'selected' : ''}`} key={c.id} data-category={c.id} aria-label={categoryDisplayLabel(c, lang)} aria-pressed={selected === c.id} disabled={disabled} onClick={() => onSelect(c.id)}><span className="category-icon" style={{ background: `var(--${c.color})` }}><Icon name={c.icon}/></span><span className="category-label">{categoryDisplayLabel(c, lang)}</span></Tappable>)}</div>;
+  const released = event => {
+    const current = gesture.current;
+    if (!current) return;
+    if (current.dragged) {
+      clearClickBlock();
+    } else {
+      // Some mobile WebViews intentionally omit the follow-up click after a
+      // horizontal scroller has had momentum. Select on a clean pointerup so
+      // a pill stays usable immediately after a swipe.
+      const target = event.target?.closest?.('[data-category]');
+      if (target && !disabled) {
+        const id = target.dataset.category;
+        onSelect(id);
+        pointerSelection.current = { id, at: performance.now() };
+      }
+    }
+    gesture.current = null;
+  };
+  return <div ref={drawerRef} className="categories category-drawer" id="categories" role="group" aria-label={translate(lang, 'categories')}
+    onPointerDownCapture={event => { blockClick.current = false; gesture.current = { x:event.clientX, y:event.clientY, dragged:false }; }}
+    onPointerMoveCapture={moved}
+    onPointerUpCapture={released}
+    onPointerCancelCapture={() => { if (gesture.current?.dragged) clearClickBlock(); gesture.current = null; }}
+    onClickCapture={event => {
+      if (blockClick.current) { event.preventDefault(); event.stopPropagation(); blockClick.current = false; return; }
+      const target = event.target?.closest?.('[data-category]');
+      const pointer = pointerSelection.current;
+      if (target && pointer && pointer.id === target.dataset.category && performance.now() - pointer.at < 500) {
+        event.preventDefault(); event.stopPropagation(); pointerSelection.current = null;
+      }
+    }}>
+    {categories.map(c => <button type="button" className={`category category-pill ${selected === c.id ? 'selected' : ''}`} key={c.id} data-category={c.id} aria-label={categoryDisplayLabel(c, lang)} aria-pressed={selected === c.id} disabled={disabled} onClick={() => onSelect(c.id)}><span className="category-icon" style={{ background: `var(--${c.color})` }}><Icon name={c.icon}/></span><span className="category-label">{categoryDisplayLabel(c, lang)}</span></button>)}
+  </div>;
 });
+
+const SwipeExpenseRow = memo(function SwipeExpenseRow({ children, entry, t, onDelete, onCopy, onNote }) {
+  const [offset, setOffset] = useState(0), gesture = useRef(null);
+  const finish = useCallback(() => {
+    const current = gesture.current;
+    if (!current) return;
+    gesture.current = null;
+    if (current.dragged && current.offset < -72) { setOffset(0); onDelete(entry); return; }
+    setOffset(current.offset > 54 ? 92 : 0);
+  }, [entry, onDelete]);
+  return <div className="swipe-expense" data-offset={offset}>
+    <div className="swipe-actions swipe-actions-left" aria-hidden={offset >= 0}><button type="button" className="swipe-action swipe-delete" tabIndex={offset < 0 ? 0 : -1} onClick={() => { setOffset(0); onDelete(entry); }}><Icon name="trash"/><span>{t('deleteExpenseShort')}</span></button></div>
+    <div className="swipe-actions swipe-actions-right" aria-hidden={offset <= 0}><button type="button" className="swipe-action" tabIndex={offset > 0 ? 0 : -1} onClick={() => { setOffset(0); onCopy(entry); }}><Icon name="copy"/><span>{t('copyEntry')}</span></button><button type="button" className="swipe-action" tabIndex={offset > 0 ? 0 : -1} onClick={() => { setOffset(0); onNote(entry); }}><Icon name="edit"/><span>{t('addNote')}</span></button></div>
+    <div className="swipe-expense-surface" style={{ transform:`translate3d(${offset}px,0,0)` }} onPointerDown={event => { if (event.pointerType === 'mouse' && event.button !== 0) return; gesture.current = { x:event.clientX, y:event.clientY, offset, dragged:false }; event.currentTarget.setPointerCapture?.(event.pointerId); }} onPointerMove={event => { const current = gesture.current; if (!current) return; const dx = event.clientX - current.x, dy = event.clientY - current.y; if (Math.abs(dx) > 8 && Math.abs(dx) > Math.abs(dy)) { current.dragged = true; current.offset = Math.max(-112, Math.min(112, offset + dx)); setOffset(current.offset); } }} onPointerUp={finish} onPointerCancel={() => { gesture.current = null; setOffset(0); }} onClickCapture={event => { if (gesture.current?.dragged) { event.preventDefault(); event.stopPropagation(); gesture.current = null; } }}>{children}</div>
+  </div>;
+});
+
+function RecurringEditor({ settings, categories, t, updateSettings, disabled }) {
+  const [draft, setDraft] = useState({ day: 1, amount: '', currency: settings.currency, categoryId: categories[0]?.id || 'other', consumer: settings.consumers[0]?.id || '', note: '' });
+  const recurring = settings.recurringExpenses || [];
+  const add = event => {
+    event.preventDefault();
+    const digits = CURRENCIES[draft.currency]?.digits ?? 0, amount = Number(String(draft.amount).replace(',', '.'));
+    const amountMinor = Math.round(amount * 10 ** digits);
+    if (!Number.isSafeInteger(amountMinor) || amountMinor < 1) return;
+    updateSettings({ recurringExpenses: [...recurring, { id:createId(), day:Math.max(1, Math.min(31, Number(draft.day) || 1)), amountMinor, currency:draft.currency, categoryId:draft.categoryId, consumer:draft.consumer, note:draft.note.trim() }] });
+    setDraft(current => ({ ...current, amount:'', note:'' }));
+  };
+  const format = item => new Intl.NumberFormat(LOCALES[settings.language], { style:'currency', currency:item.currency, currencyDisplay:'narrowSymbol', minimumFractionDigits:CURRENCIES[item.currency].digits }).format(item.amountMinor / 10 ** CURRENCIES[item.currency].digits);
+  return <section className="recurring-panel"><p className="quiet-copy">{t('recurringHint')}</p><div className="recurring-list">{recurring.map(item => <div className="recurring-item" key={item.id}><span className="recurring-date">{item.day}</span><div><strong>{format(item)}</strong><small>{categoryDisplayLabel(categories.find(c => c.id === item.categoryId) || {}, settings.language)}{item.note ? ` · ${item.note}` : ''}</small></div><button type="button" aria-label={t('removeRecurring')} disabled={disabled} onClick={() => updateSettings({ recurringExpenses: recurring.filter(other => other.id !== item.id) })}>×</button></div>)}{!recurring.length && <span className="quiet-copy">{t('recurringEmpty')}</span>}</div><form className="recurring-form" onSubmit={add}><label><span>{t('recurringDay')}</span><input inputMode="numeric" type="number" min="1" max="31" value={draft.day} onChange={event => setDraft(current => ({ ...current, day:event.target.value }))}/></label><label><span>{t('amountLabel')}</span><input inputMode="decimal" type="number" min="0" step="any" required value={draft.amount} onChange={event => setDraft(current => ({ ...current, amount:event.target.value }))}/></label><label><span>{t('currency')}</span><select value={draft.currency} onChange={event => setDraft(current => ({ ...current, currency:event.target.value }))}>{Object.keys(CURRENCIES).map(currency => <option key={currency}>{currency}</option>)}</select></label><label className="recurring-wide"><span>{t('categoryFilter')}</span><select value={draft.categoryId} onChange={event => setDraft(current => ({ ...current, categoryId:event.target.value }))}>{categories.map(category => <option key={category.id} value={category.id}>{categoryDisplayLabel(category, settings.language)}</option>)}</select></label><label className="recurring-wide"><span>{t('note')}</span><input maxLength="160" value={draft.note} onChange={event => setDraft(current => ({ ...current, note:event.target.value }))}/></label><Button className="compact-save" type="submit" disabled={disabled}>{t('addRecurring')}</Button></form></section>;
+}
 
 export default function App() {
   usePocketViewport(telegram);
@@ -62,6 +154,7 @@ export default function App() {
   const [editingCategoryId, setEditingCategoryId] = useState(null);
   const [historyCategory, setHistoryCategory] = useState('all');
   const [locationSheet, setLocationSheet] = useState(false), [locationEnabled, setLocationEnabled] = useState(false), [locationBusy, setLocationBusy] = useState(false);
+  const [clipboardSuggestion, setClipboardSuggestion] = useState(null), [ratePreview, setRatePreview] = useState(null), [weather, setWeather] = useState(null), [clock, setClock] = useState(() => new Date());
   const locationClient = useRef(null), locationRound = useRef(0), locationSuppressed = useRef(false), activeCapture = useRef(null), suggestedPlace = useRef(null);
   if (!locationClient.current) locationClient.current = createLocationClient({ telegram });
 
@@ -72,10 +165,11 @@ export default function App() {
   const t = useCallback((key, values) => translate(settings.language, key, values), [settings.language]);
   const locale = LOCALES[settings.language], disabled = busy || !ready;
   const draftCurrency = draft.currency || settings.currency;
-  const digits = CURRENCIES[draftCurrency].digits, [integer, fraction] = draft.raw.split('.');
-  const amountMinor = Number(integer) * 10 ** digits + Number((fraction || '').padEnd(digits, '0') || 0);
+  const parsedAmount = parseAmountExpression(draft.raw, draftCurrency), digits = CURRENCIES[draftCurrency].digits;
+  const amountMinor = parsedAmount.valid ? parsedAmount.minor : 0;
+  const displayValue = amountMinor / 10 ** digits;
   const decimal = new Intl.NumberFormat(locale).formatToParts(1.1).find(p => p.type === 'decimal')?.value || '.';
-  const amount = Number(integer).toLocaleString(locale) + (fraction !== undefined ? decimal + fraction : '');
+  const amount = parsedAmount.valid ? displayValue.toLocaleString(locale, { minimumFractionDigits: digits && draft.raw.endsWith('.') ? digits : 0, maximumFractionDigits: digits }) : '0';
   const money = (minor, currency = settings.currency) => new Intl.NumberFormat(locale, { style: 'currency', currency, currencyDisplay: 'narrowSymbol', minimumFractionDigits: CURRENCIES[currency].digits, maximumFractionDigits: CURRENCIES[currency].digits }).format(minor / 10 ** CURRENCIES[currency].digits);
   const categories = draft.type === 'income' ? settings.incomeCategories : settings.categories;
   const expenses = profile?.expenses || [], circle = profile?.social.activeCircle;
@@ -186,6 +280,52 @@ export default function App() {
     return () => { cancelled = true; clearInterval(timer); document.removeEventListener('visibilitychange', refresh); window.removeEventListener('focus', refresh); window.removeEventListener('storage', storage); };
   }, [ready, isRemote, apply]);
   useEffect(() => { document.documentElement.lang = locale; document.title = `for. · ${t('title')}`; }, [locale, t]);
+  useEffect(() => { document.documentElement.dataset.theme = settings.theme || 'matcha'; }, [settings.theme]);
+  useEffect(() => { const timer = setInterval(() => setClock(new Date()), 60000); return () => clearInterval(timer); }, []);
+  useEffect(() => {
+    if (!ready || view !== 'record' || !navigator.clipboard?.readText) return undefined;
+    let cancelled = false, last = '';
+    const read = async () => {
+      if (document.hidden || cancelled || state.current.draft.raw !== '0') return;
+      try {
+        const text = await navigator.clipboard.readText();
+        if (!text || text === last) return;
+        last = text;
+        const parsed = parseClipboardExpense(text, settingsRef.current.currency);
+        if (!cancelled && parsed) setClipboardSuggestion(parsed);
+      } catch {}
+    };
+    const onVisibility = () => { if (!document.hidden) void read(); };
+    window.addEventListener('focus', read); document.addEventListener('visibilitychange', onVisibility); void read();
+    return () => { cancelled = true; window.removeEventListener('focus', read); document.removeEventListener('visibilitychange', onVisibility); };
+  }, [ready, view, settings.currency]);
+  useEffect(() => {
+    if (!ready || !amountMinor || draftCurrency === settings.currency) { setRatePreview(null); return undefined; }
+    const controller = new AbortController();
+    const timer = setTimeout(async () => {
+      try {
+        const response = await fetch(`/api/rates?base=${encodeURIComponent(draftCurrency)}&symbols=${encodeURIComponent(settings.currency)}`, { signal:controller.signal });
+        if (!response.ok) return;
+        const data = await response.json(), rate = Number(data.rates?.[settings.currency]);
+        if (Number.isFinite(rate) && rate > 0) setRatePreview({ currency:settings.currency, minor:Math.round((amountMinor / 10 ** digits) * rate * 10 ** CURRENCIES[settings.currency].digits) });
+      } catch {}
+    }, 280);
+    return () => { clearTimeout(timer); controller.abort(); };
+  }, [ready, amountMinor, draftCurrency, settings.currency, digits]);
+  useEffect(() => {
+    const location = draft.location;
+    if (!Number.isFinite(location?.lat) || !Number.isFinite(location?.lng)) { setWeather(null); return undefined; }
+    const controller = new AbortController();
+    const timer = setTimeout(async () => {
+      try {
+        const response = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${encodeURIComponent(location.lat)}&longitude=${encodeURIComponent(location.lng)}&current=weather_code`, { signal:controller.signal });
+        if (!response.ok) return;
+        const code = Number((await response.json())?.current?.weather_code);
+        if (Number.isFinite(code)) setWeather({ rain:[51,53,55,56,57,61,63,65,66,67,80,81,82,95,96,99].includes(code), sun:[0,1].includes(code) });
+      } catch {}
+    }, 250);
+    return () => { clearTimeout(timer); controller.abort(); };
+  }, [draft.location?.lat, draft.location?.lng]);
   useEffect(() => {
     const back = () => navigate('record'); telegram?.BackButton?.onClick?.(back);
     try { view === 'record' ? telegram?.BackButton?.hide?.() : telegram?.BackButton?.show?.(); } catch {}
@@ -283,13 +423,17 @@ export default function App() {
   }, [draft.raw, draft.location, draft.selected, draft.type, draft.occurredAt, draft.currency, draft.currencyManual, isRemote, config.aiEnabled, view, locationScope, settings.currency]);
   const pushKey = useCallback(key => {
     if (busyRef.current || !state.current.ready) return;
-    const current = state.current.draft.raw, digits = CURRENCIES[state.current.draft.currency || settingsRef.current.currency].digits;
+    const current = state.current.draft.raw, currency = state.current.draft.currency || settingsRef.current.currency, digits = CURRENCIES[currency].digits;
     let next = current;
     if (key === 'backspace') next = current.slice(0, -1) || '0';
     else if (key === 'clear') next = '0';
-    else if (key === '.') { if (digits && !current.includes('.')) next += '.'; }
-    else if (/^\d$/.test(key)) { const [whole, part] = current.split('.'); if (part !== undefined && part.length >= digits) return; if (part === undefined && whole.length >= 8) return; next = current === '0' ? key : current + key; }
+    else if (key === '+') { if (!current.endsWith('+') && /\d$/.test(current) && current.split('+').length < 8) next += '+'; else return; }
+    else if (key === '.') { const term = current.split('+').at(-1); if (digits && !term.includes('.')) next += '.'; else return; }
+    else if (/^\d$/.test(key)) { const term = current.split('+').at(-1), [whole, part] = term.split('.'); if (part !== undefined && part.length >= digits) return; if (part === undefined && whole.length >= 8) return; next = current === '0' ? key : current + key; }
+    else return;
+    if (next.length > 96) return;
     pending.current = null; state.current.draft = { ...state.current.draft, raw: next }; setDraft(current => ({ ...current, raw: next }));
+    playKeySound(settingsRef.current.soundPack); haptic();
   }, []);
   const submitWrite = useCallback(write => {
     const { payload, backend, scope } = write;
@@ -325,7 +469,7 @@ export default function App() {
   const save = useCallback(() => {
     const { draft: d, amountMinor, ready } = state.current;
     if (!ready || busyRef.current || !amountMinor || !d.selected || !d.consumer) return;
-    const payload = { id: createId(), ledgerId: currentProfile.current.ledgerId, type: d.type, amountMinor, currency: d.currency || settingsRef.current.currency, location: normalizeLocation(d.location), categoryId: d.selected, consumer: d.consumer, note: d.note, occurredAt: d.occurredAt || new Date().toISOString(), timezone };
+    const payload = { id: createId(), ledgerId: currentProfile.current.ledgerId, type: d.type, amountMinor, currency: d.currency || settingsRef.current.currency, location: normalizeLocation(d.location), categoryId: d.selected, consumer: d.consumer, note: d.note, occurredAt: d.occurredAt || new Date().toISOString(), timezone, ...(d.recurringId ? { recurringId:d.recurringId } : {}) };
     const before = currentProfile.current;
     const pool = d.type === 'income' ? settingsRef.current.incomeCategories : settingsRef.current.categories;
     const category = pool.find(item => item.id === d.selected);
@@ -346,7 +490,7 @@ export default function App() {
       if (e.ctrlKey || e.metaKey || e.altKey || e.isComposing || document.querySelector('dialog[open]') || ['INPUT','SELECT','TEXTAREA'].includes(e.target.tagName)) return;
       if (e.key === 'Escape' && state.current.view !== 'record') { navigate('record'); return; }
       if (state.current.view !== 'record') return;
-      if (/^[0-9.,]$/.test(e.key)) { e.preventDefault(); pushKey(e.key === ',' ? '.' : e.key); }
+      if (/^[0-9.,+]$/.test(e.key)) { e.preventDefault(); pushKey(e.key === ',' ? '.' : e.key); }
       else if (e.key === 'Backspace') { e.preventDefault(); pushKey('backspace'); }
       else if (e.key === 'Delete') pushKey('clear');
       else if (e.key === 'Enter' && e.target === document.body) save();
@@ -406,9 +550,21 @@ export default function App() {
   }
   async function logout() { const result = await run(() => service.current.logout()); if (result !== null) { service.current = localService(language); setRemote(false); apply(await service.current.getProfile()); } }
   async function removeEntry(entry) {
+    if (!entry || entry.canDelete === false || busyRef.current) return;
+    const before = currentProfile.current, removedAt = new Date().toISOString();
+    const p = { ...before, expenses: before.expenses.filter(e => e.id !== entry.id) };
+    currentProfile.current = p; setProfile(p); notify('removed', null, { undoId: entry.id, ledgerId: p.ledgerId });
     const result = await run(() => service.current.deleteExpense(entry.id));
-    if (result) { const p = { ...currentProfile.current, expenses: currentProfile.current.expenses.filter(e => e.id !== entry.id) }; currentProfile.current = p; setProfile(p); notify('removed', null, { undoId: entry.id, ledgerId: p.ledgerId }); }
+    if (!result) { currentProfile.current = { ...p, expenses: [...p.expenses, entry].sort((a,b) => (a.occurredAt || a.createdAt).localeCompare(b.occurredAt || b.createdAt)) }; setProfile(currentProfile.current); return; }
+    void removedAt;
   }
+  const fillFromEntry = useCallback((entry, openNote = false) => {
+    if (!entry) return;
+    editDraft({ raw:minorToRaw(entry.amountMinor, entry.currency), currency:entry.currency, currencyManual:true, selected:entry.categoryId, consumer:entry.consumer, type:entry.type || 'expense', note:openNote ? (entry.note || '') : entry.note || '', occurredAt:null, location:entry.location, recurringId:undefined });
+    navigate('record');
+    if (openNote) setTimeout(() => setNoteEditor(true), 0);
+    haptic();
+  }, [navigate]);
   async function saveTime(occurredAt) {
     if (!timeEditor.entry) { locationRound.current++; locationSuppressed.current = Boolean(occurredAt); activeCapture.current = null; setLocationBusy(false); locationClient.current.clear(); editDraft({ occurredAt, location:undefined, suggestedCurrency:undefined }); setTimeEditor(null); return; }
     const entry = await run(() => service.current.updateEntryTime(timeEditor.entry.id, { occurredAt, timezone }, timeEditor.ledgerId));
@@ -426,6 +582,40 @@ export default function App() {
     currentProfile.current = next;
     setProfile(next);
   }, []);
+  const applyClipboard = () => {
+    if (!clipboardSuggestion) return;
+    editDraft({ raw:clipboardSuggestion.raw, currency:clipboardSuggestion.currency, currencyManual:true, note:clipboardSuggestion.note || draft.note });
+    setClipboardSuggestion(null); haptic();
+  };
+  const monthPrefix = today.slice(0, 7), dueRecurring = useMemo(() => (settings.recurringExpenses || []).filter(item => {
+    if (Number(new Intl.DateTimeFormat('en', { timeZone:timezone, day:'numeric' }).format(clock)) < Number(item.day)) return false;
+    return !expenses.some(entry => entry.recurringId === item.id && String(entry.dayKey || '').startsWith(monthPrefix));
+  }), [settings.recurringExpenses, expenses, timezone, clock, monthPrefix]);
+  const applyRecurring = item => {
+    editDraft({ raw:minorToRaw(item.amountMinor, item.currency), currency:item.currency, currencyManual:true, selected:item.categoryId, consumer:item.consumer, note:item.note || '', type:'expense', recurringId:item.id, occurredAt:null });
+    haptic();
+  };
+  const exportPostcard = () => {
+    try {
+      const canvas = document.createElement('canvas'), scale = 2, width = 720, height = 980;
+      canvas.width = width * scale; canvas.height = height * scale;
+      const ctx = canvas.getContext('2d'); ctx.scale(scale, scale);
+      ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--paper').trim() || '#fffdf6'; ctx.fillRect(0, 0, width, height);
+      ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--ink').trim() || '#343a30'; ctx.font = '800 30px system-ui'; ctx.fillText(`${t('postcardTitle')} · ${monthPrefix}`, 48, 72);
+      ctx.fillStyle = '#f4e1c8'; ctx.beginPath(); ctx.roundRect(48, 106, width - 96, 160, 26); ctx.fill();
+      ctx.fillStyle = '#4a503f'; ctx.font = '900 54px system-ui'; ctx.fillText(money(historyExpense, historyCurrency), 72, 178);
+      ctx.font = '600 16px system-ui'; ctx.fillText(`${history.length} · ${t('postcardRecords')}`, 74, 214);
+      ctx.font = '34px system-ui'; ctx.fillText('☁', width - 130, 178);
+      let y = 326; const grouped = new Map();
+      for (const entry of history.slice(0, 12)) { const label = categoryLabel(entry.category, settings.language); grouped.set(label, (grouped.get(label) || 0) + 1); }
+      ctx.fillStyle = '#818d72'; ctx.font = '800 16px system-ui'; ctx.fillText(t('postcardStamps'), 48, y); y += 38;
+      ctx.fillStyle = '#4a503f'; ctx.font = '700 20px system-ui';
+      for (const [label, count] of grouped) { ctx.fillText(`✦  ${label}  ×${count}`, 72, y); y += 34; if (y > 650) break; }
+      ctx.fillStyle = '#9b6b55'; ctx.font = 'italic 18px system-ui'; ctx.fillText(t('postcardLine'), 48, 850);
+      ctx.fillStyle = '#9da890'; ctx.font = '600 14px system-ui'; ctx.fillText('for. pocket', 48, 910);
+      const link = document.createElement('a'); link.download = `for-pocket-${monthPrefix}.png`; link.href = canvas.toDataURL('image/png'); link.click(); haptic();
+    } catch { notify(null, null, { error:'errorSave' }); }
+  };
   const todayEntries = expenses.filter(e => e.dayKey === today && e.currency === settings.currency);
   const total = (list, type) => list.filter(e => isBudgetEntry(e) && (e.type || 'expense') === type).reduce((sum, e) => sum + e.amountMinor, 0);
   const todayExpense = total(todayEntries, 'expense'), todayIncome = total(todayEntries, 'income');
@@ -446,10 +636,12 @@ export default function App() {
     && e.dayKey.startsWith(today.slice(0,7)) && (historyCategory === 'all' || categoryKey(e) === historyCategory))), [expenses, historyCurrency, historyCategory, today]);
   const historyExpense = total(history, 'expense'), historyIncome = total(history, 'income');
   const days = [...new Set(history.map(e => e.dayKey))];
+  const mascotEnvironment = clock.getHours() >= 23 ? 'night' : weather?.rain ? 'rain' : weather?.sun ? 'sun' : null;
+  const keypadKeys = ['1','2','3','4','5','6','7','8','9',digits ? '.' : 'clear','0','+','backspace', ...(digits ? ['clear'] : [])];
   const saveLabel = t(busy ? 'saving' : !amountMinor ? 'enterAmount' : !draft.selected ? 'selectCategory' : draft.type === 'income' ? 'saveIncome' : 'save');
   const storageStatus = <div className="storage-state"><span id="storage-status" role="status">{t(failed ? 'unavailable' : !ready ? 'loading' : syncFailed ? 'syncFailed' : isRemote ? 'remoteStorage' : 'localStorage')}</span>{failed && <Button mode="plain" size="s" onClick={() => setRetryCount(n => n + 1)}>{t('retry')}</Button>}</div>;
   const secondary = !['record','history'].includes(view);
-  const titleKey = { record: draft.type === 'income' ? 'incomeTitle' : 'recordTitle', history: 'historyTitle', settings: 'settingsTitle', profile: 'myProfile', account: 'accountTitle', circles: 'circlesTitle', manage: 'manageTitle', 'ai-import': 'aiImportTitle' }[view];
+  const titleKey = { record: draft.type === 'income' ? 'incomeTitle' : 'recordTitle', history: 'historyTitle', settings: 'settingsTitle', profile: 'myProfile', account: 'accountTitle', circles: 'circlesTitle', manage: 'manageTitle', recurring: 'recurringTitle', 'ai-import': 'aiImportTitle' }[view];
   return <AppRoot appearance="light" platform={['ios','macos'].includes(telegram?.platform) ? 'ios' : 'base'} className="for-root" data-ui-kit="telegram-ui" data-view={view}><div className="app-shell">
     <header className="app-header"><a className="brand" href="#record" aria-label={t('record')} onClick={e => { e.preventDefault(); navigate('record'); }}><Icon name="home"/></a>
       <Button id="circle-switcher" mode="plain" className="ledger-switcher" disabled={disabled} onClick={() => isRemote ? setPicker(true) : navigate('circles')}><span>{circle?.name || t('personal')}</span><Icon name="chevronDown"/></Button>
@@ -457,13 +649,14 @@ export default function App() {
     </header>
 
     {failedCount > 0 && <button type="button" className="sync-retry-banner" onClick={retryWrites}>{t('retryUnconfirmed', { n: failedCount })}</button>}<main key={view} ref={pageRef} id={`${view}-view`} className="page">{view !== 'record' && <div className="page-heading"><h1 id={`${view}-title`} tabIndex={-1}>{t(titleKey)}</h1>{secondary && <Button mode="plain" size="s" className="text-button" onClick={() => navigate(view === 'settings' ? 'record' : 'settings')}>{t('back')}</Button>}</div>}
-    {view === 'record' && <><div className="today-strip"><span className="today-icon" aria-hidden="true"><Icon name="arrowDown"/></span><div><span>{t('todayTotal')}</span><strong id="today-total">{money(todayExpense)}</strong></div><Button id="edit-draft-time" mode="plain" className={`date-label date-button ${draft.occurredAt ? 'has-custom-time' : ''}`} aria-label={t('editEntryTime')} disabled={disabled} onClick={() => setTimeEditor({})}><Icon name="clock"/>{new Intl.DateTimeFormat(locale, { month:'short',day:'numeric', ...(draft.occurredAt ? { hour:'2-digit',minute:'2-digit',hourCycle:'h23' } : {}) }).format(new Date(draft.occurredAt || Date.now()))}</Button><Button id="open-ai-import" mode="plain" className="ai-quick-trigger" aria-label={t('aiImportTitle')} title={t('aiImportTitle')} disabled={busy} onClick={() => navigate('ai-import')}><Icon name="receipt"/></Button></div><div className="record-layout"><section ref={stageRef} className={`amount-stage ${draft.raw.length >= 6 ? 'long-amount' : ''} ${draft.type === 'income' ? 'is-income' : ''}`} aria-label={t('amountInput')}><div className="amount-meta"><div className="type-toggle-pill" role="group" aria-label={t('transactionType')}>{['expense','income'].map(type => <Tappable Component="button" type="button" key={type} className={`type-pill-btn ${draft.type === type ? `active type-${type}` : ''}`} aria-pressed={draft.type === type} disabled={disabled} onClick={() => { editDraft({ type, selected:null }); haptic(); }}>{t(type)}</Tappable>)}</div><Select id="currency" className="currency-control" aria-label={t('currency')} value={draftCurrency} data-suggested={Boolean(draft.suggestedCurrency === draftCurrency && !draft.currencyManual)} title={draft.suggestedCurrency ? `${t('locationCurrency')} · ${draft.suggestedCurrency}` : t('currency')} disabled={disabled} onChange={e => { const currency=e.target.value; editDraft({ currency, currencyManual:true, raw:CURRENCIES[currency].digits ? draft.raw : draft.raw.split('.')[0] }); }}>{Object.keys(CURRENCIES).map(c => <option key={c} value={c}>{c}{draft.suggestedCurrency === c && draftCurrency !== c ? ` · ${t('locationCurrency')}` : ''}</option>)}</Select></div><div className="amount-line"><span className="currency-symbol">{draft.type === 'income' ? '+' : ''}{CURRENCIES[draftCurrency].symbol}</span><output id="amount-display" data-length={draft.raw.length < 6 ? 'short' : draft.raw.length > 9 ? 'long' : draft.raw.length} aria-label={t('currentAmount')} style={{ '--amount-chars':amount.length }}>{amount}</output><span className="input-caret" aria-hidden="true"/></div><div className="amount-bottom"><span>{draft.selected ? categoryDisplayLabel(categories.find(c => c.id === draft.selected) || {}, settings.language) : ''}</span></div><PocketMascot mascotRef={mascotRef} t={t} onTap={haptic} canConfirm={Boolean(!disabled && amountMinor && draft.selected && draft.consumer)} busy={busy} celebrate={celebration} confirmLabel={saveLabel} onConfirm={save}/></section>
+    {view === 'record' && <><div className="today-strip"><span className="today-icon" aria-hidden="true"><Icon name="arrowDown"/></span><div><span>{t('todayTotal')}</span><strong id="today-total">{money(todayExpense)}</strong></div><Button id="edit-draft-time" mode="plain" className={`date-label date-button ${draft.occurredAt ? 'has-custom-time' : ''}`} aria-label={t('editEntryTime')} disabled={disabled} onClick={() => setTimeEditor({})}><Icon name="clock"/>{new Intl.DateTimeFormat(locale, { month:'short',day:'numeric', ...(draft.occurredAt ? { hour:'2-digit',minute:'2-digit',hourCycle:'h23' } : {}) }).format(new Date(draft.occurredAt || Date.now()))}</Button><Button id="open-ai-import" mode="plain" className="ai-quick-trigger" aria-label={t('aiImportTitle')} title={t('aiImportTitle')} disabled={busy} onClick={() => navigate('ai-import')}><Icon name="receipt"/></Button></div>{clipboardSuggestion && <button type="button" className="clipboard-capsule" onClick={applyClipboard}><Icon name="clip"/><span>{t('clipboardFound',{ amount:money(clipboardSuggestion.amountMinor, clipboardSuggestion.currency) })}</span><b>{t('clipboardFill')}</b></button>}{dueRecurring.length > 0 && <div className="recurring-due" role="status"><span>{t('recurringDue',{ n:dueRecurring.length })}</span><div>{dueRecurring.slice(0,2).map(item => <button type="button" key={item.id} onClick={() => applyRecurring(item)}>{categoryDisplayLabel(categories.find(c => c.id === item.categoryId) || {}, settings.language)} · {money(item.amountMinor,item.currency)}</button>)}</div></div>}<div className="record-layout"><section ref={stageRef} className={`amount-stage ${draft.raw.length >= 6 ? 'long-amount' : ''} ${draft.raw.includes('+') ? 'has-expression' : ''} ${draft.type === 'income' ? 'is-income' : ''}`} aria-label={t('amountInput')}><div className="amount-meta"><div className="type-toggle-pill" role="group" aria-label={t('transactionType')}>{['expense','income'].map(type => <Tappable Component="button" type="button" key={type} className={`type-pill-btn ${draft.type === type ? `active type-${type}` : ''}`} aria-pressed={draft.type === type} disabled={disabled} onClick={() => { editDraft({ type, selected:null }); haptic(); }}>{t(type)}</Tappable>)}</div><Select id="currency" className="currency-control" aria-label={t('currency')} value={draftCurrency} data-suggested={Boolean(draft.suggestedCurrency === draftCurrency && !draft.currencyManual)} title={draft.suggestedCurrency ? `${t('locationCurrency')} · ${draft.suggestedCurrency}` : t('currency')} disabled={disabled} onChange={e => { const currency=e.target.value; editDraft({ currency, currencyManual:true, raw:currency === 'JPY' ? draft.raw.replace(/\.[^+]+/g,'').replace(/\.$/,'') : draft.raw }); }}>{Object.keys(CURRENCIES).map(c => <option key={c} value={c}>{c}{draft.suggestedCurrency === c && draftCurrency !== c ? ` · ${t('locationCurrency')}` : ''}</option>)}</Select></div><div className="amount-line"><span className="currency-symbol">{draft.type === 'income' ? '+' : ''}{CURRENCIES[draftCurrency].symbol}</span><output id="amount-display" data-length={draft.raw.length < 6 ? 'short' : draft.raw.length > 9 ? 'long' : draft.raw.length} aria-label={t('currentAmount')} style={{ '--amount-chars':amount.length }}>{amount}</output><span className="input-caret" aria-hidden="true"/></div><div className="amount-bottom"><span>{draft.raw.includes('+') ? draft.raw : (draft.selected ? categoryDisplayLabel(categories.find(c => c.id === draft.selected) || {}, settings.language) : '')}</span>{ratePreview && <small className="rate-preview">≈ {money(ratePreview.minor, ratePreview.currency)}</small>}</div><PocketMascot mascotRef={mascotRef} t={t} environment={mascotEnvironment} onTap={haptic} canConfirm={Boolean(!disabled && amountMinor && draft.selected && draft.consumer)} busy={busy} celebrate={celebration} confirmLabel={saveLabel} onConfirm={save}/></section>
       <section className="purposes"><div className="section-heading"><h2>{t('categories')}</h2>{(!circle || circle.isAdmin) && <Button className="text-button" id="edit-categories" mode="plain" size="s" disabled={disabled} onClick={startEditing}>{t('editCategories')}</Button>}</div><Categories categories={orderedCategories} lang={settings.language} selected={draft.selected} disabled={disabled} onSelect={id => { editDraft({ selected:id }); haptic(); }}/></section>
-      <section id="keypad" className="keypad" aria-label={t('keypad')}>{['1','2','3','4','5','6','7','8','9',digits ? '.' : 'clear','0','backspace'].map(key => <Tappable Component="button" type="button" className={`key ${key.length > 1 || key === '.' ? 'key-secondary' : ''}`} key={key} data-key={key} disabled={disabled} aria-label={key === 'clear' ? t('clear') : key === 'backspace' ? t('backspace') : key === '.' ? t('decimal') : key} onPointerDown={event => { if (!disabled) { event.currentTarget.setAttribute('data-pressed', 'true'); stageRef.current?.setAttribute('data-press', 'true'); haptic(); } }} onPointerUp={event => event.currentTarget.removeAttribute('data-pressed')} onPointerCancel={event => event.currentTarget.removeAttribute('data-pressed')} onPointerLeave={event => event.currentTarget.removeAttribute('data-pressed')} onClick={() => pushKey(key)}>{key === 'clear' ? 'C' : key === 'backspace' ? <Icon name="backspace"/> : key === '.' ? decimal : key}</Tappable>)}</section>
+       <section id="keypad" className="keypad" aria-label={t('keypad')}>{keypadKeys.map((key,index) => <Tappable Component="button" type="button" className={`key ${['clear','backspace','.','+'].includes(key) ? 'key-secondary' : ''}`} key={`${key}-${index}`} data-key={key} disabled={disabled} aria-label={key === 'clear' ? t('clear') : key === 'backspace' ? t('backspace') : key === '.' ? t('decimal') : key === '+' ? t('addAmounts') : key} onPointerDown={event => { if (!disabled) { event.currentTarget.setAttribute('data-pressed', 'true'); stageRef.current?.setAttribute('data-press', 'true'); haptic(); } }} onPointerUp={event => event.currentTarget.removeAttribute('data-pressed')} onPointerCancel={event => event.currentTarget.removeAttribute('data-pressed')} onPointerLeave={event => event.currentTarget.removeAttribute('data-pressed')} onClick={() => pushKey(key)}>{key === 'clear' ? 'C' : key === 'backspace' ? <Icon name="backspace"/> : key === '.' ? decimal : key}</Tappable>)}</section>
       <section className="finish" aria-label={t('save')}><div className="entry-actions">{circle && settings.consumers.length > 1 && <div className="consumer-buttons" role="group" aria-label={t(draft.type === 'income' ? 'incomeOwner' : 'consumer')}>{settings.consumers.map(c => <Tappable Component="button" type="button" className={`consumer-chip consumer-color-${c.color}`} key={c.id} aria-pressed={draft.consumer === c.id} disabled={disabled} onClick={() => { editDraft({ consumer:c.id }); haptic(); }}><Avatar person={c}/><span>{c.name}</span></Tappable>)}</div>}<Button id="entry-location" mode="plain" className={`location-trigger ${draft.location ? 'has-location' : ''}`} aria-label={t('locationTitle')} aria-pressed={Boolean(draft.location)} title={locationLabel(draft.location) || t('locationTitle')} disabled={disabled} onClick={() => setLocationSheet(true)}><Icon name="pin"/></Button><Button id="edit-note" mode="plain" className={`note-trigger ${draft.note ? "has-note" : ""}`} aria-label={t('note')} title={draft.note || t('note')} disabled={disabled} onClick={() => setNoteEditor(true)}><Icon name="edit"/></Button></div></section></div>
       </>}
-    {view === 'history' && <><div className="history-controls"><SegmentedControl className="period-tabs" aria-label={t('period')}>{['month','all'].map(p => <SegmentedControl.Item key={p} selected={period === p} onClick={() => setPeriod(p)}>{t(p)}</SegmentedControl.Item>)}</SegmentedControl><Select id="history-currency" className="history-currency" aria-label={t('ledgerCurrency')} value={historyCurrency} onChange={e => setHistoryCurrency(e.target.value)}>{Object.keys(CURRENCIES).map(c => <option key={c}>{c}</option>)}</Select></div><label className="history-category-filter"><span>{t('categoryFilter')}</span><Select id="history-category" aria-label={t('categoryFilter')} value={historyCategory} onChange={e => setHistoryCategory(e.target.value)}><option value="all">{t('allCategories')}</option>{['expense','income'].map(type => <optgroup key={type} label={t(type)}>{historyCategories.filter(option => option.type === type).map(option => <option key={option.key} value={option.key}>{categoryLabel(option.category,settings.language)}</option>)}</optgroup>)}</Select></label><section className="history-summary"><div className="history-summary-amount"><span>{t('netBalance')}</span><strong id="history-total">{money(historyIncome - historyExpense, historyCurrency)}</strong><small id="history-total-count">{countText(history.length, settings.language, historyCurrency)}</small></div><div className="balance-details"><div><span>{t('expense')}</span><strong>{money(historyExpense,historyCurrency)}</strong></div><div><span>{t('income')}</span><strong className="income-value">+{money(historyIncome,historyCurrency)}</strong></div></div></section><Footprints items={footprints} t={t}/><AiSummary t={t} profile={profile} settings={settings} currency={historyCurrency} busy={busy} run={run} service={service.current} isRemote={isRemote} config={config} onAccount={() => navigate('account')}/><div className="history-list">{!history.length && <Placeholder className="empty-state" header={t('emptyTitle')} description={t(historyCategory === 'all' ? 'emptyText' : 'filterEmpty')}><span className="empty-face">◡</span><Button mode="filled" onClick={() => navigate('record')}>{t('newEntry')}</Button></Placeholder>}{days.map(day => <section key={day}><div className="history-day">{day === today ? t('today') : new Intl.DateTimeFormat(locale,{ timeZone:'UTC',month:'short',day:'numeric' }).format(new Date(`${day}T12:00:00Z`))}</div>{history.filter(e => e.dayKey === day).map(e => <Cell Component="article" readOnly multiline key={e.id} className={`expense-row ${e.type === 'income' ? 'is-income' : ''}`} before={<span className="category-icon" style={{ background:`var(--${e.category.color})` }}><Icon name={e.category.icon}/></span>} subtitle={<span className="expense-meta"><span className={`consumer-badge consumer-color-${e.member?.color || 'blue'}`}><i/>{e.member?.name || settings.consumers.find(c => c.id === e.consumer)?.name || t('unknownConsumer')}</span><button type="button" className="entry-time" aria-label={t('editEntryTime')} disabled={busy || e.canDelete === false} onClick={() => setTimeEditor({ entry:e, ledgerId:profile.ledgerId })}><time dateTime={e.occurredAt || e.createdAt}>{new Intl.DateTimeFormat(locale,{timeZone:e.timezone || timezone,hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(new Date(e.occurredAt || e.createdAt))}</time></button></span>} description={e.note || e.location ? <span className="expense-description">{e.note && <span className="expense-note">{e.note}</span>}{e.location && <span className="expense-location"><Icon name="pin"/><span>{locationLabel(e.location) || t('locationAttached')}</span></span>}</span> : undefined} after={<div className="expense-actions"><span className="expense-money">{e.type === 'income' ? '+' : '−'}{money(e.amountMinor,e.currency)}</span>{e.canDelete !== false && <Button className="delete-expense" mode="plain" size="s" disabled={busy} data-delete={e.id} aria-label={t('deleteExpense',{category:categoryLabel(e.category,settings.language),amount:money(e.amountMinor,e.currency)})} onClick={() => removeEntry(e)}><Icon name="trash"/></Button>}</div>}><strong>{categoryLabel(e.category,settings.language)}</strong>{!isBudgetEntry(e) && <small className="entry-kind">{t(e.recordKind === 'transfer' ? 'recordKindTransfer' : 'recordKindReimbursement')}</small>}</Cell>)}</section>)}</div><div className="today-balance"><span>{t('todayBalance')}</span><strong>{money(todayIncome - todayExpense)}</strong></div></>}
-    {view === 'settings' && <div className="settings-home">{[['profile','myProfile'],['circles','circlesTitle'],['account','accountTitle'],['ai-import','aiImportTitle']].map(([v,key]) => <Button key={v} mode="plain" className="settings-row" onClick={() => navigate(v)} disabled={!ready}>{v === 'profile' ? <Avatar person={profile?.user}/> : <Icon name={v === 'circles' ? 'users' : v === 'ai-import' ? 'receipt' : 'card'}/>}<span>{t(key)}</span><span aria-hidden="true">›</span></Button>)}<Button mode="plain" className="settings-row" onClick={() => setLocationSheet(true)} disabled={!ready}><Icon name="pin"/><span>{t('locationTitle')}</span><span aria-hidden="true">›</span></Button><label className="settings-language"><span>{t('language')}</span><Select id="language" className="language-control" aria-label={t('language')} value={settings.language} disabled={disabled} onChange={e => updateSettings({ language:e.target.value })}><option value="zh">中文</option><option value="en">English</option><option value="uk">Українська</option></Select></label></div>}
+    {view === 'history' && <><div className="history-controls"><SegmentedControl className="period-tabs" aria-label={t('period')}>{['month','all'].map(p => <SegmentedControl.Item key={p} selected={period === p} onClick={() => setPeriod(p)}>{t(p)}</SegmentedControl.Item>)}</SegmentedControl><div className="history-actions"><Select id="history-currency" className="history-currency" aria-label={t('ledgerCurrency')} value={historyCurrency} onChange={e => setHistoryCurrency(e.target.value)}>{Object.keys(CURRENCIES).map(c => <option key={c}>{c}</option>)}</Select><Button mode="plain" className="postcard-button" onClick={exportPostcard} aria-label={t('postcardExport')}><Icon name="receipt"/></Button></div></div><label className="history-category-filter"><span>{t('categoryFilter')}</span><Select id="history-category" aria-label={t('categoryFilter')} value={historyCategory} onChange={e => setHistoryCategory(e.target.value)}><option value="all">{t('allCategories')}</option>{['expense','income'].map(type => <optgroup key={type} label={t(type)}>{historyCategories.filter(option => option.type === type).map(option => <option key={option.key} value={option.key}>{categoryLabel(option.category,settings.language)}</option>)}</optgroup>)}</Select></label><section className="history-summary"><div className="history-summary-amount"><span>{t('netBalance')}</span><strong id="history-total">{money(historyIncome - historyExpense, historyCurrency)}</strong><small id="history-total-count">{countText(history.length, settings.language, historyCurrency)}</small></div><div className="balance-details"><div><span>{t('expense')}</span><strong>{money(historyExpense,historyCurrency)}</strong></div><div><span>{t('income')}</span><strong className="income-value">+{money(historyIncome,historyCurrency)}</strong></div></div></section><Footprints items={footprints} t={t}/><AiSummary t={t} profile={profile} settings={settings} currency={historyCurrency} busy={busy} run={run} service={service.current} isRemote={isRemote} config={config} onAccount={() => navigate('account')}/><div className="history-list">{!history.length && <Placeholder className="empty-state" header={t('emptyTitle')} description={t(historyCategory === 'all' ? 'emptyText' : 'filterEmpty')}><span className="empty-face">◡</span><Button mode="filled" onClick={() => navigate('record')}>{t('newEntry')}</Button></Placeholder>}{days.map(day => <section key={day}><div className="history-day">{day === today ? t('today') : new Intl.DateTimeFormat(locale,{ timeZone:'UTC',month:'short',day:'numeric' }).format(new Date(`${day}T12:00:00Z`))}</div>{history.filter(e => e.dayKey === day).map(e => <SwipeExpenseRow key={e.id} entry={e} t={t} onDelete={removeEntry} onCopy={fillFromEntry} onNote={entry => fillFromEntry(entry, true)}><Cell Component="article" readOnly multiline key={e.id} className={`expense-row ${e.type === 'income' ? 'is-income' : ''}`} before={<span className="category-icon" style={{ background:`var(--${e.category.color})` }}><Icon name={e.category.icon}/></span>} subtitle={<span className="expense-meta"><span className={`consumer-badge consumer-color-${e.member?.color || 'blue'}`}><i/>{e.member?.name || settings.consumers.find(c => c.id === e.consumer)?.name || t('unknownConsumer')}</span><button type="button" className="entry-time" aria-label={t('editEntryTime')} disabled={busy || e.canDelete === false} onClick={() => setTimeEditor({ entry:e, ledgerId:profile.ledgerId })}><time dateTime={e.occurredAt || e.createdAt}>{new Intl.DateTimeFormat(locale,{timeZone:e.timezone || timezone,hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(new Date(e.occurredAt || e.createdAt))}</time></button></span>} description={e.note || e.location ? <span className="expense-description">{e.note && <span className="expense-note">{e.note}</span>}{e.location && <span className="expense-location"><Icon name="pin"/><span>{locationLabel(e.location) || t('locationAttached')}</span></span>}</span> : undefined} after={<div className="expense-actions"><span className="expense-money">{e.type === 'income' ? '+' : '−'}{money(e.amountMinor,e.currency)}</span>{e.canDelete !== false && <Button className="delete-expense" mode="plain" size="s" disabled={busy} data-delete={e.id} aria-label={t('deleteExpense',{category:categoryLabel(e.category,settings.language),amount:money(e.amountMinor,e.currency)})} onClick={() => removeEntry(e)}><Icon name="trash"/></Button>}</div>}><strong>{categoryLabel(e.category,settings.language)}</strong>{!isBudgetEntry(e) && <small className="entry-kind">{t(e.recordKind === 'transfer' ? 'recordKindTransfer' : 'recordKindReimbursement')}</small>}</Cell></SwipeExpenseRow>)}</section>)}</div><div className="today-balance"><span>{t('todayBalance')}</span><strong>{money(todayIncome - todayExpense)}</strong></div></>}
+    {view === 'settings' && <div className="settings-home">{[['profile','myProfile'],['circles','circlesTitle'],['account','accountTitle'],['ai-import','aiImportTitle']].map(([v,key]) => <Button key={v} mode="plain" className="settings-row" onClick={() => navigate(v)} disabled={!ready}>{v === 'profile' ? <Avatar person={profile?.user}/> : <Icon name={v === 'circles' ? 'users' : v === 'ai-import' ? 'receipt' : 'card'}/>}<span>{t(key)}</span><span aria-hidden="true">›</span></Button>)}<Button mode="plain" className="settings-row" onClick={() => setLocationSheet(true)} disabled={!ready}><Icon name="pin"/><span>{t('locationTitle')}</span><span aria-hidden="true">›</span></Button><Button mode="plain" className="settings-row" onClick={() => navigate('recurring')} disabled={!ready}><Icon name="repeat"/><span>{t('recurringTitle')}</span><span aria-hidden="true">›</span></Button><label className="settings-language"><span>{t('language')}</span><Select id="language" className="language-control" aria-label={t('language')} value={settings.language} disabled={disabled} onChange={e => updateSettings({ language:e.target.value })}><option value="zh">中文</option><option value="en">English</option><option value="uk">Українська</option></Select></label><label className="settings-language"><span>{t('themeTitle')}</span><Select className="language-control" aria-label={t('themeTitle')} value={settings.theme || 'matcha'} disabled={disabled} onChange={e => updateSettings({ theme:e.target.value })}>{THEME_OPTIONS.map(theme => <option key={theme} value={theme}>{t(`theme_${theme}`)}</option>)}</Select></label><label className="settings-language"><span>{t('soundTitle')}</span><Select className="language-control" aria-label={t('soundTitle')} value={settings.soundPack || 'off'} disabled={disabled} onChange={e => updateSettings({ soundPack:e.target.value })}>{SOUND_OPTIONS.map(sound => <option key={sound} value={sound}>{t(`sound_${sound}`)}</option>)}</Select></label></div>}
+    {view === 'recurring' && <RecurringEditor settings={settings} categories={settings.categories} t={t} updateSettings={updateSettings} disabled={disabled}/>}
     {view === 'profile' && profile && <ProfileEditor key={profile.user.id} user={profile.user} t={t} busy={busy} run={run} service={service.current}/>}
     {view === 'account' && profile && <AccountPage t={t} profile={profile} isRemote={isRemote} config={config} language={settings.language} busy={busy} run={run} service={service.current} onGoogle={login} onLogout={logout} copy={copy}/>}
     {view === 'circles' && profile && <CirclesPage t={t} profile={profile} busy={busy} isRemote={isRemote} run={run} service={service.current} onAccount={() => navigate('account')} onSwitch={switchCircle} copy={copy}/>}
