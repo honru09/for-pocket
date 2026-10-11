@@ -1,5 +1,5 @@
 import http from 'node:http';
-import { timingSafeEqual } from 'node:crypto';
+import { timingSafeEqual, randomBytes } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -11,10 +11,12 @@ import { createLocationResolver } from './location.mjs';
 import { normalizeLocation, currencyForCountry } from './public/location.mjs';
 import { RequestError, fail, hash, ensureUser, issueSession, googleLogin, handleDomain } from './domain.mjs';
 import { CURRENCIES, resolveLanguage } from './public/shared.mjs';
-import { AiError, createExpenseParser, createExpenseSummarizer } from './ai.mjs';
+import { AiError, createExpenseParser, createExpenseSummarizer, createExpenseChat } from './ai.mjs';
 import { summarizeExpenses } from './ai-summary.mjs';
 import { createTelegramHandler } from './telegram-ai.mjs';
 import { deriveTelegramWebhookSecret, ensureTelegramWebhook } from './telegram-config.mjs';
+import { createDigestService } from './digest.mjs';
+import { createTelegramExpenseSync } from './telegram-expense-sync.mjs';
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 const { version } = JSON.parse(await readFile(path.join(root, 'package.json'), 'utf8'));
@@ -27,14 +29,23 @@ function decodeBase64File(data, mimeType) {
   return { data, mimeType, bytes: Buffer.from(data, 'base64') };
 }
 
-export function createApp({ token = process.env.BOT_TOKEN || '', dataDir = path.resolve(root, process.env.DATA_DIR || 'data'), publicUrl = process.env.PUBLIC_URL || '', maxAgeSeconds = Number(process.env.AUTH_MAX_AGE_SECONDS || 86400), googleClientId = process.env.GOOGLE_CLIENT_ID || '', verifyGoogle, resolveLocation, aiParser = createExpenseParser(), aiSummarizer = createExpenseSummarizer(), webhookSecret = process.env.TELEGRAM_WEBHOOK_SECRET || '', callTelegram, now = () => Date.now(), asyncPersist = process.env.STORE_ASYNC_PERSIST === 'true' || !process.env.K_SERVICE, storeOptions } = {}) {
+export function createApp({ token = process.env.BOT_TOKEN || '', dataDir = path.resolve(root, process.env.DATA_DIR || 'data'), publicUrl = process.env.PUBLIC_URL || '', maxAgeSeconds = Number(process.env.AUTH_MAX_AGE_SECONDS || 86400), googleClientId = process.env.GOOGLE_CLIENT_ID || '', verifyGoogle, resolveLocation, aiParser = createExpenseParser(), aiSummarizer = createExpenseSummarizer(), aiChat = createExpenseChat(), webhookSecret = process.env.TELEGRAM_WEBHOOK_SECRET || '', cronSecret = process.env.CRON_SECRET || '', callTelegram, now = () => Date.now(), asyncPersist = process.env.STORE_ASYNC_PERSIST === 'true' || !process.env.K_SERVICE, storeOptions } = {}) {
   if (!Number.isSafeInteger(maxAgeSeconds) || maxAgeSeconds < 60) throw new Error('Invalid AUTH_MAX_AGE_SECONDS');
   const resolvedWebhookSecret = token ? deriveTelegramWebhookSecret(token, webhookSecret) : '';
   const store = createStore(dataDir, storeOptions), google = new OAuth2Client(), attempts = new Map();
+  // Scheduler authentication is intentionally independent from the Telegram
+  // webhook secret. If CRON_SECRET is omitted, generate a per-process secret;
+  // production deployments should set the env var so Scheduler can retain it
+  // across Cloud Run revisions.
+  const resolvedCronSecret = typeof cronSecret === 'string' && cronSecret ? cronSecret : randomBytes(32).toString('hex');
   const locationResolver = resolveLocation || createLocationResolver({ publicUrl });
+  const expenseSync = createTelegramExpenseSync({ store, token, callTelegram, now });
   const telegramHandler = createTelegramHandler({ store, token, publicUrl, now, limit, callTelegram, resolveLocation: locationResolver,
     beforeDeliver: asyncPersist ? undefined : () => store.flush(),
-    aiParser: { ...aiParser, summarize: (input, profile) => summarizeExpenses(input, profile, aiSummarizer, now()) } });
+    expenseSync,
+    aiParser: { ...aiParser, summarize: (input, profile) => summarizeExpenses(input, profile, aiSummarizer, now()),
+      chat: aiParser.chat || ((input, profile) => aiChat.chat({ ...input, profile })) } });
+  const digestService = createDigestService({ store, summarizer: aiSummarizer, token, callTelegram, now });
   function limit(key, max = 12) {
     const at = now(), item = attempts.get(key);
     if (item && item.until > at) { if (item.count >= max) fail('errorRateLimit', 429); item.count++; }
@@ -158,7 +169,7 @@ export function createApp({ token = process.env.BOT_TOKEN || '', dataDir = path.
   const app = http.createServer(async (req, res) => {
     try {
       const url = new URL(req.url, 'http://localhost');
-      if (url.pathname === '/api/config' && req.method === 'GET') { await send(res, 200, { ...release, mode: token || googleClientId ? 'remote' : 'local', googleClientId, telegramEnabled: Boolean(token), aiEnabled: Boolean(aiParser?.enabled) }); return; }
+      if (url.pathname === '/api/config' && req.method === 'GET') { await send(res, 200, { ...release, mode: token || googleClientId ? 'remote' : 'local', googleClientId, telegramEnabled: Boolean(token), aiEnabled: Boolean(aiParser?.enabled || aiChat?.enabled || aiSummarizer?.enabled) }); return; }
       if (url.pathname.startsWith('/api/')) {
         checkOrigin(req);
         if (['/api/telegram/webhook', '/api/telegram-webhook'].includes(url.pathname) && req.method === 'POST') {
@@ -168,6 +179,18 @@ export function createApp({ token = process.env.BOT_TOKEN || '', dataDir = path.
           const handled = await telegramHandler.handle(update);
           if (handled?.retryable) { await send(res, 503, { ok: false }); return; }
           await send(res, 200, { ok: true }); return;
+        }
+        const cronDigestRoute = url.pathname === '/api/cron/digest' && req.method === 'POST';
+        const cronTickRoute = url.pathname === '/api/cron/tick' && req.method === 'POST';
+        if (cronDigestRoute || cronTickRoute) {
+          if (!safeTokenEqual(req.headers['x-cron-secret'], resolvedCronSecret)) fail('errorAuth', 401);
+          const cronBody = await bodyOf(req, 32768);
+          if (cronDigestRoute) {
+            if (typeof cronBody.slot !== 'string' || !['morning', 'noon', 'evening'].includes(cronBody.slot)) fail('errorAiInput', 400);
+            const ledgerId = cronBody.ledgerId === undefined ? '' : String(cronBody.ledgerId || '').trim();
+            await send(res, 200, await digestService.processSlot(cronBody.slot, { ledgerId, at: now() })); return;
+          }
+          await send(res, 200, await digestService.tick({ at: now() })); return;
         }
         const aiRoute = url.pathname === '/api/ai/parse-expense' && req.method === 'POST';
         const telegramAiRoute = url.pathname === '/api/ai/telegram-parse' && req.method === 'POST';
@@ -253,8 +276,8 @@ export function createApp({ token = process.env.BOT_TOKEN || '', dataDir = path.
             if (typeof googlePayload?.sub !== 'string' || !googlePayload.sub || googlePayload.sub.length > 255 || googlePayload.aud !== googleClientId || !['accounts.google.com', 'https://accounts.google.com'].includes(googlePayload.iss) || !Number.isFinite(googlePayload.exp) || googlePayload.exp * 1000 <= now()) throw new Error('Invalid claims');
           } catch { fail('errorGoogleCredential', 401); }
         }
+        const route = url.pathname.slice(4);
         const result = await store.run(db => {
-          const route = url.pathname.slice(4);
           // Logout is deliberately idempotent and does not authenticate via
           // Telegram initData, so a stale payload cannot mint a replacement
           // session while revoking the supplied bearer.
@@ -275,6 +298,19 @@ export function createApp({ token = process.env.BOT_TOKEN || '', dataDir = path.
           const uid = resolveAuth(db, req);
           return handleDomain(db, uid, route, req.method, body, { now: now(), limit, ledgerQuery: url.searchParams.get('ledgerId') });
         });
+        // Telegram companion notifications are best-effort and never change
+        // the web request result. References are kept in the server store so
+        // later edits/deletes can update or remove the original message.
+        if (['/expenses', '/expenses/import'].includes(route) && req.method === 'POST') {
+          const entries = Array.isArray(result?.entries) ? result.entries : [result];
+          for (const entry of entries) { try { await expenseSync.notify(entry); } catch {} }
+        } else if (/^\/expenses\/[a-zA-Z0-9_-]{8,64}$/.test(route) && req.method === 'PUT') {
+          try { await expenseSync.sync(result, 'edit'); } catch {}
+        } else if (/^\/expenses\/[a-zA-Z0-9_-]{8,64}$/.test(route) && req.method === 'DELETE') {
+          try { await expenseSync.sync(result, 'delete'); } catch {}
+        } else if (/^\/expenses\/[a-zA-Z0-9_-]{8,64}\/restore$/.test(route) && req.method === 'POST') {
+          try { await expenseSync.notify(result); } catch {}
+        }
         // Return a shallow response envelope after the store commit. Never
         // mutate an object returned from store.run: domain entries can still
         // reference the committed database state.
@@ -317,6 +353,9 @@ export function createApp({ token = process.env.BOT_TOKEN || '', dataDir = path.
     return app;
   };
   app.flushStore = () => store.flush();
+  // Exposed only on the in-process server object for tests and local
+  // scheduler setup; it is never returned by an HTTP route.
+  app.cronSecret = resolvedCronSecret;
   return app;
 }
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

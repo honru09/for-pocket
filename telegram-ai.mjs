@@ -3,6 +3,8 @@ import {
   CURRENCIES,
   DEFAULT_CATEGORIES,
   DEFAULT_INCOME_CATEGORIES,
+  dateKey,
+  isBudgetEntry,
   resolveLanguage,
   validateExpense,
 } from './public/shared.mjs';
@@ -315,6 +317,24 @@ function periodForText(text) {
   return /(本周|这周|上周|week|тижд)/i.test(String(text || '')) ? 'week' : 'month';
 }
 
+function expenseIntent(text) {
+  const value = String(text || '').normalize('NFKC').trim();
+  if (!value) return false;
+  if (/\d|[¥$₴€£]|(?:日元|人民币|美元|гривн|yen|yuan|dollar|uah|jpy|usd)/iu.test(value)) return true;
+  return /(记账|记一笔|花了|买了|消费|支出|付款|付了|吃了|喝了|打车|房租|转给|代付|报销|收入|入账|expense|spent|spend|bought|buy|paid|pay|purchase|rent|taxi|transfer|reimburse|income|витрат|витратив|купив|купити|запис|оплатив|оренда|переказ|дохід)/iu.test(value);
+}
+
+function chatLedgerContext(profile, now, timezone) {
+  const zone = validTimezone(profile?.settings?.timezone || timezone);
+  const today = dateKey(new Date(now), zone);
+  const entries = (profile?.expenses || []).filter(entry => !entry.deletedAt && entry.type !== 'income' && isBudgetEntry(entry) && entry.dayKey === today);
+  const byCurrency = new Map();
+  for (const entry of entries) byCurrency.set(entry.currency, (byCurrency.get(entry.currency) || 0) + (Number(entry.amountMinor) || 0));
+  const totals = [...byCurrency].map(([currency, amountMinor]) => ({ currency, amountMinor }));
+  const recent = entries.slice(-4).map(entry => ({ category: entry.category?.label || entry.categoryId || '', amountMinor: entry.amountMinor, currency: entry.currency }));
+  return { date: today, count: entries.length, totals, recent };
+}
+
 /**
  * Telegram update handler shared by polling and the Cloud Run webhook.
  *
@@ -332,6 +352,7 @@ export function createTelegramHandler({
   now = () => Date.now(),
   limit,
   callTelegram,
+  expenseSync,
   beforeDeliver,
   downloadFile,
   resolveLocation,
@@ -921,7 +942,7 @@ export function createTelegramHandler({
   async function setConfirmationMode(context, chatId, mode) {
     await store.run(db => {
       const state = ensureTelegramState(db);
-      state.preferences[context.uid] = { mode, updatedAt: atMillis(now) };
+      state.preferences[context.uid] = { ...(state.preferences[context.uid] || {}), mode, updatedAt: atMillis(now), chatId: String(chatId) };
     });
     await sendMessage(chatId, botText(context.language, mode === 'auto' ? 'autoEnabled' : 'manualEnabled'));
     return { ok: true, kind: mode === 'auto' ? 'auto-enabled' : 'manual-enabled', mode };
@@ -942,6 +963,46 @@ export function createTelegramHandler({
     } catch {}
     if (!output?.trim()) return reply(context, message.chat.id, 'summaryUnavailable', { ok: false, reason: 'summary-unavailable' });
     return deliverReply(context.operation, { type: 'reply', chatId: message.chat.id, text: output.trim().slice(0, 3900), result: { ok: true, kind: 'summary', ai: true } });
+  }
+
+  async function rememberChat(context, chatId) {
+    const key = String(chatId ?? '').trim();
+    if (!key || key.length > 64) return;
+    await store.run(db => {
+      const state = ensureTelegramState(db);
+      state.preferences[context.uid] = { ...(state.preferences[context.uid] || {}), chatId: key, chatType: 'private', language: context.language, seenAt: atMillis(now) };
+    });
+  }
+
+  function chatFallback(language, text) {
+    if (language === 'en') return /tired|exhausted|long day/i.test(text)
+      ? 'Hm, the day clearly tried to eat you alive. Get something warm, then pretend tomorrow is totally under control, wow.'
+      : /sleep|good night|晚安/i.test(text)
+        ? 'Good night, little spenders. Hide the snack drawer before midnight gets any ideas, hm.'
+        : 'Wow, a message with no receipt attached. I’m listening—tell me what tiny drama is happening today, hm.';
+    if (language === 'uk') return /втом|важк|стомив/i.test(text)
+      ? 'Гм, день явно вирішив тебе добряче помучити. З’їж щось тепле й зроби вигляд, що завтра все під контролем, ого.'
+      : /ніч|спати|надобраніч/i.test(text)
+        ? 'Надобраніч, маленькі витратники. Сховайте смаколики, бо опівночі вони самі стрибають у кошик, ага.'
+        : 'Ого, цього разу без чека. Я слухаю — яка життєва драма трапилася сьогодні, гм?';
+    return /累|疲|困/u.test(text)
+      ? '额……今天像是被工作啃了一口。先吃点热乎的再躺平，明天继续装作一切尽在掌握，哇哦。'
+      : /晚安|睡觉|睡了/u.test(text)
+        ? '晚安，两位小花销家。零食抽屉先藏好，免得半夜自己跑去结账，哼哼。'
+        : '哇哦，这次没有小票也没有金额。来嘛，今天又发生什么小 drama 了，咳咳？';
+  }
+
+  async function chatFor(context, message, text) {
+    invokeLimit(`telegram-chat:${context.telegramId}`, 20);
+    let output = '';
+    try {
+      if (typeof aiParser?.chat === 'function') {
+        const value = await aiParser.chat({ text: firstText(text), language: context.language, timezone: validTimezone(context.profile?.settings?.timezone || timezone), context: chatLedgerContext(context.profile, atMillis(now), timezone) }, context.profile);
+        output = typeof value === 'string' ? value : value?.text || '';
+      }
+    } catch {}
+    if (!output.trim()) output = chatFallback(context.language, text);
+    return deliverReply(context.operation, { type: 'reply', chatId: message.chat.id, text: output.trim().slice(0, 3900), result: { ok: true, kind: 'chat', generated: Boolean(output) } });
   }
 
   async function cancelDrafts(context, chatId) {
@@ -1005,6 +1066,7 @@ export function createTelegramHandler({
     const from = query?.from;
     const context = await contextFor(from, operation);
     if (!context) return { ok: false, reason: 'invalid-user' };
+    await rememberChat(context, query.message.chat.id);
     const match = /^fp:(confirm|now|cancel|retry|edit):([a-zA-Z0-9_-]{8,64})$/.exec(String(query.data || ''));
     if (!match) {
       try { await botCall('answerCallbackQuery', { callback_query_id: query.id }); } catch {}
@@ -1044,7 +1106,7 @@ export function createTelegramHandler({
         draft.savedIds = savedIds;
         draft.confirmedAt = at;
         draft.ledgerId = profile.ledgerId;
-        return { kind: 'confirmed', count: savedIds.length, retryId: draft.retryId };
+        return { kind: 'confirmed', count: savedIds.length, savedIds, retryId: draft.retryId };
       });
     } catch (error) {
       outcome = { kind: error instanceof RequestError ? error.message : 'failed' };
@@ -1052,6 +1114,17 @@ export function createTelegramHandler({
     const language = context.language;
     const chatId = query.message?.chat?.id;
     const messageId = query.message?.message_id;
+    if (outcome.kind === 'confirmed' && expenseSync?.notify && Array.isArray(outcome.savedIds)) {
+      for (const savedId of outcome.savedIds) {
+        try {
+          const saved = await store.run(db => {
+            const profile = visible(db, context.uid);
+            return structuredClone(profile.expenses.find(item => item.id === savedId) || null);
+          });
+          if (saved) await expenseSync.notify(saved, { excludeChatId: chatId });
+        } catch {}
+      }
+    }
     if (outcome.retryId) deleteCachedImage(outcome.retryId);
     if (['cancelled', 'already'].includes(outcome.kind)) for (const [id, cached] of imageCache) if (cached.draftId === draftId) deleteCachedImage(id);
     const key = ({ confirmed: 'confirmed', already: 'alreadyConfirmed', cancelled: 'cancelled', missing: 'expired', expired: 'expired',
@@ -1068,6 +1141,7 @@ export function createTelegramHandler({
     const context = await contextFor(message.from, operation);
     if (!context) return { ok: false, reason: 'invalid-user' };
     context.language = contentLanguage(message.text || message.caption || '', context.language);
+    await rememberChat(context, message.chat.id);
     const text = firstText(message.text || '');
     if (message.location || message.venue) return rememberLocation(context, message);
     const numericOnly = /^[\d.,\s]+$/u.test(String(message.text || '').normalize('NFKC').trim())
@@ -1093,9 +1167,10 @@ export function createTelegramHandler({
       if (name === 'manual') return setConfirmationMode(context, message.chat.id, 'manual');
       return summaryFor(context, message, name === 'week' ? '/week' : '/month');
     }
-    if (summaryQuestion(text)) return summaryFor(context, message, text);
     const audioInfo = audioFromMessage(message);
     const fileInfo = importFromMessage(message);
+    if (summaryQuestion(text)) return summaryFor(context, message, text);
+    if (text && !audioInfo && !fileInfo && !expenseIntent(text)) return chatFor(context, message, text);
     if ((message.voice || message.audio) && !audioInfo?.kind) {
       await sendMessage(message.chat.id, botText(context.language, 'invalidAudio'));
       return { ok: false, reason: 'invalid-audio' };

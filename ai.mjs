@@ -15,6 +15,7 @@ import {
 const DEFAULT_TEXT_MODEL = 'gemini-3.1-flash-lite';
 const DEFAULT_VISION_MODEL = 'gemini-3.1-flash-lite';
 const DEFAULT_ENHANCED_MODEL = 'gemini-3.1-flash-lite';
+const DEFAULT_CHAT_MODEL = 'gemini-3.1-flash-lite';
 const DEFAULT_LOCATION = 'global';
 const MAX_TEXT = 12000;
 const MAX_RECORDS = 50;
@@ -335,4 +336,50 @@ export function createExpenseSummarizer(options = {}) {
   };
 }
 
-export const aiDefaults = { textModel: DEFAULT_TEXT_MODEL, visionModel: DEFAULT_VISION_MODEL, enhancedModel: DEFAULT_ENHANCED_MODEL, summaryModel: DEFAULT_TEXT_MODEL, location: DEFAULT_LOCATION, maxText: MAX_TEXT };
+const CHAT_LANGUAGE_NAMES = { zh: 'natural Simplified Chinese', en: 'natural English', uk: 'natural Ukrainian' };
+
+/** Keep ordinary conversation separate from expense extraction. */
+export function chatPrompt({ text = '', language = 'zh', context = {} } = {}) {
+  const lang = ['zh', 'en', 'uk'].includes(language) ? language : 'zh';
+  const tone = lang === 'zh'
+    ? '自然使用一两个“哇哦、咳咳、竟然、让我来看看、哼哼、额、等一下、抓到了”'
+    : lang === 'uk'
+      ? 'use natural Ukrainian playful interjections such as «ого», «гм», «ага», «ну-ну», without translating Chinese filler'
+      : 'use natural English playful interjections such as “wow”, “hm”, “wait”, or “gotcha”, without translating Chinese filler';
+  return `Reply in ${CHAT_LANGUAGE_NAMES[lang]} as a cheeky, curious friend who watches two people’s everyday life from their shoulders. Be playful and lightly nosy, never cruel. ${tone}. No headings, markdown, greeting formula, self-introduction, financial jargon, advice, moral lesson, or words AI, model, assistant. Do not claim facts outside the supplied context. Keep it to one compact paragraph of 60–110 characters or words appropriate for the language. If the message is tiredness, bedtime, food plans, or a casual update, answer like a real friend with a little teasing. The ledger context is optional flavor only; never expose private notes or invent spending.\nLedger context: ${JSON.stringify(context || {})}\nMessage: ${JSON.stringify(String(text).trim().slice(0, 500))}`;
+}
+
+export function createExpenseChat(options = {}) {
+  const projectId = options.projectId || process.env.VERTEX_PROJECT_ID || process.env.GOOGLE_CLOUD_PROJECT || '';
+  const location = options.location || process.env.VERTEX_LOCATION || DEFAULT_LOCATION;
+  const modelName = options.model || process.env.VERTEX_CHAT_MODEL || process.env.VERTEX_TEXT_MODEL || DEFAULT_CHAT_MODEL;
+  const models = new Map();
+  if (options.modelClient) models.set('custom', options.modelClient);
+  let projectPromise;
+  const getModel = async () => {
+    const existing = models.get(modelName) || models.get('custom');
+    if (existing) return existing;
+    try {
+      const resolvedProject = projectId || await (projectPromise ||= new GoogleAuth().getProjectId());
+      const vertex = options.vertex || new VertexAI({ project: resolvedProject, location, ...(location === 'global' ? { apiEndpoint: 'aiplatform.googleapis.com' } : {}) });
+      const next = vertex.getGenerativeModel({ model: modelName, generationConfig: { temperature: 0.7, maxOutputTokens: 260 } }, { timeout: 25000 });
+      models.set(modelName, next);
+      return next;
+    } catch { throw new AiError('errorAiUnavailable', 503); }
+  };
+  return {
+    enabled: Boolean(projectId || process.env.K_SERVICE || options.modelClient),
+    async chat(input = {}) {
+      const prompt = chatPrompt(input);
+      if (!String(input.text || '').trim()) throw new AiError('errorAiInput', 400);
+      let response;
+      try { response = (await (await getModel()).generateContent({ contents: [{ role: 'user', parts: [{ text: prompt }] }] })).response; }
+      catch { throw new AiError('errorAiUnavailable', 503); }
+      const text = extractText(response).trim();
+      if (!text) throw new AiError('errorAiResult', 502);
+      return text.slice(0, 900);
+    },
+  };
+}
+
+export const aiDefaults = { textModel: DEFAULT_TEXT_MODEL, visionModel: DEFAULT_VISION_MODEL, enhancedModel: DEFAULT_ENHANCED_MODEL, summaryModel: DEFAULT_TEXT_MODEL, chatModel: DEFAULT_CHAT_MODEL, location: DEFAULT_LOCATION, maxText: MAX_TEXT };

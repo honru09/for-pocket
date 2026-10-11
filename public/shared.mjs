@@ -25,6 +25,11 @@ export const CONSUMER_COLORS = ['milk', 'blue', 'pink', 'mint', 'peach', 'yellow
 export const DEFAULT_CONSUMERS = [];
 export const CONSUMERS = {};
 export const MAX_CIRCLE_MEMBERS = 99;
+const MAX_CUSTOM_AVATAR_LENGTH = 256 * 1024;
+export function isCustomAvatar(value) {
+  return typeof value === 'string' && value.length <= MAX_CUSTOM_AVATAR_LENGTH
+    && /^data:image\/(?:png|jpe?g|webp|gif);base64,[A-Za-z0-9+/]+={0,2}$/i.test(value);
+}
 // Keep transfers and repayments visible without inflating everyday spending.
 export function isBudgetEntry(entry) {
   return !['transfer', 'reimbursement'].includes(entry?.recordKind);
@@ -34,7 +39,7 @@ export function validateUserProfile(value) {
   if (!name || Array.from(name).length > 24) throw new Error('角色名称需为 1–24 个字。');
   if (!CONSUMER_COLORS.includes(value.color)) throw new Error('请选择有效的图标和颜色。');
   const avatar = value.avatar;
-  if (!AVATARS.includes(avatar) && !(typeof avatar === 'string' && avatar.length <= 2048 && /^https:\/\//.test(avatar))) throw new Error('请选择有效的图标和颜色。');
+  if (!AVATARS.includes(avatar) && !(typeof avatar === 'string' && avatar.length <= 2048 && /^https:\/\//.test(avatar)) && !isCustomAvatar(avatar)) throw new Error('请选择有效的图标和颜色。');
   return { name, color: value.color, avatar };
 }
 export { DEFAULT_CATEGORIES, LEGACY_DEFAULT_CATEGORIES, sortCategoriesByUsage } from './category-presets.mjs';
@@ -59,6 +64,9 @@ export function initialSettings(lang = 'zh') {
   const language = LANGUAGES.includes(lang) ? lang : resolveLanguage(lang, 'zh');
   return {
     currency: 'JPY',
+    // The scheduler uses the ledger's wall clock. Tokyo is the product's
+    // stable default; users can change it to any IANA timezone in settings.
+    timezone: 'Asia/Tokyo',
     language,
     languageManual: false,
     categories: structuredClone(DEFAULT_CATEGORIES),
@@ -71,6 +79,9 @@ export function validateSettings(value) {
   // built-ins from initialSettings; validation never rewrites a user's list.
   const input = value || {};
   if (input?.language !== undefined && !LANGUAGES.includes(input.language)) throw new Error('请选择有效的语言。');
+  const timezone = input?.timezone === undefined ? 'Asia/Tokyo' : input.timezone;
+  if (typeof timezone !== 'string' || !timezone.trim() || timezone.length > 80) throw new Error('时区格式有误。');
+  try { new Intl.DateTimeFormat('en', { timeZone: timezone }).format(); } catch { throw new Error('时区格式有误。'); }
   if (!value || !Object.hasOwn(CURRENCIES, input.currency) || !Array.isArray(input.categories)
     || input.categories.length < 1 || input.categories.length > MAX_CATEGORIES) throw new Error('请保留 1–48 个分类。');
   const ids = new Set();
@@ -109,12 +120,13 @@ export function validateSettings(value) {
     const name = typeof item?.name === 'string' ? item.name.trim() : '';
     if (!name || Array.from(name).length > 24) throw new Error('角色名称需为 1–24 个字。');
     const color = CONSUMER_COLORS.includes(item?.color) ? item.color : 'milk';
-    const avatar = typeof item?.avatar === 'string' && (AVATARS.includes(item.avatar) || item.avatar.startsWith('http') || item.avatar.startsWith('data:')) ? item.avatar : (index === 0 ? 'cat' : 'bunny');
+    const avatar = typeof item?.avatar === 'string' && (AVATARS.includes(item.avatar) || /^https:\/\//.test(item.avatar) || isCustomAvatar(item.avatar)) ? item.avatar : (index === 0 ? 'cat' : 'bunny');
     return { id, name, color, avatar };
   });
 
   return {
     currency: input.currency,
+    timezone,
     language: input.language || 'zh',
     languageManual: Boolean(input.languageManual),
     categories,
