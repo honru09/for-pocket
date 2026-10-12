@@ -1,4 +1,4 @@
-import { initialSettings, validateSettings, validateExpense, validateUserProfile, validateEntryTime, dateKey } from '../public/shared.mjs';
+import { initialSettings, validateSettings, validateExpense, validateExpenseUpdate, validateUserProfile, validateEntryTime, dateKey } from '../public/shared.mjs';
 import { validTimezone } from '../public/timezone.mjs';
 export const PREVIEW_KEY = 'for-pocket.preview.v1';
 export const SESSION_KEY = 'for-pocket.session.v1';
@@ -42,6 +42,12 @@ export function localService(defaultLang = 'zh') {
       p.expenses.push(entry); return entry;
     }),
     updateEntryTime: async (id, value) => mutate(p => { const e = p.expenses.find(e => e.id === id && !e.deletedAt); if (!e) throw new Error('errorMissing'); Object.assign(e, validateEntryTime(value.occurredAt, value.timezone), { updatedAt: new Date().toISOString() }); return e; }),
+    updateExpense: async (id, value) => mutate(p => {
+      const e = p.expenses.find(e => e.id === id && !e.deletedAt); if (!e) throw new Error('errorMissing');
+      const valid = validateExpenseUpdate(e, value, p.settings);
+      Object.assign(e, valid, { member:p.settings.consumers.find(member => member.id === valid.consumer) || e.member, updatedAt:new Date().toISOString() });
+      return e;
+    }),
     deleteExpense: async id => mutate(p => { const e = p.expenses.find(e => e.id === id); if (!e) throw new Error('errorMissing'); e.deletedAt = new Date().toISOString(); return e; }),
     restoreExpense: async id => mutate(p => { const e = p.expenses.find(e => e.id === id); if (!e) throw new Error('errorMissing'); delete e.deletedAt; return e; }),
     resolveLocation: async location => {
@@ -159,6 +165,7 @@ export function remoteService(telegram) {
       return { entries: saved };
     },
     updateEntryTime: (id, value, scope = ledgerId) => request(`/expenses/${encodeURIComponent(id)}`, 'PUT', { ...value, ledgerId: scope }),
+    updateExpense: (id, value, scope = ledgerId) => request(`/expenses/${encodeURIComponent(id)}`, 'PATCH', { ...value, id, ledgerId: scope }),
     deleteExpense: (id, scope = ledgerId) => request(`/expenses/${encodeURIComponent(id)}?ledgerId=${encodeURIComponent(scope)}`, 'DELETE'),
     restoreExpense: (id, scope = ledgerId) => request(`/expenses/${encodeURIComponent(id)}/restore`, 'POST', { ledgerId: scope }),
     resolveLocation: location => request('/location/reverse', 'POST', { location, ledgerId }, { timeout: 7000 }),

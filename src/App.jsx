@@ -18,6 +18,9 @@ import CategorySuggestions from './CategorySuggestions.jsx';
 import { deviceTimezone } from '../public/timezone.mjs';
 import { bindForegroundRefresh } from './foreground-refresh.mjs';
 import { parseClipboardExpense } from '../public/clipboard.mjs';
+import { createEntryMutations } from './entry-mutations.mjs';
+import ExpenseEditor from './ExpenseEditor.jsx';
+import SettingsPage from './SettingsPage.jsx';
 
 const telegram = window.Telegram?.WebApp;
 const language = resolveLanguage(telegram?.initDataUnsafe?.user?.language_code || navigator.language);
@@ -106,19 +109,43 @@ const Categories = memo(function Categories({ categories, lang, selected, disabl
   </div>;
 });
 
-const SwipeExpenseRow = memo(function SwipeExpenseRow({ children, entry, t, onDelete, onCopy, onNote }) {
-  const [offset, setOffset] = useState(0), gesture = useRef(null);
+const SwipeExpenseRow = memo(function SwipeExpenseRow({ children, entry, t, onDelete, onCopy, onEdit }) {
+  const ACTION_WIDTH = 72, OPEN_WIDTH = ACTION_WIDTH * 3;
+  const [offset, setOffset] = useState(0), [dragging, setDragging] = useState(false);
+  const gesture = useRef(null), suppressClick = useRef(false);
+  const close = useCallback(() => { setDragging(false); setOffset(0); }, []);
+  useEffect(() => {
+    const reveal = event => { setDragging(false); setOffset(event.detail === entry.id ? OPEN_WIDTH : 0); };
+    document.addEventListener('pocket:entry-actions', reveal);
+    return () => document.removeEventListener('pocket:entry-actions', reveal);
+  }, [entry.id]);
   const finish = useCallback(() => {
     const current = gesture.current;
     if (!current) return;
     gesture.current = null;
-    if (current.dragged && current.offset < -72) { setOffset(0); onDelete(entry); return; }
-    setOffset(current.offset > 54 ? 92 : 0);
-  }, [entry, onDelete]);
-  return <div className="swipe-expense" data-offset={offset}>
-    <div className="swipe-actions swipe-actions-left" aria-hidden={offset >= 0}><button type="button" className="swipe-action swipe-delete" tabIndex={offset < 0 ? 0 : -1} onClick={() => { setOffset(0); onDelete(entry); }}><Icon name="trash"/><span>{t('deleteExpenseShort')}</span></button></div>
-    <div className="swipe-actions swipe-actions-right" aria-hidden={offset <= 0}><button type="button" className="swipe-action" tabIndex={offset > 0 ? 0 : -1} onClick={() => { setOffset(0); onCopy(entry); }}><Icon name="copy"/><span>{t('copyEntry')}</span></button><button type="button" className="swipe-action" tabIndex={offset > 0 ? 0 : -1} onClick={() => { setOffset(0); onNote(entry); }}><Icon name="edit"/><span>{t('addNote')}</span></button></div>
-    <div className="swipe-expense-surface" style={{ transform:`translate3d(${offset}px,0,0)` }} onPointerDown={event => { if (event.pointerType === 'mouse' && event.button !== 0) return; gesture.current = { x:event.clientX, y:event.clientY, offset, dragged:false }; event.currentTarget.setPointerCapture?.(event.pointerId); }} onPointerMove={event => { const current = gesture.current; if (!current) return; const dx = event.clientX - current.x, dy = event.clientY - current.y; if (Math.abs(dx) > 8 && Math.abs(dx) > Math.abs(dy)) { current.dragged = true; current.offset = Math.max(-112, Math.min(112, offset + dx)); setOffset(current.offset); } }} onPointerUp={finish} onPointerCancel={() => { gesture.current = null; setOffset(0); }} onClickCapture={event => { if (gesture.current?.dragged) { event.preventDefault(); event.stopPropagation(); gesture.current = null; } }}>{children}</div>
+    setDragging(false);
+    if (current.dragged) {
+      suppressClick.current = true;
+      window.setTimeout(() => { suppressClick.current = false; }, 0);
+    }
+    if (current.dragged && current.offset > ACTION_WIDTH) document.dispatchEvent(new CustomEvent('pocket:entry-actions', { detail:entry.id }));
+    else setOffset(0);
+  }, [entry.id]);
+  const action = useCallback((callback) => { close(); callback(entry); }, [close, entry]);
+  return <div className="swipe-expense" data-offset={offset} data-dragging={dragging}>
+    <div className="swipe-actions swipe-actions-right" aria-hidden={offset === 0}>
+      <button type="button" className="swipe-action swipe-delete" disabled={entry.canDelete === false} tabIndex={offset > 0 ? 0 : -1} onClick={() => action(onDelete)}><Icon name="trash"/><span>{t('deleteExpenseShort')}</span></button>
+      <button type="button" className="swipe-action" tabIndex={offset > 0 ? 0 : -1} onClick={() => action(onCopy)}><Icon name="copy"/><span>{t('copyEntry')}</span></button>
+      <button type="button" className="swipe-action" disabled={entry.canDelete === false} tabIndex={offset > 0 ? 0 : -1} onClick={() => action(onEdit)}><Icon name="edit"/><span>{t('editEntry')}</span></button>
+    </div>
+    <div className="swipe-expense-surface" style={{ transform:`translate3d(${offset}px,0,0)` }}
+      onPointerDown={event => { if (event.pointerType === 'mouse' && event.button !== 0) return; suppressClick.current = false; gesture.current = { x:event.clientX, y:event.clientY, startOffset:offset, offset, dragged:false, axis:null, pointerId:event.pointerId }; }}
+      onPointerMove={event => { const current = gesture.current; if (!current) return; const dx = event.clientX - current.x, dy = event.clientY - current.y; if (!current.axis && (Math.abs(dx) > 8 || Math.abs(dy) > 8)) current.axis = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y'; if (current.axis !== 'x') return; current.dragged = true; setDragging(true); event.preventDefault(); event.currentTarget.setPointerCapture?.(current.pointerId); current.offset = Math.max(0, Math.min(OPEN_WIDTH, current.startOffset + dx)); setOffset(current.offset); }}
+      onPointerUp={finish}
+      onPointerCancel={() => { gesture.current = null; close(); }}
+      onClickCapture={event => { if (suppressClick.current) { event.preventDefault(); event.stopPropagation(); suppressClick.current = false; } }}>
+      {children}
+    </div>
   </div>;
 });
 
@@ -151,15 +178,17 @@ export default function App() {
   const [failedCount, setFailedCount] = useState(0);
   const [timeEditor, setTimeEditor] = useState(null);
   const [noteEditor, setNoteEditor] = useState(false);
-  const [editingCategoryId, setEditingCategoryId] = useState(null);
+  const [editingCategoryId, setEditingCategoryId] = useState(null), [editingEntry, setEditingEntry] = useState(null);
   const [historyCategory, setHistoryCategory] = useState('all');
+  const [locationGeneration, setLocationGeneration] = useState(0);
+  const lastLocation = useRef(null);
   const [locationSheet, setLocationSheet] = useState(false), [locationEnabled, setLocationEnabled] = useState(false), [locationBusy, setLocationBusy] = useState(false);
   const [clipboardSuggestion, setClipboardSuggestion] = useState(null), [ratePreview, setRatePreview] = useState(null), [weather, setWeather] = useState(null), [clock, setClock] = useState(() => new Date());
   const locationClient = useRef(null), locationRound = useRef(0), locationSuppressed = useRef(false), activeCapture = useRef(null), suggestedPlace = useRef(null);
   if (!locationClient.current) locationClient.current = createLocationClient({ telegram });
 
   const service = useRef(null), busyRef = useRef(false), state = useRef({}), settingsRef = useRef(settings), currentProfile = useRef(null), pending = useRef(null), drafts = useRef(new Map());
-  const pendingWrites = useRef(new Map()), failedWrites = useRef(new Map()), settingWrites = useRef(new Map()), settingQueue = useRef(Promise.resolve());
+  const pendingWrites = useRef(new Map()), failedWrites = useRef(new Map()), entryOperations = useRef(null), settingWrites = useRef(new Map()), settingQueue = useRef(Promise.resolve());
   const confirmedSettings = useRef(new Map());
   const pageRef = useRef(null), mascotRef = useRef(null), stageRef = useRef(null), keyboard = useRef(false), epoch = useRef(0);
   const t = useCallback((key, values) => translate(settings.language, key, values), [settings.language]);
@@ -169,7 +198,8 @@ export default function App() {
   const amountMinor = parsedAmount.valid ? parsedAmount.minor : 0;
   const displayValue = amountMinor / 10 ** digits;
   const decimal = new Intl.NumberFormat(locale).formatToParts(1.1).find(p => p.type === 'decimal')?.value || '.';
-  const amount = parsedAmount.valid ? displayValue.toLocaleString(locale, { minimumFractionDigits: digits && draft.raw.endsWith('.') ? digits : 0, maximumFractionDigits: digits }) : '0';
+  const fraction = draft.raw.split('.')[1];
+  const amount = Number(draft.raw.split('.')[0] || 0).toLocaleString(locale) + (digits && fraction !== undefined ? decimal + fraction : '');
   const money = (minor, currency = settings.currency) => new Intl.NumberFormat(locale, { style: 'currency', currency, currencyDisplay: 'narrowSymbol', minimumFractionDigits: CURRENCIES[currency].digits, maximumFractionDigits: CURRENCIES[currency].digits }).format(minor / 10 ** CURRENCIES[currency].digits);
   const categories = draft.type === 'income' ? settings.incomeCategories : settings.categories;
   const expenses = profile?.expenses || [], circle = profile?.social.activeCircle;
@@ -178,6 +208,19 @@ export default function App() {
   const changeBusy = value => { busyRef.current = value; setBusy(value); };
   const notify = useCallback((key, values, extra = {}) => setNotice({ id: createId(), key, values, ...extra }), []);
   const showError = useCallback(error => notify(null, null, { error: error.message || 'errorSave' }), [notify]);
+  if (!entryOperations.current) entryOperations.current = createEntryMutations({
+    publish(operation, entry) {
+      const p = currentProfile.current;
+      if (operation.backend !== service.current || operation.scope !== p?.user.id + ':' + p?.ledgerId) return;
+      const next = { ...p, expenses:[...p.expenses.filter(item => item.id !== operation.id), ...(entry ? [{ ...entry, canDelete:operation.fallback?.canDelete ?? true }] : [])] };
+      currentProfile.current = next; setProfile(next);
+    },
+    failed(operation, error) {
+      const p = currentProfile.current;
+      if (operation.backend === service.current && operation.scope === p?.user.id + ':' + p?.ledgerId) showError(error);
+    },
+    changed() { epoch.current++; },
+  });
   const persistOutbox = useCallback((scope = `${currentProfile.current?.user.id}:${currentProfile.current?.ledgerId}`) => {
     setFailedCount([...failedWrites.current.values()].filter(write => write.scope === scope).length);
     const writes = new Map([...failedWrites.current, ...pendingWrites.current]);
@@ -197,6 +240,10 @@ export default function App() {
     const edits = [...pendingWrites.current.values()].filter(write => write.scope === scope && write.backend === service.current);
     const existing = new Set(p.expenses.map(entry => entry.id));
     p = { ...p, expenses: [...p.expenses, ...edits.filter(write => !existing.has(write.payload.id)).map(write => write.optimistic)] };
+    for (const operation of entryOperations.current.pending.values()) {
+      if (operation.scope !== scope || operation.backend !== service.current) continue;
+      p.expenses = [...p.expenses.filter(entry => entry.id !== operation.id), ...(operation.optimistic ? [operation.optimistic] : [])];
+    }
     const settingWrite = settingWrites.current.get(scope);
     if (!settingWrite) confirmedSettings.current.set(scope, validateSettings(p.settings));
     if (settingWrite?.backend === service.current) p.settings = { ...p.settings, ...settingWrite.settings, consumers: p.settings.consumers };
@@ -204,7 +251,8 @@ export default function App() {
     const currencyChanged = settingsRef.current.currency !== next.currency;
     const scopeChanged = previous?.ledgerId !== p.ledgerId || previous?.user.id !== p.user.id;
     if (scopeChanged) {
-      setTimeEditor(null); setLocationSheet(false); setHistoryCategory('all');
+      setTimeEditor(null); setEditingEntry(null); setLocationSheet(false); setHistoryCategory('all');
+      lastLocation.current = null;
       locationRound.current++; locationSuppressed.current = false; activeCapture.current = null; setLocationBusy(false);
       if (previous) drafts.current.set(`${previous.user.id}:${previous.ledgerId}`, { ...state.current.draft, baseCurrency: settingsRef.current.currency });
       const stored = drafts.current.get(`${p.user.id}:${p.ledgerId}`);
@@ -263,7 +311,7 @@ export default function App() {
     if (!ready) return;
     let cancelled = false, refreshing = false;
     const refresh = async () => {
-      if (document.hidden || busyRef.current || refreshing || pendingWrites.current.size || settingWrites.current.size) return;
+      if (document.hidden || busyRef.current || refreshing || pendingWrites.current.size || entryOperations.current.pending.size || settingWrites.current.size) return;
       const backend = service.current, version = epoch.current; refreshing = true;
       try {
         const p = await backend.getProfile();
@@ -345,7 +393,16 @@ export default function App() {
   }, [locationScope]);
   const captureLocation = useCallback(async ({ explicit = false, refresh = false } = {}) => {
     const before = currentProfile.current, d = state.current.draft;
-    if (!before || activeCapture.current || (!explicit && (locationSuppressed.current || d.occurredAt))) return;
+    if (!before || (!explicit && (locationSuppressed.current || d.occurredAt))) return;
+    // A foreground refresh can be in flight when the user explicitly asks
+    // for the current place. In that case invalidate the older round first
+    // so the explicit request is never swallowed by the background lookup.
+    if (activeCapture.current) {
+      if (!explicit) return;
+      locationRound.current++;
+      activeCapture.current = null;
+      locationClient.current.clear();
+    }
     const scope = `${before.user.id}:${before.ledgerId}`;
     if (!explicit && !locationPreference(scope)) return;
     const round = locationRound.current, request = {}, backend = service.current, occurredAt = d.occurredAt;
@@ -354,13 +411,15 @@ export default function App() {
       && state.current.draft.occurredAt === occurredAt && !locationSuppressed.current;
     activeCapture.current = request; setLocationBusy(true);
     try {
-      const coords = await locationClient.current.capture({ allowPrompt: explicit, refresh: explicit || refresh });
+      const coords = await locationClient.current.capture({ allowPrompt: explicit || locationPreference(scope), refresh: explicit || refresh });
       if (!coords || !current()) return;
+      lastLocation.current = { scope, location:normalizeLocation(coords), at:Date.now() };
       editDraft({ location: normalizeLocation(coords) });
       let resolved;
       try { resolved = await backend.resolveLocation(coords); } catch {}
       if (!current()) return;
       const location = normalizeLocation(resolved?.location) || normalizeLocation(coords);
+      lastLocation.current = { scope, location, at:lastLocation.current?.at || Date.now() };
       const currency = currencyForCountry(location?.countryCode);
       const live = state.current.draft;
       const canSuggest = currency && !live.currencyManual;
@@ -375,7 +434,7 @@ export default function App() {
     const refresh = () => { void captureLocation({ refresh:true }); };
     refresh();
     return bindForegroundRefresh({ telegram, refresh });
-  }, [ready, view, locationEnabled, locationScope, captureLocation]);
+  }, [ready, view, locationEnabled, locationScope, locationGeneration, captureLocation]);
   useEffect(() => {
     if (!ready || !locationScope) return;
     const sync = async () => {
@@ -400,6 +459,7 @@ export default function App() {
     locationSuppressed.current = false; void captureLocation({ explicit:true });
   };
   const removeLocation = (disable = false) => {
+    lastLocation.current = null;
     locationRound.current++; locationSuppressed.current = true; activeCapture.current = null; setLocationBusy(false); locationClient.current.clear();
     editDraft({ location:undefined, suggestedCurrency:undefined });
     if (disable) { locationPreference(locationScope, false); setLocationEnabled(false); locationClient.current.clear(); }
@@ -427,9 +487,8 @@ export default function App() {
     let next = current;
     if (key === 'backspace') next = current.slice(0, -1) || '0';
     else if (key === 'clear') next = '0';
-    else if (key === '+') { if (!current.endsWith('+') && /\d$/.test(current) && current.split('+').length < 8) next += '+'; else return; }
-    else if (key === '.') { const term = current.split('+').at(-1); if (digits && !term.includes('.')) next += '.'; else return; }
-    else if (/^\d$/.test(key)) { const term = current.split('+').at(-1), [whole, part] = term.split('.'); if (part !== undefined && part.length >= digits) return; if (part === undefined && whole.length >= 8) return; next = current === '0' ? key : current + key; }
+    else if (key === '.') { const term = current; if (digits && !term.includes('.')) next += '.'; else return; }
+    else if (/^\d$/.test(key)) { const term = current, [whole, part] = term.split('.'); if (part !== undefined && part.length >= digits) return; if (part === undefined && whole.length >= 8) return; next = current === '0' ? key : current + key; }
     else return;
     if (next.length > 96) return;
     pending.current = null; state.current.draft = { ...state.current.draft, raw: next }; setDraft(current => ({ ...current, raw: next }));
@@ -469,8 +528,8 @@ export default function App() {
   const save = useCallback(() => {
     const { draft: d, amountMinor, ready } = state.current;
     if (!ready || busyRef.current || !amountMinor || !d.selected || !d.consumer) return;
+    const before = currentProfile.current, backend = service.current, scope = `${before.user.id}:${before.ledgerId}`;
     const payload = { id: createId(), ledgerId: currentProfile.current.ledgerId, type: d.type, amountMinor, currency: d.currency || settingsRef.current.currency, location: normalizeLocation(d.location), categoryId: d.selected, consumer: d.consumer, note: d.note, occurredAt: d.occurredAt || new Date().toISOString(), timezone, ...(d.recurringId ? { recurringId:d.recurringId } : {}) };
-    const before = currentProfile.current;
     const pool = d.type === 'income' ? settingsRef.current.incomeCategories : settingsRef.current.categories;
     const category = pool.find(item => item.id === d.selected);
     const member = settingsRef.current.consumers.find(item => item.id === d.consumer) || before.user;
@@ -479,18 +538,21 @@ export default function App() {
     const optimisticProfile = { ...before, expenses: [...before.expenses, optimistic] };
     currentProfile.current = optimisticProfile; setProfile(optimisticProfile);
     locationRound.current++; locationSuppressed.current = false; activeCapture.current = null; setLocationBusy(false);
-    const nextDraft = { ...blankDraft(), consumer: before.user.id, type: d.type, currency: d.currency, currencyManual: d.currencyManual };
+    const remembered = lastLocation.current;
+    const nextLocation = locationPreference(scope) && remembered?.scope === scope && Date.now() - remembered.at < 60000 ? remembered.location : undefined;
+    const nextDraft = { ...blankDraft(), consumer: before.user.id, type: d.type, currency: d.currency, currencyManual: d.currencyManual, location:nextLocation };
+    setLocationGeneration(value => value + 1);
     state.current.draft = nextDraft; state.current.amountMinor = 0; setDraft(nextDraft);
     setCelebration({ id: payload.id, type: d.type }); notify('savedShort'); haptic('success');
     submitWrite({ payload, optimistic, draft: d, backend: service.current, scope: `${before.user.id}:${before.ledgerId}` });
-  }, [submitWrite, notify]);
+  }, [submitWrite, notify, timezone]);
   useEffect(() => {
     const keydown = e => {
       keyboard.current = true; document.documentElement.classList.add('keyboard-action');
       if (e.ctrlKey || e.metaKey || e.altKey || e.isComposing || document.querySelector('dialog[open]') || ['INPUT','SELECT','TEXTAREA'].includes(e.target.tagName)) return;
       if (e.key === 'Escape' && state.current.view !== 'record') { navigate('record'); return; }
       if (state.current.view !== 'record') return;
-      if (/^[0-9.,+]$/.test(e.key)) { e.preventDefault(); pushKey(e.key === ',' ? '.' : e.key); }
+      if (/^[0-9.,]$/.test(e.key)) { e.preventDefault(); pushKey(e.key === ',' ? '.' : e.key); }
       else if (e.key === 'Backspace') { e.preventDefault(); pushKey('backspace'); }
       else if (e.key === 'Delete') pushKey('clear');
       else if (e.key === 'Enter' && e.target === document.body) save();
@@ -549,20 +611,35 @@ export default function App() {
     return res;
   }
   async function logout() { const result = await run(() => service.current.logout()); if (result !== null) { service.current = localService(language); setRemote(false); apply(await service.current.getProfile()); } }
-  async function removeEntry(entry) {
-    if (!entry || entry.canDelete === false || busyRef.current) return;
-    const before = currentProfile.current, removedAt = new Date().toISOString();
-    const p = { ...before, expenses: before.expenses.filter(e => e.id !== entry.id) };
-    currentProfile.current = p; setProfile(p); notify('removed', null, { undoId: entry.id, ledgerId: p.ledgerId });
-    const result = await run(() => service.current.deleteExpense(entry.id));
-    if (!result) { currentProfile.current = { ...p, expenses: [...p.expenses, entry].sort((a,b) => (a.occurredAt || a.createdAt).localeCompare(b.occurredAt || b.createdAt)) }; setProfile(currentProfile.current); return; }
-    void removedAt;
+  function mutateEntry(entry, optimistic, request) {
+    const p = currentProfile.current, backend = service.current, scope = p.user.id + ':' + p.ledgerId;
+    return entryOperations.current.enqueue({ key:scope + ':' + entry.id, id:entry.id, backend, scope, optimistic, fallback:p.expenses.find(item => item.id === entry.id) || null, request:() => request(backend, p.ledgerId) });
   }
-  const fillFromEntry = useCallback((entry, openNote = false) => {
+  function removeEntry(entry) {
+    if (!entry || entry.canDelete === false) return;
+    const p = currentProfile.current, backend = service.current;
+    void mutateEntry(entry, null, (service, ledgerId) => service.deleteExpense(entry.id, ledgerId));
+    notify('removed', null, { undoId:entry.id, undoEntry:entry, undoBackend:backend, undoScope:p.user.id + ':' + p.ledgerId });
+  }
+  function undo() {
+    const p = currentProfile.current, entry = notice?.undoEntry;
+    if (!entry || service.current !== notice.undoBackend || notice.undoScope !== p.user.id + ':' + p.ledgerId) return;
+    void mutateEntry(entry, entry, (service, ledgerId) => service.restoreExpense(entry.id, ledgerId));
+    notify('restored'); haptic();
+  }
+  function commitEntryEdit(patch) {
+    const entry = editingEntry;
+    if (!entry || entry.canDelete === false) return;
+    const pool = entry.type === 'income' ? settingsRef.current.incomeCategories : settingsRef.current.categories;
+    const optimistic = { ...entry, ...patch, category:pool.find(c => c.id === patch.categoryId) || entry.category, member:settingsRef.current.consumers.find(c => c.id === patch.consumer) || entry.member };
+    void mutateEntry(entry, optimistic, (service, ledgerId) => service.updateExpense(entry.id, patch, ledgerId));
+    setEditingEntry(null); notify('savedShort'); haptic('success');
+  }
+  const fillFromEntry = useCallback((entry) => {
     if (!entry) return;
-    editDraft({ raw:minorToRaw(entry.amountMinor, entry.currency), currency:entry.currency, currencyManual:true, selected:entry.categoryId, consumer:entry.consumer, type:entry.type || 'expense', note:openNote ? (entry.note || '') : entry.note || '', occurredAt:null, location:entry.location, recurringId:undefined });
+    setEditingEntry(null);
+    editDraft({ raw:minorToRaw(entry.amountMinor, entry.currency), currency:entry.currency, currencyManual:true, selected:entry.categoryId, consumer:entry.consumer, type:entry.type || 'expense', note:entry.note || '', occurredAt:null, location:entry.location, recurringId:undefined });
     navigate('record');
-    if (openNote) setTimeout(() => setNoteEditor(true), 0);
     haptic();
   }, [navigate]);
   async function saveTime(occurredAt) {
@@ -573,7 +650,6 @@ export default function App() {
       currentProfile.current = p; setProfile(p); setTimeEditor(null); notify('timeSaved');
     }
   }
-  async function undo() { const entry = await run(() => service.current.restoreExpense(notice.undoId, notice.ledgerId)); if (entry) { const p = { ...currentProfile.current, expenses: [...currentProfile.current.expenses.filter(e => e.id !== entry.id), entry] }; currentProfile.current = p; setProfile(p); notify('restored'); } }
   const handleAiImported = useCallback(saved => {
     const entries = Array.isArray(saved) ? saved.filter(Boolean) : [];
     if (!entries.length || !currentProfile.current) return;
@@ -636,8 +712,8 @@ export default function App() {
     && e.dayKey.startsWith(today.slice(0,7)) && (historyCategory === 'all' || categoryKey(e) === historyCategory))), [expenses, historyCurrency, historyCategory, today]);
   const historyExpense = total(history, 'expense'), historyIncome = total(history, 'income');
   const days = [...new Set(history.map(e => e.dayKey))];
-  const mascotEnvironment = clock.getHours() >= 23 ? 'night' : weather?.rain ? 'rain' : weather?.sun ? 'sun' : null;
-  const keypadKeys = ['1','2','3','4','5','6','7','8','9',digits ? '.' : 'clear','0','+','backspace', ...(digits ? ['clear'] : [])];
+  const mascotEnvironment = (clock.getHours() >= 23 || clock.getHours() < 6) ? 'night' : weather?.rain ? 'rain' : weather?.sun ? 'sun' : null;
+  const keypadKeys = ['1','2','3','4','5','6','7','8','9',digits ? '.' : 'clear','0','backspace'];
   const saveLabel = t(busy ? 'saving' : !amountMinor ? 'enterAmount' : !draft.selected ? 'selectCategory' : draft.type === 'income' ? 'saveIncome' : 'save');
   const storageStatus = <div className="storage-state"><span id="storage-status" role="status">{t(failed ? 'unavailable' : !ready ? 'loading' : syncFailed ? 'syncFailed' : isRemote ? 'remoteStorage' : 'localStorage')}</span>{failed && <Button mode="plain" size="s" onClick={() => setRetryCount(n => n + 1)}>{t('retry')}</Button>}</div>;
   const secondary = !['record','history'].includes(view);
@@ -649,13 +725,18 @@ export default function App() {
     </header>
 
     {failedCount > 0 && <button type="button" className="sync-retry-banner" onClick={retryWrites}>{t('retryUnconfirmed', { n: failedCount })}</button>}<main key={view} ref={pageRef} id={`${view}-view`} className="page">{view !== 'record' && <div className="page-heading"><h1 id={`${view}-title`} tabIndex={-1}>{t(titleKey)}</h1>{secondary && <Button mode="plain" size="s" className="text-button" onClick={() => navigate(view === 'settings' ? 'record' : 'settings')}>{t('back')}</Button>}</div>}
-    {view === 'record' && <><div className="today-strip"><span className="today-icon" aria-hidden="true"><Icon name="arrowDown"/></span><div><span>{t('todayTotal')}</span><strong id="today-total">{money(todayExpense)}</strong></div><Button id="edit-draft-time" mode="plain" className={`date-label date-button ${draft.occurredAt ? 'has-custom-time' : ''}`} aria-label={t('editEntryTime')} disabled={disabled} onClick={() => setTimeEditor({})}><Icon name="clock"/>{new Intl.DateTimeFormat(locale, { month:'short',day:'numeric', ...(draft.occurredAt ? { hour:'2-digit',minute:'2-digit',hourCycle:'h23' } : {}) }).format(new Date(draft.occurredAt || Date.now()))}</Button><Button id="open-ai-import" mode="plain" className="ai-quick-trigger" aria-label={t('aiImportTitle')} title={t('aiImportTitle')} disabled={busy} onClick={() => navigate('ai-import')}><Icon name="receipt"/></Button></div>{clipboardSuggestion && <button type="button" className="clipboard-capsule" onClick={applyClipboard}><Icon name="clip"/><span>{t('clipboardFound',{ amount:money(clipboardSuggestion.amountMinor, clipboardSuggestion.currency) })}</span><b>{t('clipboardFill')}</b></button>}{dueRecurring.length > 0 && <div className="recurring-due" role="status"><span>{t('recurringDue',{ n:dueRecurring.length })}</span><div>{dueRecurring.slice(0,2).map(item => <button type="button" key={item.id} onClick={() => applyRecurring(item)}>{categoryDisplayLabel(categories.find(c => c.id === item.categoryId) || {}, settings.language)} · {money(item.amountMinor,item.currency)}</button>)}</div></div>}<div className="record-layout"><section ref={stageRef} className={`amount-stage ${draft.raw.length >= 6 ? 'long-amount' : ''} ${draft.raw.includes('+') ? 'has-expression' : ''} ${draft.type === 'income' ? 'is-income' : ''}`} aria-label={t('amountInput')}><div className="amount-meta"><div className="type-toggle-pill" role="group" aria-label={t('transactionType')}>{['expense','income'].map(type => <Tappable Component="button" type="button" key={type} className={`type-pill-btn ${draft.type === type ? `active type-${type}` : ''}`} aria-pressed={draft.type === type} disabled={disabled} onClick={() => { editDraft({ type, selected:null }); haptic(); }}>{t(type)}</Tappable>)}</div><Select id="currency" className="currency-control" aria-label={t('currency')} value={draftCurrency} data-suggested={Boolean(draft.suggestedCurrency === draftCurrency && !draft.currencyManual)} title={draft.suggestedCurrency ? `${t('locationCurrency')} · ${draft.suggestedCurrency}` : t('currency')} disabled={disabled} onChange={e => { const currency=e.target.value; editDraft({ currency, currencyManual:true, raw:currency === 'JPY' ? draft.raw.replace(/\.[^+]+/g,'').replace(/\.$/,'') : draft.raw }); }}>{Object.keys(CURRENCIES).map(c => <option key={c} value={c}>{c}{draft.suggestedCurrency === c && draftCurrency !== c ? ` · ${t('locationCurrency')}` : ''}</option>)}</Select></div><div className="amount-line"><span className="currency-symbol">{draft.type === 'income' ? '+' : ''}{CURRENCIES[draftCurrency].symbol}</span><output id="amount-display" data-length={draft.raw.length < 6 ? 'short' : draft.raw.length > 9 ? 'long' : draft.raw.length} aria-label={t('currentAmount')} style={{ '--amount-chars':amount.length }}>{amount}</output><span className="input-caret" aria-hidden="true"/></div><div className="amount-bottom"><span>{draft.raw.includes('+') ? draft.raw : (draft.selected ? categoryDisplayLabel(categories.find(c => c.id === draft.selected) || {}, settings.language) : '')}</span>{ratePreview && <small className="rate-preview">≈ {money(ratePreview.minor, ratePreview.currency)}</small>}</div><PocketMascot mascotRef={mascotRef} t={t} environment={mascotEnvironment} onTap={haptic} canConfirm={Boolean(!disabled && amountMinor && draft.selected && draft.consumer)} busy={busy} celebrate={celebration} confirmLabel={saveLabel} onConfirm={save}/></section>
+    {view === 'record' && <><div className="today-strip"><span className="today-icon" aria-hidden="true"><Icon name="arrowDown"/></span><div><span>{t('todayTotal')}</span><strong id="today-total">{money(todayExpense)}</strong></div><Button id="edit-draft-time" mode="plain" className={`date-label date-button ${draft.occurredAt ? 'has-custom-time' : ''}`} aria-label={t('editEntryTime')} disabled={disabled} onClick={() => setTimeEditor({})}><Icon name="clock"/>{new Intl.DateTimeFormat(locale, { month:'short',day:'numeric', ...(draft.occurredAt ? { hour:'2-digit',minute:'2-digit',hourCycle:'h23' } : {}) }).format(new Date(draft.occurredAt || Date.now()))}</Button><Button id="open-ai-import" mode="plain" className="ai-quick-trigger" aria-label={t('aiImportTitle')} title={t('aiImportTitle')} disabled={busy} onClick={() => navigate('ai-import')}><Icon name="receipt"/></Button></div>{clipboardSuggestion && <button type="button" className="clipboard-capsule" onClick={applyClipboard}><Icon name="clip"/><span>{t('clipboardFound',{ amount:money(clipboardSuggestion.amountMinor, clipboardSuggestion.currency) })}</span><b>{t('clipboardFill')}</b></button>}{dueRecurring.length > 0 && <div className="recurring-due" role="status"><span>{t('recurringDue',{ n:dueRecurring.length })}</span><div>{dueRecurring.slice(0,2).map(item => <button type="button" key={item.id} onClick={() => applyRecurring(item)}>{categoryDisplayLabel(categories.find(c => c.id === item.categoryId) || {}, settings.language)} · {money(item.amountMinor,item.currency)}</button>)}</div></div>}<div className="record-layout"><section ref={stageRef} className={`amount-stage ${draft.raw.length >= 6 ? 'long-amount' : ''} ${draft.type === 'income' ? 'is-income' : ''}`} aria-label={t('amountInput')}><div className="amount-meta"><div className="type-toggle-pill" role="group" aria-label={t('transactionType')}>{['expense','income'].map(type => <Tappable Component="button" type="button" key={type} className={`type-pill-btn ${draft.type === type ? `active type-${type}` : ''}`} aria-pressed={draft.type === type} disabled={disabled} onClick={() => { editDraft({ type, selected:null }); haptic(); }}>{t(type)}</Tappable>)}</div><Select id="currency" className="currency-control" aria-label={t('currency')} value={draftCurrency} data-suggested={Boolean(draft.suggestedCurrency === draftCurrency && !draft.currencyManual)} title={draft.suggestedCurrency ? `${t('locationCurrency')} · ${draft.suggestedCurrency}` : t('currency')} disabled={disabled} onChange={e => { const currency=e.target.value; editDraft({ currency, currencyManual:true, raw:currency === 'JPY' ? draft.raw.replace(/\.[^+]+/g,'').replace(/\.$/,'') : draft.raw }); }}>{Object.keys(CURRENCIES).map(c => <option key={c} value={c}>{c}{draft.suggestedCurrency === c && draftCurrency !== c ? ` · ${t('locationCurrency')}` : ''}</option>)}</Select></div><div className="amount-line"><span className="currency-symbol">{draft.type === 'income' ? '+' : ''}{CURRENCIES[draftCurrency].symbol}</span><output id="amount-display" data-length={draft.raw.length < 6 ? 'short' : draft.raw.length > 9 ? 'long' : draft.raw.length} aria-label={t('currentAmount')} style={{ '--amount-chars':amount.length }}>{amount}</output><span className="input-caret" aria-hidden="true"/></div><div className="amount-bottom"><span>{(draft.selected ? categoryDisplayLabel(categories.find(c => c.id === draft.selected) || {}, settings.language) : '')}</span>{ratePreview && <small className="rate-preview">≈ {money(ratePreview.minor, ratePreview.currency)}</small>}</div><PocketMascot mascotRef={mascotRef} t={t} environment={mascotEnvironment} onTap={haptic} canConfirm={Boolean(!disabled && amountMinor && draft.selected && draft.consumer)} busy={busy} celebrate={celebration} confirmLabel={saveLabel} onConfirm={save}/></section>
       <section className="purposes"><div className="section-heading"><h2>{t('categories')}</h2>{(!circle || circle.isAdmin) && <Button className="text-button" id="edit-categories" mode="plain" size="s" disabled={disabled} onClick={startEditing}>{t('editCategories')}</Button>}</div><Categories categories={orderedCategories} lang={settings.language} selected={draft.selected} disabled={disabled} onSelect={id => { editDraft({ selected:id }); haptic(); }}/></section>
-       <section id="keypad" className="keypad" aria-label={t('keypad')}>{keypadKeys.map((key,index) => <Tappable Component="button" type="button" className={`key ${['clear','backspace','.','+'].includes(key) ? 'key-secondary' : ''}`} key={`${key}-${index}`} data-key={key} disabled={disabled} aria-label={key === 'clear' ? t('clear') : key === 'backspace' ? t('backspace') : key === '.' ? t('decimal') : key === '+' ? t('addAmounts') : key} onPointerDown={event => { if (!disabled) { event.currentTarget.setAttribute('data-pressed', 'true'); stageRef.current?.setAttribute('data-press', 'true'); haptic(); } }} onPointerUp={event => event.currentTarget.removeAttribute('data-pressed')} onPointerCancel={event => event.currentTarget.removeAttribute('data-pressed')} onPointerLeave={event => event.currentTarget.removeAttribute('data-pressed')} onClick={() => pushKey(key)}>{key === 'clear' ? 'C' : key === 'backspace' ? <Icon name="backspace"/> : key === '.' ? decimal : key}</Tappable>)}</section>
+       <section id="keypad" className="keypad" aria-label={t('keypad')}>{keypadKeys.map((key,index) => <Tappable Component="button" type="button" className={`key ${['clear','backspace','.'].includes(key) ? 'key-secondary' : ''}`} key={`${key}-${index}`} data-key={key} disabled={disabled} aria-label={key === 'clear' ? t('clear') : key === 'backspace' ? t('backspace') : key === '.' ? t('decimal') : key} onPointerDown={event => { if (!disabled) { event.currentTarget.setAttribute('data-pressed', 'true'); stageRef.current?.setAttribute('data-press', 'true'); haptic(); } }} onPointerUp={event => event.currentTarget.removeAttribute('data-pressed')} onPointerCancel={event => event.currentTarget.removeAttribute('data-pressed')} onPointerLeave={event => event.currentTarget.removeAttribute('data-pressed')} onClick={() => pushKey(key)}>{key === 'clear' ? 'C' : key === 'backspace' ? <Icon name="backspace"/> : key === '.' ? decimal : key}</Tappable>)}</section>
       <section className="finish" aria-label={t('save')}><div className="entry-actions">{circle && settings.consumers.length > 1 && <div className="consumer-buttons" role="group" aria-label={t(draft.type === 'income' ? 'incomeOwner' : 'consumer')}>{settings.consumers.map(c => <Tappable Component="button" type="button" className={`consumer-chip consumer-color-${c.color}`} key={c.id} aria-pressed={draft.consumer === c.id} disabled={disabled} onClick={() => { editDraft({ consumer:c.id }); haptic(); }}><Avatar person={c}/><span>{c.name}</span></Tappable>)}</div>}<Button id="entry-location" mode="plain" className={`location-trigger ${draft.location ? 'has-location' : ''}`} aria-label={t('locationTitle')} aria-pressed={Boolean(draft.location)} title={locationLabel(draft.location) || t('locationTitle')} disabled={disabled} onClick={() => setLocationSheet(true)}><Icon name="pin"/></Button><Button id="edit-note" mode="plain" className={`note-trigger ${draft.note ? "has-note" : ""}`} aria-label={t('note')} title={draft.note || t('note')} disabled={disabled} onClick={() => setNoteEditor(true)}><Icon name="edit"/></Button></div></section></div>
       </>}
-    {view === 'history' && <><div className="history-controls"><SegmentedControl className="period-tabs" aria-label={t('period')}>{['month','all'].map(p => <SegmentedControl.Item key={p} selected={period === p} onClick={() => setPeriod(p)}>{t(p)}</SegmentedControl.Item>)}</SegmentedControl><div className="history-actions"><Select id="history-currency" className="history-currency" aria-label={t('ledgerCurrency')} value={historyCurrency} onChange={e => setHistoryCurrency(e.target.value)}>{Object.keys(CURRENCIES).map(c => <option key={c}>{c}</option>)}</Select><Button mode="plain" className="postcard-button" onClick={exportPostcard} aria-label={t('postcardExport')}><Icon name="receipt"/></Button></div></div><label className="history-category-filter"><span>{t('categoryFilter')}</span><Select id="history-category" aria-label={t('categoryFilter')} value={historyCategory} onChange={e => setHistoryCategory(e.target.value)}><option value="all">{t('allCategories')}</option>{['expense','income'].map(type => <optgroup key={type} label={t(type)}>{historyCategories.filter(option => option.type === type).map(option => <option key={option.key} value={option.key}>{categoryLabel(option.category,settings.language)}</option>)}</optgroup>)}</Select></label><section className="history-summary"><div className="history-summary-amount"><span>{t('netBalance')}</span><strong id="history-total">{money(historyIncome - historyExpense, historyCurrency)}</strong><small id="history-total-count">{countText(history.length, settings.language, historyCurrency)}</small></div><div className="balance-details"><div><span>{t('expense')}</span><strong>{money(historyExpense,historyCurrency)}</strong></div><div><span>{t('income')}</span><strong className="income-value">+{money(historyIncome,historyCurrency)}</strong></div></div></section><Footprints items={footprints} t={t}/><AiSummary t={t} profile={profile} settings={settings} currency={historyCurrency} busy={busy} run={run} service={service.current} isRemote={isRemote} config={config} onAccount={() => navigate('account')}/><div className="history-list">{!history.length && <Placeholder className="empty-state" header={t('emptyTitle')} description={t(historyCategory === 'all' ? 'emptyText' : 'filterEmpty')}><span className="empty-face">◡</span><Button mode="filled" onClick={() => navigate('record')}>{t('newEntry')}</Button></Placeholder>}{days.map(day => <section key={day}><div className="history-day">{day === today ? t('today') : new Intl.DateTimeFormat(locale,{ timeZone:'UTC',month:'short',day:'numeric' }).format(new Date(`${day}T12:00:00Z`))}</div>{history.filter(e => e.dayKey === day).map(e => <SwipeExpenseRow key={e.id} entry={e} t={t} onDelete={removeEntry} onCopy={fillFromEntry} onNote={entry => fillFromEntry(entry, true)}><Cell Component="article" readOnly multiline key={e.id} className={`expense-row ${e.type === 'income' ? 'is-income' : ''}`} before={<span className="category-icon" style={{ background:`var(--${e.category.color})` }}><Icon name={e.category.icon}/></span>} subtitle={<span className="expense-meta"><span className={`consumer-badge consumer-color-${e.member?.color || 'blue'}`}><i/>{e.member?.name || settings.consumers.find(c => c.id === e.consumer)?.name || t('unknownConsumer')}</span><button type="button" className="entry-time" aria-label={t('editEntryTime')} disabled={busy || e.canDelete === false} onClick={() => setTimeEditor({ entry:e, ledgerId:profile.ledgerId })}><time dateTime={e.occurredAt || e.createdAt}>{new Intl.DateTimeFormat(locale,{timeZone:e.timezone || timezone,hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(new Date(e.occurredAt || e.createdAt))}</time></button></span>} description={e.note || e.location ? <span className="expense-description">{e.note && <span className="expense-note">{e.note}</span>}{e.location && <span className="expense-location"><Icon name="pin"/><span>{locationLabel(e.location) || t('locationAttached')}</span></span>}</span> : undefined} after={<div className="expense-actions"><span className="expense-money">{e.type === 'income' ? '+' : '−'}{money(e.amountMinor,e.currency)}</span>{e.canDelete !== false && <Button className="delete-expense" mode="plain" size="s" disabled={busy} data-delete={e.id} aria-label={t('deleteExpense',{category:categoryLabel(e.category,settings.language),amount:money(e.amountMinor,e.currency)})} onClick={() => removeEntry(e)}><Icon name="trash"/></Button>}</div>}><strong>{categoryLabel(e.category,settings.language)}</strong>{!isBudgetEntry(e) && <small className="entry-kind">{t(e.recordKind === 'transfer' ? 'recordKindTransfer' : 'recordKindReimbursement')}</small>}</Cell></SwipeExpenseRow>)}</section>)}</div><div className="today-balance"><span>{t('todayBalance')}</span><strong>{money(todayIncome - todayExpense)}</strong></div></>}
-    {view === 'settings' && <div className="settings-home">{[['profile','myProfile'],['circles','circlesTitle'],['account','accountTitle'],['ai-import','aiImportTitle']].map(([v,key]) => <Button key={v} mode="plain" className="settings-row" onClick={() => navigate(v)} disabled={!ready}>{v === 'profile' ? <Avatar person={profile?.user}/> : <Icon name={v === 'circles' ? 'users' : v === 'ai-import' ? 'receipt' : 'card'}/>}<span>{t(key)}</span><span aria-hidden="true">›</span></Button>)}<Button mode="plain" className="settings-row" onClick={() => setLocationSheet(true)} disabled={!ready}><Icon name="pin"/><span>{t('locationTitle')}</span><span aria-hidden="true">›</span></Button><Button mode="plain" className="settings-row" onClick={() => navigate('recurring')} disabled={!ready}><Icon name="repeat"/><span>{t('recurringTitle')}</span><span aria-hidden="true">›</span></Button><label className="settings-language"><span>{t('language')}</span><Select id="language" className="language-control" aria-label={t('language')} value={settings.language} disabled={disabled} onChange={e => updateSettings({ language:e.target.value })}><option value="zh">中文</option><option value="en">English</option><option value="uk">Українська</option></Select></label><label className="settings-language"><span>{t('themeTitle')}</span><Select className="language-control" aria-label={t('themeTitle')} value={settings.theme || 'matcha'} disabled={disabled} onChange={e => updateSettings({ theme:e.target.value })}>{THEME_OPTIONS.map(theme => <option key={theme} value={theme}>{t(`theme_${theme}`)}</option>)}</Select></label><label className="settings-language"><span>{t('soundTitle')}</span><Select className="language-control" aria-label={t('soundTitle')} value={settings.soundPack || 'off'} disabled={disabled} onChange={e => updateSettings({ soundPack:e.target.value })}>{SOUND_OPTIONS.map(sound => <option key={sound} value={sound}>{t(`sound_${sound}`)}</option>)}</Select></label></div>}
+    {view === 'history' && <><div className="history-controls history-toolbar">
+      <select id="history-period" aria-label={t('period')} value={period} onChange={e => setPeriod(e.target.value)}>{['month','all'].map(p => <option key={p} value={p}>{t(p)}</option>)}</select>
+      <select id="history-category" aria-label={t('categoryFilter')} value={historyCategory} onChange={e => setHistoryCategory(e.target.value)}><option value="all">{t('allCategories')}</option>{['expense','income'].map(type => <optgroup key={type} label={t(type)}>{historyCategories.filter(option => option.type === type).map(option => <option key={option.key} value={option.key}>{categoryLabel(option.category,settings.language)}</option>)}</optgroup>)}</select>
+      <select id="history-currency" aria-label={t('ledgerCurrency')} value={historyCurrency} onChange={e => setHistoryCurrency(e.target.value)}>{Object.keys(CURRENCIES).map(c => <option key={c}>{c}</option>)}</select>
+      <Button mode="plain" className="postcard-button" onClick={exportPostcard} aria-label={t('postcardExport')}><Icon name="receipt"/></Button>
+    </div><section className="history-summary"><div className="history-summary-amount"><span>{t('netBalance')}</span><strong id="history-total">{money(historyIncome - historyExpense, historyCurrency)}</strong><small id="history-total-count">{countText(history.length, settings.language, historyCurrency)}</small></div><div className="balance-details"><div><span>{t('expense')}</span><strong>{money(historyExpense,historyCurrency)}</strong></div><div><span>{t('income')}</span><strong className="income-value">+{money(historyIncome,historyCurrency)}</strong></div></div></section><Footprints items={footprints} t={t}/><AiSummary t={t} profile={profile} settings={settings} currency={historyCurrency} busy={busy} run={run} service={service.current} isRemote={isRemote} config={config} onAccount={() => navigate('account')}/><div className="history-list">{!history.length && <Placeholder className="empty-state" header={t('emptyTitle')} description={t(historyCategory === 'all' ? 'emptyText' : 'filterEmpty')}><span className="empty-face">◡</span><Button mode="filled" onClick={() => navigate('record')}>{t('newEntry')}</Button></Placeholder>}{days.map(day => <section key={day}><div className="history-day">{day === today ? t('today') : new Intl.DateTimeFormat(locale,{ timeZone:'UTC',month:'short',day:'numeric' }).format(new Date(`${day}T12:00:00Z`))}</div>{history.filter(e => e.dayKey === day).map(e => <SwipeExpenseRow key={e.id} entry={e} t={t} onDelete={removeEntry} onCopy={fillFromEntry} onEdit={entry => { if (entry.canDelete !== false) setEditingEntry(entry); }}><Cell Component="article" readOnly multiline key={e.id} className={`expense-row ${e.type === 'income' ? 'is-income' : ''}`} before={<span className="category-icon" style={{ background:`var(--${e.category.color})` }}><Icon name={e.category.icon}/></span>} subtitle={<span className="expense-meta"><span className={`consumer-badge consumer-color-${e.member?.color || 'blue'}`}><i/>{e.member?.name || settings.consumers.find(c => c.id === e.consumer)?.name || t('unknownConsumer')}</span><button type="button" className="entry-time" aria-label={t('editEntryTime')} disabled={busy || e.canDelete === false} onClick={() => setTimeEditor({ entry:e, ledgerId:profile.ledgerId })}><time dateTime={e.occurredAt || e.createdAt}>{new Intl.DateTimeFormat(locale,{timeZone:e.timezone || timezone,hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(new Date(e.occurredAt || e.createdAt))}</time></button></span>} description={e.note || e.location ? <span className="expense-description">{e.note && <span className="expense-note">{e.note}</span>}{e.location && <span className="expense-location"><Icon name="pin"/><span>{locationLabel(e.location) || t('locationAttached')}</span></span>}</span> : undefined} after={<div className="expense-actions"><span className="expense-money">{e.type === 'income' ? '+' : '−'}{money(e.amountMinor,e.currency)}</span><Button className="entry-more" mode="plain" size="s" aria-label={t('entryActions')} onClick={() => document.dispatchEvent(new CustomEvent('pocket:entry-actions', { detail:e.id }))}><Icon name="more"/></Button></div>}><strong>{categoryLabel(e.category,settings.language)}</strong>{!isBudgetEntry(e) && <small className="entry-kind">{t(e.recordKind === 'transfer' ? 'recordKindTransfer' : 'recordKindReimbursement')}</small>}</Cell></SwipeExpenseRow>)}</section>)}</div><div className="today-balance"><span>{t('todayBalance')}</span><strong>{money(todayIncome - todayExpense)}</strong></div></>}
+    {view === 'settings' && <SettingsPage profile={profile} settings={settings} t={t} ready={ready} disabled={disabled} navigate={navigate} updateSettings={updateSettings} onLocation={() => setLocationSheet(true)} locationEnabled={locationEnabled}/>}
     {view === 'recurring' && <RecurringEditor settings={settings} categories={settings.categories} t={t} updateSettings={updateSettings} disabled={disabled}/>}
     {view === 'profile' && profile && <ProfileEditor key={profile.user.id} user={profile.user} t={t} busy={busy} run={run} service={service.current}/>}
     {view === 'account' && profile && <AccountPage t={t} profile={profile} isRemote={isRemote} config={config} language={settings.language} busy={busy} run={run} service={service.current} onGoogle={login} onLogout={logout} copy={copy}/>}
@@ -666,7 +747,8 @@ export default function App() {
     </div>{picker && profile && <CirclePicker profile={profile} t={t} busy={busy} onSwitch={switchCircle} onManage={() => navigate('circles')} onClose={() => setPicker(false)}/>}
     {locationSheet && <LocationSheet t={t} location={draft.location} enabled={locationEnabled} loading={locationBusy} onCapture={useLocation} onRemove={() => removeLocation()} onDisable={() => removeLocation(true)} onClose={() => setLocationSheet(false)}/>}
     {noteEditor && <Sheet title={t('note')} onClose={() => setNoteEditor(false)}><form className="note-form" onSubmit={e => { e.preventDefault(); setNoteEditor(false); }}><Input id="note" className="note-field" autoFocus aria-label={t('note')} placeholder={t('notePlaceholder')} value={draft.note} maxLength={160} disabled={disabled} onChange={e => editDraft({ note:e.target.value })}/><Button type="submit" className="compact-save" aria-label={t('confirm')}><Icon name="check"/></Button></form></Sheet>}
+    {editingEntry && <ExpenseEditor entry={editingEntry} settings={settings} t={t} onClose={() => setEditingEntry(null)} onSave={commitEntryEdit}/> }
     {timeEditor && <TimeEditor value={timeEditor.entry ? timeEditor.entry.occurredAt || timeEditor.entry.createdAt : draft.occurredAt} isDraft={!timeEditor.entry} t={t} busy={busy} onSave={saveTime} onClose={() => setTimeEditor(null)}/>}
-    {notice && <Snackbar className={`notice ${notice.error ? 'error' : ''}`} key={notice.id} role="status" duration={notice.error || notice.undoId ? 2147480000 : 2200} onClose={() => setNotice(current => current?.id === notice.id ? null : current)} after={<span className="notice-actions">{notice.retryWrites && <Snackbar.Button onClick={retryWrites}>{t('retry')}</Snackbar.Button>}{notice.undoId && <Snackbar.Button id="undo-button" disabled={busy} onClick={undo}>{t('undo')}</Snackbar.Button>}<Snackbar.Button id="dismiss-notice" aria-label={t('closeNotice')} onClick={() => setNotice(null)}>×</Snackbar.Button></span>}><span id="notice-text">{notice.error ? translateError(notice.error,settings.language) : t(notice.key,notice.values)}</span></Snackbar>}
+    {notice && <Snackbar className={`notice ${notice.error ? 'error' : ''}`} key={notice.id} role="status" duration={notice.error || notice.undoId ? 2147480000 : 2200} onClose={() => setNotice(current => current?.id === notice.id ? null : current)} after={<span className="notice-actions">{notice.retryWrites && <Snackbar.Button onClick={retryWrites}>{t('retry')}</Snackbar.Button>}{notice.undoId && <Snackbar.Button id="undo-button" onClick={undo}>{t('undo')}</Snackbar.Button>}<Snackbar.Button id="dismiss-notice" aria-label={t('closeNotice')} onClick={() => setNotice(null)}>×</Snackbar.Button></span>}><span id="notice-text">{notice.error ? translateError(notice.error,settings.language) : t(notice.key,notice.values)}</span></Snackbar>}
   </AppRoot>;
 }

@@ -232,6 +232,19 @@ export function validateExpense(value, settings) {
     splitMode, splitParticipants: [...splitParticipants], recordKind,
     ...(suggestion ? { categorySuggestion: suggestion } : {}), ...(location ? { location } : {}), ...(recurringId ? { recurringId } : {}) };
 }
+export function validateExpenseUpdate(entry, patch, settings) {
+  const fields = ['amountMinor','currency','categoryId','consumer','note'];
+  const changes = Object.fromEntries(fields.filter(key => Object.hasOwn(patch, key)).map(key => [key, patch[key]]));
+  const poolKey = entry.type === 'income' ? 'incomeCategories' : 'categories';
+  const pool = [...(settings[poolKey] || [])];
+  // A note correction must still work after a category/member was archived.
+  if ((!changes.categoryId || changes.categoryId === entry.categoryId) && entry.category && !pool.some(c => c.id === entry.categoryId)) pool.push(entry.category);
+  const consumers = [...(settings.consumers || [])];
+  const preservedMembers = [...(entry.splitParticipants || []), ...(!changes.consumer || changes.consumer === entry.consumer ? [entry.consumer] : [])];
+  for (const id of preservedMembers) if (!consumers.some(c => c.id === id)) consumers.push({ id });
+  const valid = validateExpense({ ...entry, ...changes, occurredAt:entry.occurredAt || entry.createdAt }, { ...settings, [poolKey]:pool, consumers });
+  return { ...Object.fromEntries(fields.map(key => [key, valid[key]])), category:valid.category };
+}
 export function validateEntryTime(value, timezone) {
   if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/.test(value)) throw new Error('errorEntryTime');
   const time = new Date(value);

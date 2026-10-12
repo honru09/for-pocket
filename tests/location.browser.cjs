@@ -99,7 +99,13 @@ const ARTIFACTS = fs.mkdtempSync(path.join(os.tmpdir(), 'for-pocket-location-'))
       await page.locator('.mascot-confirm').click();
       await expect(page.locator('#amount-display')).toHaveText('0');
       release();release=null;
-      await expect(page.locator('#entry-location')).toHaveAttribute('aria-pressed','false');
+      // Location opt-in persists and the next draft keeps the latest place
+      // while a fresh foreground lookup is in flight.
+      await expect(page.locator('#entry-location')).toHaveAttribute('aria-pressed','true');
+      // The foreground refresh may already have completed with the current
+      // place. The delayed result from the previous draft must never leak
+      // into this new entry.
+      await expect(page.locator('#entry-location')).not.toHaveAttribute('title','Late area · Late place');
       await page.locator('#entry-location').click();
       await page.getByRole('button',{name:'Turn off',exact:true}).click();
       await page.locator('dialog header button').click();

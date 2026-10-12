@@ -45,7 +45,8 @@ export function createApp({ token = process.env.BOT_TOKEN || '', dataDir = path.
     beforeDeliver: asyncPersist ? undefined : () => store.flush(),
     expenseSync,
     aiParser: { ...aiParser, summarize: (input, profile) => summarizeExpenses(input, profile, aiSummarizer, now()),
-      chat: aiParser.chat || ((input, profile) => aiChat.chat({ ...input, profile })) } });
+      chat: aiParser.chat || ((input, profile) => aiChat.chat({ ...input, profile })),
+      classifyIntent: aiParser.classifyIntent || (aiChat.enabled ? input => aiChat.classifyIntent(input) : undefined) } });
   const digestService = createDigestService({ store, summarizer: aiSummarizer, token, callTelegram, now });
   function limit(key, max = 12) {
     const at = now(), item = attempts.get(key);
@@ -216,7 +217,7 @@ export function createApp({ token = process.env.BOT_TOKEN || '', dataDir = path.
         }
         const aiRoute = url.pathname === '/api/ai/parse-expense' && req.method === 'POST';
         const telegramAiRoute = url.pathname === '/api/ai/telegram-parse' && req.method === 'POST';
-        const body = aiRoute || telegramAiRoute ? null : ['POST', 'PUT'].includes(req.method)
+        const body = aiRoute || telegramAiRoute ? null : ['POST', 'PUT', 'PATCH'].includes(req.method)
           ? await bodyOf(req, url.pathname === '/api/expenses/import' ? 131072 : url.pathname === '/api/user-profile' ? MAX_CUSTOM_AVATAR_LENGTH + 8192 : 32768)
           : {};
         if (url.pathname === '/api/location/reverse' && req.method === 'POST') {
@@ -328,7 +329,7 @@ export function createApp({ token = process.env.BOT_TOKEN || '', dataDir = path.
         if (['/expenses', '/expenses/import'].includes(route) && req.method === 'POST') {
           const entries = Array.isArray(result?.entries) ? result.entries : [result];
           for (const entry of entries) { try { await expenseSync.notify(entry); } catch {} }
-        } else if (/^\/expenses\/[a-zA-Z0-9_-]{8,64}$/.test(route) && req.method === 'PUT') {
+        } else if (/^\/expenses\/[a-zA-Z0-9_-]{8,64}$/.test(route) && ['PUT','PATCH'].includes(req.method)) {
           try { await expenseSync.sync(result, 'edit'); } catch {}
         } else if (/^\/expenses\/[a-zA-Z0-9_-]{8,64}$/.test(route) && req.method === 'DELETE') {
           try { await expenseSync.sync(result, 'delete'); } catch {}

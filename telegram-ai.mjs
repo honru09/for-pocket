@@ -1,3 +1,4 @@
+import { textIntent, intentFallback } from './telegram-intent.mjs';
 import { randomUUID } from 'node:crypto';
 import {
   CURRENCIES,
@@ -315,26 +316,6 @@ function summaryQuestion(text) {
 
 function periodForText(text) {
   return /(本周|这周|上周|week|тижд)/i.test(String(text || '')) ? 'week' : 'month';
-}
-
-function expenseIntent(text) {
-  const value = String(text || '').normalize('NFKC').trim();
-  if (!value) return false;
-  const hasCurrency = /[¥$₴€£]|(?:日元|人民币|美元|гривн|yen|yuan|dollar|uah|jpy|usd)/iu.test(value);
-  // A future plan (“tomorrow I'll buy…”, “завтра куплю…”) is conversation
-  // until an amount or an explicit already-paid verb appears. This prevents
-  // the parser from turning meal ideas and shopping plans into fake drafts.
-  const futurePlan = /(明天|后天|下周|以后|打算|准备|想(?:要)?|tomorrow|next\s+(?:day|week)|planning\s+to|going\s+to|завтра|післязавтра|наступн(?:ого|ої)|планую|хочу)/iu.test(value);
-  const alreadyPaid = /(花了|买了|买过|消费了|支出了|付款了|付了|吃了|喝了|打车了|转给|代付|报销|收入|入账|记账|记一笔|spent|spend|bought|paid|purchased|was\s+charged|витратив|витратила|купив|купила|оплатив|оплатила|переказав|отримав|записати|дохід)/iu.test(value);
-  // A bare amount is a useful shorthand in Telegram (and is also used after
-  // a pending venue). Other numbers need a money unit or a spending cue;
-  // dates, times, quantities and ordinary chat should stay in the chat path.
-  const bareAmount = /^[\d.,\s]+$/u.test(value) && /\d/u.test(value);
-  const spendingCue = /(记账|记一笔|花|买|消费|支出|付款|付|吃|喝|午饭|晚饭|早餐|拉面|咖啡|房租|打车|转给|代付|报销|收入|入账|夜市|夜宵|市场|便利店|超市|餐厅|便当|外卖|expense|spent|spend|bought|paid|pay(?:ment)?|purchase|rent|taxi|transfer|reimburse|income|lunch|dinner|breakfast|coffee|food|market|snack|ramen|restaurant|convenience|grocery|витрат|витратив|куп|оплат|оренд|переказ|дохід|обід|кава|ринок|магазин|ресторан)/iu.test(value);
-  const hasAmount = hasCurrency || (spendingCue && /\d/u.test(value));
-  if (futurePlan && !alreadyPaid) return false;
-  if (bareAmount || hasAmount) return true;
-  return spendingCue;
 }
 
 function chatLedgerContext(profile, now, timezone) {
@@ -1204,8 +1185,25 @@ export function createTelegramHandler({
     }
     const audioInfo = audioFromMessage(message);
     const fileInfo = importFromMessage(message);
-    if (summaryQuestion(text)) return summaryFor(context, message, text);
-    if (text && !audioInfo && !fileInfo && !expenseIntent(text)) return chatFor(context, message, text);
+    // A reply to “edit” belongs to that draft even if it is just “at noon”.
+    const editing = await pendingDraftEdit(context, message.chat.id);
+    if (editing?.stale) {
+      await completeDraftEdit(context, editing.id);
+      return reply(context, message.chat.id, 'ledgerChanged', { ok: false, reason: 'ledger-changed' });
+    }
+    if (!editing && text && !audioInfo && !fileInfo && !locationEntry) {
+      // Summary wording wins when there is no concrete amount. Chinese and
+      // Ukrainian often spell small numbers as words, so do not rely on \d.
+      if (summaryQuestion(text) && !/[¥$₴€£]|\d/u.test(text)) return summaryFor(context, message, text);
+      let intent = textIntent(text);
+      if (intent === 'ambiguous') {
+        invokeLimit(`telegram-intent:${context.telegramId}`, 20);
+        try { intent = await aiParser?.classifyIntent?.({ text, language:context.language }); } catch {}
+        if (!['expense','chat','summary'].includes(intent)) intent = intentFallback(text);
+      }
+      if (intent === 'summary') return summaryFor(context, message, text);
+      if (intent === 'chat') return chatFor(context, message, text);
+    }
     if ((message.voice || message.audio) && !audioInfo?.kind) {
       await sendMessage(message.chat.id, botText(context.language, 'invalidAudio'));
       return { ok: false, reason: 'invalid-audio' };
@@ -1249,11 +1247,6 @@ export function createTelegramHandler({
         await sendMessage(message.chat.id, botText(context.language, 'invalidPhoto'));
         return { ok: false, reason: error?.message === 'errorImportFileTooLarge' ? 'file-too-large' : 'file-download' };
       }
-    }
-    const editing = await pendingDraftEdit(context, message.chat.id);
-    if (editing?.stale) {
-      await completeDraftEdit(context, editing.id);
-      return reply(context, message.chat.id, 'ledgerChanged', { ok: false, reason: 'ledger-changed' });
     }
     if (!editing) return parseMessage(context, message, attachment, { locationEntry });
     try {

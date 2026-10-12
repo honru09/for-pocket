@@ -1,5 +1,5 @@
 import { randomUUID, randomBytes, randomInt, createHash } from 'node:crypto';
-import { initialSettings, resolveLanguage, validateSettings, validateExpense, validateUserProfile, validateEntryTime, dateKey, MAX_CIRCLE_MEMBERS, MAX_CATEGORIES } from './public/shared.mjs';
+import { initialSettings, resolveLanguage, validateSettings, validateExpense, validateExpenseUpdate, validateUserProfile, validateEntryTime, dateKey, MAX_CIRCLE_MEMBERS, MAX_CATEGORIES } from './public/shared.mjs';
 import { validTimezone } from './public/timezone.mjs';
 
 export class RequestError extends Error { constructor(message, status = 400) { super(message); this.status = status; } }
@@ -213,11 +213,14 @@ export function handleDomain(db, uid, route, method, body, { now, limit, ledgerQ
     ledger.expenses.push(entry); return entry;
   }
   const recordRoute = /^\/expenses\/([a-zA-Z0-9_-]{8,64})(\/restore)?$/.exec(route);
-  if (recordRoute && !recordRoute[2] && method === 'PUT') {
-    const { ledger, circle } = checkLedger(db, uid, body.ledgerId);
+  if (recordRoute && !recordRoute[2] && (method === 'PUT' || method === 'PATCH')) {
+    const { ledger, circle, consumers } = checkLedger(db, uid, body.ledgerId);
     const entry = ledger.expenses.find(e => e.id === recordRoute[1] && !e.deletedAt); if (!entry) fail('errorMissing', 404);
     if (circle && entry.createdBy !== uid && !circle.admins.includes(uid)) fail('errorEditPermission', 403);
-    Object.assign(entry, validateEntryTime(body.occurredAt, body.timezone), { updatedAt: new Date(now).toISOString() });
+    if (method === 'PATCH') {
+      const valid = validateExpenseUpdate(entry, body, { ...ledger.settings, consumers });
+      Object.assign(entry, valid, { member: structuredClone(consumers.find(c => c.id === valid.consumer) || entry.member), updatedAt: new Date(now).toISOString() });
+    } else Object.assign(entry, validateEntryTime(body.occurredAt, body.timezone), { updatedAt: new Date(now).toISOString() });
     return entry;
   }
   if (recordRoute && (method === 'DELETE' && !recordRoute[2] || method === 'POST' && recordRoute[2])) {

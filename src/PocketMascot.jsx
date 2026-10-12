@@ -2,6 +2,9 @@ import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from
 import { Tappable } from '@telegram-apps/telegram-ui';
 import { createPortal } from 'react-dom';
 import { Icon } from './icons.jsx';
+import weatherAtlas from '../public/assets/weather-accessories.png';
+import cloudStateAtlas from '../public/assets/cloud-state-atlas.png';
+import confirmButtonAtlas from '../public/assets/confirm-button-atlas.png';
 
 const BODY = 'M24 53C16 18 48 7 68 18C86-1 121 23 107 52C130 74 113 107 87 101C70 128 38 116 35 98C4 105-5 68 24 53Z';
 const MOODS = ['cloudHappy', 'cloudSmile', 'cloudShy', 'cloudQuestion', 'cloudSigh', 'cloudGrumpy', 'cloudFurious'];
@@ -34,23 +37,44 @@ function ExpenseFace() {
   </g>;
 }
 
+const WEATHER_CROP = {
+  rain: { x:-9, y:-27, width:70, height:70, viewBox:'0 0 724 724' },
+  sun: { x:22, y:22, width:81, height:81, viewBox:'724 0 724 724' },
+  night: { x:22, y:-25, width:84, height:84, viewBox:'1448 0 724 724' },
+};
+function WeatherAccessory({ environment }) {
+  const crop = WEATHER_CROP[environment];
+  if (!crop) return null;
+  return <g className={`cloud-weather cloud-${environment}`}>
+    <svg {...crop}><image href={weatherAtlas} width="2172" height="724"/></svg>
+    {environment === 'night' && <text className="cloud-sleep-z" x="100" y="24">z</text>}
+  </g>;
+}
+
+function CloudRaster({ frame }) {
+  return <svg className="cloud-raster" viewBox={`${frame * 256} 0 256 256`} preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+    <image href={cloudStateAtlas} width="1536" height="256" />
+  </svg>;
+}
+
 function Cloud({ mood, cashAction, cashId, environment }) {
   const faceMood = cashAction === 'income' ? 1 : mood;
+  const resting = mood === 0 && !cashAction;
+  const rasterFrame = cashAction ? null : mood >= 5 ? 5 : Math.min(4, mood);
   return <svg className="mascot" id="mascot" viewBox="0 0 130 126" aria-hidden="true">
     <path className="mascot-body" d={BODY}/>
-    {environment === 'rain' && <g className="cloud-weather cloud-rain"><path d="M25 22h42"/><path d="M36 21q6-13 12 0q6-13 12 0"/><path d="M38 23v8m12-8v8m12-8v8"/></g>}
-    {environment === 'sun' && <g className="cloud-weather cloud-sun"><path d="M40 31h48"/><path d="M48 32l8 11m16-11-8 11"/><path d="M51 35h14m6 0h14"/></g>}
-    {environment === 'night' && <g className="cloud-weather cloud-night"><path d="M38 25q12-10 24 0v12H38Z"/><path d="M38 28q12-7 24 0"/><text x="87" y="25">Zzz</text></g>}
+    {rasterFrame != null && <CloudRaster frame={rasterFrame}/>}
     <g className="cloud-face-idle">
       <g className="cloud-face">
       {mood >= 5 && !cashAction && <path className="cloud-brows" d={mood === 6 ? 'M39 48l15 8m30-10-16 9' : 'M40 51l13 5m29-7-12 5'}/>}
-      {cashAction !== 'expense' && <><g className="cloud-eyes"><path d={EYES[faceMood]} className="face-eyes"/></g><path d={MOUTHS[faceMood]} className={`face-mouth ${faceMood === 6 ? 'cloud-angry-mouth' : ''}`}/></>}
+      {cashAction !== 'expense' && <><g className={resting && environment === 'night' ? 'cloud-sleep-eyes' : 'cloud-eyes'}><path d={resting && environment === 'night' ? 'M40 62q6 5 12 0m18-2q6 5 12 0' : EYES[faceMood]} className="face-eyes"/></g><path d={MOUTHS[faceMood]} className={`face-mouth ${faceMood === 6 ? 'cloud-angry-mouth' : ''}`}/></>}
       <ellipse className="cloud-blush" cx="35" cy="74" rx={mood === 2 ? 11 : 7} ry={mood === 2 ? 6 : 4}/>
       <ellipse className="cloud-blush" cx="88" cy="72" rx={mood === 2 ? 11 : 7} ry={mood === 2 ? 6 : 4}/>
       {mood === 2 && <g className="cloud-blush-lines"><path d="m30 72 2 4m3-5 2 4m45-5 2 4m3-5 2 4"/></g>}
       {cashAction === 'expense' && <ExpenseFace key={cashId}/>}
       </g>
     </g>
+    {resting && <WeatherAccessory environment={environment}/>}
     {cashAction && <g key={cashId} className={`cloud-cash-hands is-${cashAction}`}><path className="cloud-cash-hand-left" d="M34 91q4 10 17 7"/><path className="cloud-cash-hand-right" d="M93 88q-1 11-14 10"/></g>}
     {mood === 3 && !cashAction && <text className="cloud-question" x="101" y="32">?</text>}
     {mood === 4 && !cashAction && <><path className="cloud-sigh" d="M89 83q12-11 19-4q4 7-4 9q-8 1-9-3m11-12q8-2 9 5"/><path className="cloud-teardrop" d="M92 54q5 7 0 11q-5-4 0-11Z"/></>}
@@ -85,7 +109,7 @@ function StopSign() {
 
 export default function PocketMascot({ mascotRef, t, onTap, canConfirm = false, busy = false, confirmLabel, onConfirm, celebrate = null, environment = null }) {
   const [step, setStep] = useState(0), [phase, setPhase] = useState('cloud');
-  const [signTaps, setSignTaps] = useState(0), [flight, setFlight] = useState(null), [celebration, setCelebration] = useState(null);
+  const [signTaps, setSignTaps] = useState(0), [flight, setFlight] = useState(null), [celebration, setCelebration] = useState(null), [confirmFrame, setConfirmFrame] = useState(0);
   const stepRef = useRef(0), tapsRef = useRef(0), buttonRef = useRef(null), flightRef = useRef(null);
   const motionRef = useRef(null), cashMotionRef = useRef(null), cashAnimationRef = useRef(null), deadlineRef = useRef(0), lastPhase = useRef('cloud');
   const celebrationRef = useRef(celebrate?.id), celebrationTimer = useRef(null);
@@ -110,6 +134,15 @@ export default function PocketMascot({ mascotRef, t, onTap, canConfirm = false, 
     setCelebration({ id: celebrationId, type: celebrationType });
     celebrationTimer.current = setTimeout(() => setCelebration(null), CASH_DURATION[celebrationType]);
   }, [celebrationId, celebrationType]);
+
+  useEffect(() => {
+    if (busy) setConfirmFrame(3);
+    else if (celebrationId != null) {
+      setConfirmFrame(2);
+      const timer = setTimeout(() => setConfirmFrame(0), 520);
+      return () => clearTimeout(timer);
+    } else setConfirmFrame(0);
+  }, [busy, celebrationId]);
 
   useEffect(() => () => {
     clearTimeout(celebrationTimer.current);
@@ -193,7 +226,7 @@ export default function PocketMascot({ mascotRef, t, onTap, canConfirm = false, 
         {phase === 'burst' && <span className="cloud-pop" aria-hidden="true"><span className="cloud-pop-word">{t('cloudPopSound')}</span>{Array.from({length:6},(_,i) => <i key={i} style={{ '--puff-x':`${Math.cos(i * Math.PI / 3) * 32}px`, '--puff-y':`${Math.sin(i * Math.PI / 3) * 27}px` }}/>)}</span>}
         {sign && <span className="stop-sign-rest" data-hidden={phase === 'falling'}><StopSign/></span>}
       </Tappable>
-      {canConfirm && <Tappable Component="button" type="button" interactiveAnimation="opacity" className="mascot-confirm" aria-label={confirmLabel || t('save')} title={confirmLabel || t('save')} aria-busy={busy} disabled={busy} onClick={event => { event.stopPropagation(); onConfirm?.(); }}><span aria-hidden="true"><Icon name="check"/></span></Tappable>}
+      {canConfirm && <Tappable Component="button" type="button" interactiveAnimation="opacity" className="mascot-confirm" aria-label={confirmLabel || t('save')} title={confirmLabel || t('save')} aria-busy={busy} data-confirm-frame={confirmFrame} disabled={busy} onPointerDown={() => setConfirmFrame(1)} onPointerUp={() => { if (!busy) setConfirmFrame(0); }} onPointerCancel={() => { if (!busy) setConfirmFrame(0); }} onClick={event => { event.stopPropagation(); onConfirm?.(); }}><i className="confirm-art" style={{ backgroundImage:`url(${confirmButtonAtlas})` }} aria-hidden="true"/><span aria-hidden="true"><Icon name="check"/></span></Tappable>}
       {celebration && <CashCelebration event={celebration} cloudVisible={phase === 'cloud'}/>}
     </span>
     <span className="cloud-announcement" role="status" aria-live="polite">{step ? t(moodKey) : ''}</span>
