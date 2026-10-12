@@ -44,3 +44,76 @@
 .for-root .entry-more{min-width:32px;width:32px;height:44px;min-height:44px;padding:7px;color:var(--muted);background:transparent}
 .for-root .entry-more .for-icon{width:18px;height:18px}
 @media(max-width:360px){.for-root .history-toolbar{gap:4px;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr) 59px 36px}.for-root .history-toolbar select{font-size:11px;padding:0 4px}.for-root .history-toolbar .postcard-button{width:36px;min-width:36px;padding:9px}.for-root .history-summary{padding:14px;gap:10px}}
+
+/* Final surface polish: make the fast path feel continuous between screens,
+   while keeping the paper-like palette quiet and touch-first. */
+.for-root .page {
+  animation: pocket-page-in 240ms var(--ease-out) both;
+}
+@keyframes pocket-page-in {
+  from { opacity:0; transform:translate3d(0,6px,0); }
+  to { opacity:1; transform:translate3d(0,0,0); }
+}
+.for-root .bottom-nav {
+  box-shadow:0 -8px 24px rgba(51,58,48,.055);
+}
+.for-root #record-view .categories.category-drawer {
+  position:relative;
+  scroll-padding-inline:8px;
+}
+.for-root #record-view .categories.category-drawer::before,
+.for-root #record-view .categories.category-drawer::after {
+  content:"";
+  position:absolute;
+  top:0;
+  bottom:0;
+  width:18px;
+  z-index:2;
+  pointer-events:none;
+  opacity:0;
+  transition:opacity 180ms ease;
+}
+.for-root #record-view .categories.category-drawer::before {
+  left:0;
+  background:linear-gradient(90deg,var(--paper),transparent);
+}
+.for-root #record-view .categories.category-drawer::after {
+  right:0;
+  background:linear-gradient(270deg,var(--paper),transparent);
+}
+.for-root #record-view .categories.category-drawer.has-scroll-left::before,
+.for-root #record-view .categories.category-drawer.has-scroll-right::after { opacity:.92; }
+@media(hover:hover) and (pointer:fine) {
+  .for-root #record-view .categories.category-drawer { cursor:grab; }
+  .for-root #record-view .categories.category-drawer:active { cursor:grabbing; }
+}
+.for-root .mascot-confirm>span:last-child {
+  color:var(--ink);
+}
+.for-root .mascot-confirm>span {
+  border-color:#e4cf94;
+  background:color-mix(in srgb,var(--paper) 94%,var(--confirm));
+}
+.for-root .mascot-confirm .for-icon { stroke-width:2.9; }
+.for-root .history-toolbar select {
+  font-variant-numeric:tabular-nums;
+}
+.for-root .settings-group .settings-row:active:not(:disabled) {
+  background:var(--paper);
+}
+
+/* The fixed tab bar already owns the bottom edge of the record screen. Keep
+   the desktop fast path from gaining a second, empty scroll range while
+   leaving longer secondary pages room to breathe above the bar. */
+@media (min-width:601px) {
+  .for-root[data-view="record"] .app-shell { padding-bottom:0; }
+}
+
+/* Quiet by default, clear when keyboard navigation is in use. */
+.for-root :is(.category-pill,.key,.mascot-confirm,.bottom-nav .tab,.swipe-action):focus-visible {
+  outline:2px solid color-mix(in srgb,var(--ink) 32%,transparent);
+  outline-offset:3px;
+  box-shadow:0 0 0 4px color-mix(in srgb,var(--paper) 88%,transparent);
+}
+.for-root .category-pill:focus-visible { transform:translateY(-1px) scale(1.02); }
+.for-root .key:focus-visible { background:#e5e8d8; }

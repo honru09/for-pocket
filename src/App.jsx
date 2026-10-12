@@ -55,6 +55,7 @@ function countText(n, lang, currency) {
 }
 const Categories = memo(function Categories({ categories, lang, selected, disabled, onSelect }) {
   const drawerRef = useRef(null), gesture = useRef(null), blockClick = useRef(false), pointerSelection = useRef(null);
+  const [scrollHints, setScrollHints] = useState({ left: false, right: false });
   const clearClickBlock = useCallback(() => {
     // A native horizontal touch scroll may dispatch a click after pointerup.
     // Suppress only that synthetic click, then release the guard immediately
@@ -70,6 +71,22 @@ const Categories = memo(function Categories({ categories, lang, selected, disabl
     if (left < drawer.scrollLeft + 4) drawer.scrollTo({ left:Math.max(0,left - 4), behavior:'smooth' });
     else if (right > drawer.scrollLeft + drawer.clientWidth - 4) drawer.scrollTo({ left:right - drawer.clientWidth + 4, behavior:'smooth' });
   }, [selected, categories]);
+  useEffect(() => {
+    const drawer = drawerRef.current;
+    if (!drawer) return undefined;
+    const updateHints = () => {
+      const max = Math.max(0, drawer.scrollWidth - drawer.clientWidth);
+      setScrollHints({
+        left: drawer.scrollLeft > 4,
+        right: max - drawer.scrollLeft > 4,
+      });
+    };
+    updateHints();
+    drawer.addEventListener('scroll', updateHints, { passive: true });
+    const resize = typeof ResizeObserver === 'function' ? new ResizeObserver(updateHints) : null;
+    resize?.observe(drawer);
+    return () => { drawer.removeEventListener('scroll', updateHints); resize?.disconnect(); };
+  }, [categories]);
   const moved = event => {
     const start = gesture.current;
     if (start && (Math.abs(event.clientX - start.x) > 8 || Math.abs(event.clientY - start.y) > 8)) { start.dragged = true; blockClick.current = true; }
@@ -92,7 +109,7 @@ const Categories = memo(function Categories({ categories, lang, selected, disabl
     }
     gesture.current = null;
   };
-  return <div ref={drawerRef} className="categories category-drawer" id="categories" role="group" aria-label={translate(lang, 'categories')}
+  return <div ref={drawerRef} className={`categories category-drawer ${scrollHints.left ? 'has-scroll-left' : ''} ${scrollHints.right ? 'has-scroll-right' : ''}`} id="categories" role="group" aria-label={translate(lang, 'categories')}
     onPointerDownCapture={event => { blockClick.current = false; gesture.current = { x:event.clientX, y:event.clientY, dragged:false }; }}
     onPointerMoveCapture={moved}
     onPointerUpCapture={released}
@@ -731,8 +748,8 @@ export default function App() {
       <section className="finish" aria-label={t('save')}><div className="entry-actions">{circle && settings.consumers.length > 1 && <div className="consumer-buttons" role="group" aria-label={t(draft.type === 'income' ? 'incomeOwner' : 'consumer')}>{settings.consumers.map(c => <Tappable Component="button" type="button" className={`consumer-chip consumer-color-${c.color}`} key={c.id} aria-pressed={draft.consumer === c.id} disabled={disabled} onClick={() => { editDraft({ consumer:c.id }); haptic(); }}><Avatar person={c}/><span>{c.name}</span></Tappable>)}</div>}<Button id="entry-location" mode="plain" className={`location-trigger ${draft.location ? 'has-location' : ''}`} aria-label={t('locationTitle')} aria-pressed={Boolean(draft.location)} title={locationLabel(draft.location) || t('locationTitle')} disabled={disabled} onClick={() => setLocationSheet(true)}><Icon name="pin"/></Button><Button id="edit-note" mode="plain" className={`note-trigger ${draft.note ? "has-note" : ""}`} aria-label={t('note')} title={draft.note || t('note')} disabled={disabled} onClick={() => setNoteEditor(true)}><Icon name="edit"/></Button></div></section></div>
       </>}
     {view === 'history' && <><div className="history-controls history-toolbar">
-      <select id="history-period" aria-label={t('period')} value={period} onChange={e => setPeriod(e.target.value)}>{['month','all'].map(p => <option key={p} value={p}>{t(p)}</option>)}</select>
-      <select id="history-category" aria-label={t('categoryFilter')} value={historyCategory} onChange={e => setHistoryCategory(e.target.value)}><option value="all">{t('allCategories')}</option>{['expense','income'].map(type => <optgroup key={type} label={t(type)}>{historyCategories.filter(option => option.type === type).map(option => <option key={option.key} value={option.key}>{categoryLabel(option.category,settings.language)}</option>)}</optgroup>)}</select>
+      <select id="history-period" aria-label={t('period')} value={period} onChange={e => setPeriod(e.target.value)}>{['month','all'].map(p => <option key={p} value={p}>{t(p === 'month' ? 'monthShort' : p)}</option>)}</select>
+      <select id="history-category" aria-label={t('categoryFilter')} value={historyCategory} onChange={e => setHistoryCategory(e.target.value)}><option value="all">{t('allCategoriesShort')}</option>{['expense','income'].map(type => <optgroup key={type} label={t(type)}>{historyCategories.filter(option => option.type === type).map(option => <option key={option.key} value={option.key}>{categoryLabel(option.category,settings.language)}</option>)}</optgroup>)}</select>
       <select id="history-currency" aria-label={t('ledgerCurrency')} value={historyCurrency} onChange={e => setHistoryCurrency(e.target.value)}>{Object.keys(CURRENCIES).map(c => <option key={c}>{c}</option>)}</select>
       <Button mode="plain" className="postcard-button" onClick={exportPostcard} aria-label={t('postcardExport')}><Icon name="receipt"/></Button>
     </div><section className="history-summary"><div className="history-summary-amount"><span>{t('netBalance')}</span><strong id="history-total">{money(historyIncome - historyExpense, historyCurrency)}</strong><small id="history-total-count">{countText(history.length, settings.language, historyCurrency)}</small></div><div className="balance-details"><div><span>{t('expense')}</span><strong>{money(historyExpense,historyCurrency)}</strong></div><div><span>{t('income')}</span><strong className="income-value">+{money(historyIncome,historyCurrency)}</strong></div></div></section><Footprints items={footprints} t={t}/><AiSummary t={t} profile={profile} settings={settings} currency={historyCurrency} busy={busy} run={run} service={service.current} isRemote={isRemote} config={config} onAccount={() => navigate('account')}/><div className="history-list">{!history.length && <Placeholder className="empty-state" header={t('emptyTitle')} description={t(historyCategory === 'all' ? 'emptyText' : 'filterEmpty')}><span className="empty-face">◡</span><Button mode="filled" onClick={() => navigate('record')}>{t('newEntry')}</Button></Placeholder>}{days.map(day => <section key={day}><div className="history-day">{day === today ? t('today') : new Intl.DateTimeFormat(locale,{ timeZone:'UTC',month:'short',day:'numeric' }).format(new Date(`${day}T12:00:00Z`))}</div>{history.filter(e => e.dayKey === day).map(e => <SwipeExpenseRow key={e.id} entry={e} t={t} onDelete={removeEntry} onCopy={fillFromEntry} onEdit={entry => { if (entry.canDelete !== false) setEditingEntry(entry); }}><Cell Component="article" readOnly multiline key={e.id} className={`expense-row ${e.type === 'income' ? 'is-income' : ''}`} before={<span className="category-icon" style={{ background:`var(--${e.category.color})` }}><Icon name={e.category.icon}/></span>} subtitle={<span className="expense-meta"><span className={`consumer-badge consumer-color-${e.member?.color || 'blue'}`}><i/>{e.member?.name || settings.consumers.find(c => c.id === e.consumer)?.name || t('unknownConsumer')}</span><button type="button" className="entry-time" aria-label={t('editEntryTime')} disabled={busy || e.canDelete === false} onClick={() => setTimeEditor({ entry:e, ledgerId:profile.ledgerId })}><time dateTime={e.occurredAt || e.createdAt}>{new Intl.DateTimeFormat(locale,{timeZone:e.timezone || timezone,hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(new Date(e.occurredAt || e.createdAt))}</time></button></span>} description={e.note || e.location ? <span className="expense-description">{e.note && <span className="expense-note">{e.note}</span>}{e.location && <span className="expense-location"><Icon name="pin"/><span>{locationLabel(e.location) || t('locationAttached')}</span></span>}</span> : undefined} after={<div className="expense-actions"><span className="expense-money">{e.type === 'income' ? '+' : '−'}{money(e.amountMinor,e.currency)}</span><Button className="entry-more" mode="plain" size="s" aria-label={t('entryActions')} onClick={() => document.dispatchEvent(new CustomEvent('pocket:entry-actions', { detail:e.id }))}><Icon name="more"/></Button></div>}><strong>{categoryLabel(e.category,settings.language)}</strong>{!isBudgetEntry(e) && <small className="entry-kind">{t(e.recordKind === 'transfer' ? 'recordKindTransfer' : 'recordKindReimbursement')}</small>}</Cell></SwipeExpenseRow>)}</section>)}</div><div className="today-balance"><span>{t('todayBalance')}</span><strong>{money(todayIncome - todayExpense)}</strong></div></>}
