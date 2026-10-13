@@ -301,3 +301,23 @@
   58% { transform:translate3d(0,-.5px,0) scale(1.025); }
   100% { transform:translate3d(0,0,0) scale(1); }
 }
+
+/* Respect a user's reduced-motion preference for the keypad only.  Keep a
+   clear colour/contrast press state and the normal keyboard focus ring, while
+   skipping scale, shadow and shine transitions that can be uncomfortable. */
+@media (prefers-reduced-motion: reduce) {
+  .for-root #keypad .key,
+  .for-root #keypad .key::after {
+    transition:none !important;
+    animation:none !important;
+  }
+  .for-root #keypad .key:hover,
+  .for-root #keypad .key:active,
+  .for-root #keypad .key[data-pressed="true"] {
+    transform:none !important;
+  }
+  .for-root #keypad .key[data-pressed="true"] {
+    background:#e0e4d2 !important;
+    box-shadow:inset 0 2px 0 #333a3010,0 1px 0 #ffffff70;
+  }
+}

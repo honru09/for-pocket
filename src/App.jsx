@@ -540,6 +540,18 @@ export default function App() {
     pending.current = null; state.current.draft = { ...state.current.draft, raw: next }; setDraft(current => ({ ...current, raw: next }));
     playKeySound(settingsRef.current.soundPack); haptic();
   }, []);
+  // Keep the visual press state in sync for both pointer and physical
+  // keyboard input.  The keypad buttons remain real HTML buttons so their
+  // labels and focus behaviour stay accessible; this only toggles a transient
+  // data attribute used by the tactile CSS.
+  const setKeyVisual = useCallback((key, pressed) => {
+    const nodes = [...document.querySelectorAll('#keypad .key')];
+    const node = nodes.find(item => item.dataset.key === key);
+    if (pressed) node?.setAttribute('data-pressed', 'true');
+    else node?.removeAttribute('data-pressed');
+    if (pressed) stageRef.current?.setAttribute('data-press', 'true');
+    else if (!nodes.some(item => item.dataset.pressed === 'true')) stageRef.current?.removeAttribute('data-press');
+  }, []);
   const submitWrite = useCallback(write => {
     const { payload, backend, scope } = write;
     if (pendingWrites.current.has(payload.id)) return;
@@ -606,19 +618,23 @@ export default function App() {
       if (e.ctrlKey || e.metaKey || e.altKey || e.isComposing || document.querySelector('dialog[open]') || ['INPUT','SELECT','TEXTAREA'].includes(e.target.tagName)) return;
       if (e.key === 'Escape' && state.current.view !== 'record') { navigate('record'); return; }
       if (state.current.view !== 'record') return;
-      if (/^[0-9.,]$/.test(e.key)) { e.preventDefault(); pushKey(e.key === ',' ? '.' : e.key); }
-      else if (e.key === 'Backspace') { e.preventDefault(); pushKey('backspace'); }
-      else if (e.key === 'Delete') pushKey('clear');
-      else if (e.key === 'Enter' && e.target === document.body) save();
+      if (/^[0-9.,]$/.test(e.key)) { const key = e.key === ',' ? '.' : e.key; e.preventDefault(); setKeyVisual(key, true); pushKey(key); }
+      else if (e.key === 'Backspace') { e.preventDefault(); setKeyVisual('backspace', true); pushKey('backspace'); }
+      else if (e.key === 'Delete') { e.preventDefault(); setKeyVisual('clear', true); pushKey('clear'); }
+      else if (e.key === 'Enter' && e.target === document.body) { e.preventDefault(); save(); }
+    };
+    const keyup = e => {
+      const key = /^[0-9.,]$/.test(e.key) ? (e.key === ',' ? '.' : e.key) : e.key === 'Backspace' ? 'backspace' : e.key === 'Delete' ? 'clear' : null;
+      if (key) setKeyVisual(key, false);
     };
     const pointer = () => { keyboard.current = false; document.documentElement.classList.remove('keyboard-action'); };
     const release = () => {
       stageRef.current?.removeAttribute('data-press');
       document.querySelectorAll('.key[data-pressed="true"]').forEach(node => node.removeAttribute('data-pressed'));
     };
-    document.addEventListener('keydown', keydown); document.addEventListener('pointerdown', pointer); document.addEventListener('pointerup', release); document.addEventListener('pointercancel', release);
-    return () => { document.removeEventListener('keydown', keydown); document.removeEventListener('pointerdown', pointer); document.removeEventListener('pointerup', release); document.removeEventListener('pointercancel', release); };
-  }, [pushKey, save, navigate]);
+    document.addEventListener('keydown', keydown); document.addEventListener('keyup', keyup); document.addEventListener('pointerdown', pointer); document.addEventListener('pointerup', release); document.addEventListener('pointercancel', release); window.addEventListener('blur', release);
+    return () => { document.removeEventListener('keydown', keydown); document.removeEventListener('keyup', keyup); document.removeEventListener('pointerdown', pointer); document.removeEventListener('pointerup', release); document.removeEventListener('pointercancel', release); window.removeEventListener('blur', release); };
+  }, [pushKey, save, navigate, setKeyVisual]);
   function updateSettings(patch) {
     const before = currentProfile.current, backend = service.current;
     const scope = `${before.user.id}:${before.ledgerId}`, id = createId();
@@ -785,7 +801,7 @@ export default function App() {
     {failedCount > 0 && <button type="button" className="sync-retry-banner" onClick={retryWrites}>{t('retryUnconfirmed', { n: failedCount })}</button>}<main key={view} ref={pageRef} id={`${view}-view`} className="page">{view !== 'record' && view !== 'history' && <div className="page-heading"><h1 id={`${view}-title`} tabIndex={-1}>{t(titleKey)}</h1>{secondary && <Button mode="plain" size="s" className="text-button" onClick={() => navigate(view === 'settings' ? 'record' : 'settings')}>{t('back')}</Button>}</div>}
     {view === 'record' && <><div className="today-strip"><span className="today-icon" aria-hidden="true"><Icon name="arrowDown"/></span><div><span>{t('todayTotal')}</span><strong id="today-total">{money(todayExpense)}</strong></div><Button id="edit-draft-time" mode="plain" className={`date-label date-button ${draft.occurredAt ? 'has-custom-time' : ''}`} aria-label={t('editEntryTime')} disabled={disabled} onClick={() => setTimeEditor({})}><Icon name="clock"/>{new Intl.DateTimeFormat(locale, { month:'short',day:'numeric', ...(draft.occurredAt ? { hour:'2-digit',minute:'2-digit',hourCycle:'h23' } : {}) }).format(new Date(draft.occurredAt || Date.now()))}</Button><Button id="open-ai-import" mode="plain" className="ai-quick-trigger" aria-label={t('aiImportTitle')} title={t('aiImportTitle')} disabled={busy} onClick={() => navigate('ai-import')}><Icon name="receipt"/></Button></div>{clipboardSuggestion && <button type="button" className="clipboard-capsule" onClick={applyClipboard}><Icon name="clip"/><span>{t('clipboardFound',{ amount:money(clipboardSuggestion.amountMinor, clipboardSuggestion.currency) })}</span><b>{t('clipboardFill')}</b></button>}{dueRecurring.length > 0 && <div className="recurring-due" role="status"><span>{t('recurringDue',{ n:dueRecurring.length })}</span><div>{dueRecurring.slice(0,2).map(item => <button type="button" key={item.id} onClick={() => applyRecurring(item)}>{categoryDisplayLabel(categories.find(c => c.id === item.categoryId) || {}, settings.language)} · {money(item.amountMinor,item.currency)}</button>)}</div></div>}<div className="record-layout"><section ref={stageRef} className={`amount-stage ${draft.raw.length >= 6 ? 'long-amount' : ''} ${draft.type === 'income' ? 'is-income' : ''}`} aria-label={t('amountInput')}><div className="amount-meta"><div className="type-toggle-pill" role="group" aria-label={t('transactionType')}>{['expense','income'].map(type => <Tappable Component="button" type="button" key={type} className={`type-pill-btn ${draft.type === type ? `active type-${type}` : ''}`} aria-pressed={draft.type === type} disabled={disabled} onClick={() => { editDraft({ type, selected:null }); haptic(); }}>{t(type)}</Tappable>)}</div><Select id="currency" className="currency-control" aria-label={t('currency')} value={draftCurrency} data-suggested={Boolean(draft.suggestedCurrency === draftCurrency && !draft.currencyManual)} title={draft.suggestedCurrency ? `${t('locationCurrency')} · ${draft.suggestedCurrency}` : t('currency')} disabled={disabled} onChange={e => { const currency=e.target.value; editDraft({ currency, currencyManual:true, raw:currency === 'JPY' ? draft.raw.replace(/\.[^+]+/g,'').replace(/\.$/,'') : draft.raw }); }}>{Object.keys(CURRENCIES).map(c => <option key={c} value={c}>{c}{draft.suggestedCurrency === c && draftCurrency !== c ? ` · ${t('locationCurrency')}` : ''}</option>)}</Select></div><div className="amount-line"><span className="currency-symbol">{draft.type === 'income' ? '+' : ''}{CURRENCIES[draftCurrency].symbol}</span><output id="amount-display" data-length={draft.raw.length < 6 ? 'short' : draft.raw.length > 9 ? 'long' : draft.raw.length} aria-label={t('currentAmount')} style={{ '--amount-chars':amount.length }}>{amount}</output><span className="input-caret" aria-hidden="true"/></div><div className="amount-bottom"><span>{(draft.selected ? categoryDisplayLabel(categories.find(c => c.id === draft.selected) || {}, settings.language) : '')}</span>{ratePreview && <small className="rate-preview">≈ {money(ratePreview.minor, ratePreview.currency)}</small>}</div><PocketMascot mascotRef={mascotRef} t={t} environment={mascotEnvironment} onTap={haptic} canConfirm={Boolean(!disabled && amountMinor && draft.selected && draft.consumer)} busy={busy} celebrate={celebration} confirmLabel={saveLabel} onConfirm={save}/></section>
       <section className="purposes"><div className="section-heading"><h2>{t('categories')}</h2>{(!circle || circle.isAdmin) && <Button className="text-button" id="edit-categories" mode="plain" size="s" disabled={disabled} onClick={startEditing}>{t('editCategories')}</Button>}</div><Categories categories={orderedCategories} lang={settings.language} selected={draft.selected} disabled={disabled} onSelect={id => { editDraft({ selected:id }); haptic(); }}/></section>
-       <section id="keypad" className="keypad" aria-label={t('keypad')}>{keypadKeys.map((key,index) => <Tappable Component="button" type="button" className={`key ${['clear','backspace','.'].includes(key) ? 'key-secondary' : ''}`} key={`${key}-${index}`} data-key={key} disabled={disabled} aria-label={key === 'clear' ? t('clear') : key === 'backspace' ? t('backspace') : key === '.' ? t('decimal') : key} onPointerDown={event => { if (!disabled) { event.currentTarget.setAttribute('data-pressed', 'true'); stageRef.current?.setAttribute('data-press', 'true'); haptic(); } }} onPointerUp={event => event.currentTarget.removeAttribute('data-pressed')} onPointerCancel={event => event.currentTarget.removeAttribute('data-pressed')} onPointerLeave={event => event.currentTarget.removeAttribute('data-pressed')} onClick={() => pushKey(key)}>{key === 'clear' ? 'C' : key === 'backspace' ? <Icon name="backspace"/> : key === '.' ? decimal : key}</Tappable>)}</section>
+       <section id="keypad" className="keypad" aria-label={t('keypad')}>{keypadKeys.map((key,index) => <Tappable Component="button" type="button" className={`key ${['clear','backspace','.'].includes(key) ? 'key-secondary' : ''}`} key={`${key}-${index}`} data-key={key} disabled={disabled} aria-label={key === 'clear' ? t('clear') : key === 'backspace' ? t('backspace') : key === '.' ? t('decimal') : key} onPointerDown={event => { if (!disabled) setKeyVisual(key, true); }} onPointerUp={() => setKeyVisual(key, false)} onPointerCancel={() => setKeyVisual(key, false)} onPointerLeave={() => setKeyVisual(key, false)} onClick={() => pushKey(key)}>{key === 'clear' ? 'C' : key === 'backspace' ? <Icon name="backspace"/> : key === '.' ? decimal : key}</Tappable>)}</section>
       <section className="finish" aria-label={t('save')}><div className="entry-actions">{isRemote && circle && <div ref={setReactionHost} className="circle-presence-host"/>}<Button id="entry-location" mode="plain" className={`location-trigger ${draft.location ? 'has-location' : ''}`} aria-label={t('locationTitle')} aria-pressed={Boolean(draft.location)} title={locationLabel(draft.location) || t('locationTitle')} disabled={disabled} onClick={() => setLocationSheet(true)}><Icon name="pin"/></Button><Button id="edit-note" mode="plain" className={`note-trigger ${draft.note ? "has-note" : ""}`} aria-label={t('note')} title={draft.note || t('note')} disabled={disabled} onClick={() => setNoteEditor(true)}><Icon name="edit"/></Button></div></section></div>
       </>}
     {view === 'history' && <><div className="history-title-bar"><h1 id="history-title" tabIndex={-1}>{t('ledger')}</h1><div className="history-controls history-toolbar">
