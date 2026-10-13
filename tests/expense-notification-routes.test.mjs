@@ -1,0 +1,105 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { createHmac } from 'node:crypto';
+import { mkdtemp, rm } from 'node:fs/promises';
+import { once } from 'node:events';
+import os from 'node:os';
+import path from 'node:path';
+import { createApp } from '../server.mjs';
+
+const token = '123456789:expense-notification-fixture';
+const webhookSecret = 'expense-notification-fixture-secret';
+const at = Date.parse('2026-10-13T03:00:00.000Z');
+
+function signed(id) {
+  const fields = { auth_date: String(Math.floor(at / 1000)), user: JSON.stringify({ id, first_name: `Member ${id}`, language_code: 'en' }) };
+  const text = Object.keys(fields).sort().map(key => `${key}=${fields[key]}`).join('\n');
+  const key = createHmac('sha256', 'WebAppData').update(token).digest();
+  return new URLSearchParams({ ...fields, hash: createHmac('sha256', key).update(text).digest('hex') }).toString();
+}
+
+async function fixture(t) {
+  const dataDir = await mkdtemp(path.join(os.tmpdir(), 'for-expense-notification-routes-'));
+  const calls = [];
+  const app = createApp({ dataDir, token, webhookSecret, now: () => at,
+    aiParser: { enabled: false }, aiSummarizer: { enabled: false }, aiChat: { enabled: false },
+    reactionOptions: { localTimers: false }, enqueueReactionTask: null,
+    callTelegram: async (method, parameters) => {
+      calls.push({ method, parameters: structuredClone(parameters) });
+      return { message_id: 100 + calls.length };
+    },
+  });
+  app.listen(0, '127.0.0.1');
+  await once(app, 'listening');
+  const base = `http://127.0.0.1:${app.address().port}`;
+  t.after(async () => {
+    await new Promise((resolve, reject) => app.close(error => error ? reject(error) : resolve()));
+    assert.equal(path.dirname(dataDir), path.resolve(os.tmpdir()));
+    assert.ok(path.basename(dataDir).startsWith('for-expense-notification-routes-'));
+    await rm(dataDir, { recursive: true, force: true });
+  });
+  async function request(route, { user = 101, body, method = body === undefined ? 'GET' : 'POST', headers = {} } = {}) {
+    const response = await fetch(base + '/api' + route, { method,
+      headers: { 'Content-Type': 'application/json', ...(user ? { 'X-Telegram-Init-Data': signed(user) } : {}), ...headers },
+      body: body === undefined ? undefined : JSON.stringify(body),
+    });
+    const data = await response.json();
+    assert.equal(response.status, 200, JSON.stringify(data));
+    return data;
+  }
+  const created = await request('/circles/create', { body: { name: 'Two' } });
+  const circleId = created.social.activeCircleId;
+  const invited = await request('/circles/invite', { body: { circleId } });
+  await request('/circles/join', { user: 202, body: { code: invited.code, confirm: true } });
+  // Bind each private Telegram destination through the real webhook handler.
+  // All Bot API effects are intercepted by callTelegram above.
+  for (const id of [101, 202]) await request('/telegram/webhook', { user: null,
+    headers: { 'X-Telegram-Bot-Api-Secret-Token': webhookSecret },
+    body: { update_id: id, message: { message_id: id, date: Math.floor(at / 1000),
+      chat: { id, type: 'private' }, from: { id, first_name: `Member ${id}`, language_code: 'en' }, text: '/start' } },
+  });
+  calls.length = 0;
+  const expense = (id, user = 101) => ({ id, ledgerId: created.ledgerId, consumer: `u_${user}`,
+    amountMinor: 850, currency: 'JPY', categoryId: 'stomach', type: 'expense', note: 'Ramen', timezone: 'Asia/Tokyo' });
+  return { request, expense, calls, ledgerId: created.ledgerId };
+}
+
+function assertPartnerOnly(calls, chatId, count) {
+  const sent = calls.filter(call => call.method === 'sendMessage');
+  assert.equal(sent.length, count);
+  assert.ok(sent.every(call => String(call.parameters.chat_id) === String(chatId)), 'only the partner receives expense notifications');
+  assert.ok(sent.every(call => call.parameters.disable_notification === true), 'all notifications remain silent');
+}
+
+test('HTTP expense creation excludes its recorder, including idempotent retries and either partner', async t => {
+  const f = await fixture(t);
+  const payload = f.expense('web-notification-101');
+  await f.request('/expenses', { body: payload });
+  await f.request('/expenses', { body: payload });
+  assertPartnerOnly(f.calls, 202, 1);
+  f.calls.length = 0;
+  await f.request('/expenses', { user: 202, body: f.expense('web-notification-202', 202) });
+  assertPartnerOnly(f.calls, 101, 1);
+});
+
+test('HTTP batch expense imports notify only the partner for every saved entry', async t => {
+  const f = await fixture(t);
+  await f.request('/expenses/import', { body: { ledgerId: f.ledgerId,
+    entries: [f.expense('web-import-notify-1'), f.expense('web-import-notify-2')] } });
+  assertPartnerOnly(f.calls, 202, 2);
+});
+
+test('HTTP delete and restore reuse the partner notification without sending one to the recorder', async t => {
+  const f = await fixture(t);
+  const entry = await f.request('/expenses', { body: f.expense('web-restore-notify') });
+  assertPartnerOnly(f.calls, 202, 1);
+  const original = f.calls.find(call => call.method === 'sendMessage');
+  f.calls.length = 0;
+  await f.request(`/expenses/${entry.id}`, { method: 'DELETE' });
+  const deleted = f.calls.filter(call => call.method === 'deleteMessage');
+  assert.equal(deleted.length, 1);
+  assert.equal(deleted[0].parameters.chat_id, original.parameters.chat_id);
+  f.calls.length = 0;
+  await f.request(`/expenses/${entry.id}/restore`, { body: {} });
+  assertPartnerOnly(f.calls, 202, 1);
+});
