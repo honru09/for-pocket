@@ -167,10 +167,13 @@ test('linking accounts remaps split participants in every ledger without duplica
     'the same person linked through two providers must receive only one share');
   await r('/circles/switch', { session, body: { circleId: null } });
   const mergedPersonal = (await r('/profile', { session })).data.expenses;
-  assert.equal(mergedPersonal.length, 1);
-  assert.equal(mergedPersonal[0].id, 'google-split-01');
-  assert.equal(mergedPersonal[0].consumer, 'u_101');
-  assert.deepEqual(mergedPersonal[0].splitParticipants, ['u_101']);
+  assert.equal(mergedPersonal.length, 2, 'linked personal and circle ledgers share the same records');
+  const personalRecord = mergedPersonal.find(entry => entry.id === 'google-split-01');
+  const sharedRecord = mergedPersonal.find(entry => entry.id === 'merged-split-01');
+  assert.equal(personalRecord.consumer, 'u_101');
+  assert.deepEqual(personalRecord.splitParticipants, ['u_101']);
+  assert.equal(sharedRecord.consumer, 'u_101');
+  assert.deepEqual(sharedRecord.splitParticipants, ['u_101', 'u_202']);
 });
 
 test('circle invitation requires acceptance; membership, admins, isolation, expiry and stale scope', async t => {
