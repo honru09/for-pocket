@@ -23,6 +23,12 @@
 .mascot[data-raster="true"] .mascot-main-art { opacity:1; transform:scale(1); }
 .mascot[data-raster="true"] .cloud-vector-art { opacity:0; }
 .mascot[data-raster="false"] .mascot-main-art { opacity:0; transform:scale(.96); }
+/* Generated transparent atlases are short tactile echoes. They never replace
+   the live vector face or cash choreography; each cell is clipped by its
+   nested SVG and fades before the next state settles. */
+.cloud-atlas-sequence { pointer-events:none; }
+.cloud-atlas-frame { display:block; overflow:hidden; pointer-events:none; opacity:0; transform-origin:50% 60%; mix-blend-mode:multiply; animation:cloud-atlas-frame var(--atlas-frame-duration) var(--ease-out) var(--atlas-delay) both; }
+.cloud-atlas-frame image { width:1774px; height:887px; }
 .mascot-toy .mascot-body { fill:#f9c678; }
 .cloud-face-idle { transform-origin:65px 67px; }
 .cloud-face { transform-origin:65px 67px; transition:transform 180ms var(--ease-out); }
@@ -125,6 +131,7 @@
 @keyframes cloud-idle-face { 0%,100% { transform:translate3d(0,0,0) rotate(0); } 42% { transform:translate3d(0,-.7px,0) rotate(-.7deg); } 70% { transform:translate3d(0,-.2px,0) rotate(.35deg); } }
 @keyframes cloud-blink { 0%,89%,100% { transform:scaleY(1); } 90.2% { transform:scaleY(.18); } 91.5% { transform:scaleY(1); } 92.8% { transform:scaleY(.22); } 94.1% { transform:scaleY(1); } }
 @keyframes cloud-state-pop { 0% { transform:scale(.96) rotate(-1deg); } 58% { transform:scale(1.025) rotate(1deg); } 100% { transform:scale(1) rotate(0); } }
+@keyframes cloud-atlas-frame { 0% { opacity:0; transform:scale(.94) rotate(-2deg); } 16% { opacity:var(--atlas-opacity,.1); transform:scale(.985) rotate(-.5deg); } 74% { opacity:var(--atlas-opacity,.1); transform:scale(1.01) rotate(.4deg); } 100% { opacity:0; transform:scale(1.02) rotate(0); } }
 @keyframes cloud-anger-symbol { 0%,100% { opacity:.72; transform:translate3d(0,1px,0) rotate(-4deg) scale(.96); } 50% { opacity:1; transform:translate3d(0,-1px,0) rotate(4deg) scale(1.04); } }
 @keyframes cloud-soft-pop { 0% {opacity:1;transform:rotate(0) scale(1.1)} 35% {opacity:1;transform:rotate(-3deg) scale(1.2,.92)} 100% {opacity:0;transform:rotate(3deg) scale(1.15)} }
 @keyframes cloud-pop-word { 0% {opacity:0;transform:translate(-50%,-50%) rotate(-8deg) scale(.94)} 35% {opacity:1;transform:translate(-50%,-65%) rotate(-8deg)} 100% {opacity:0;transform:translate(-50%,-90%) rotate(-8deg)} }

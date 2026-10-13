@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "source": "built-in image_gen",
+  "generatedAt": "2026-10-14",
+  "style": "original warm yellow cloud mascot; transparent RGBA atlas",
+  "atlas": {
+    "columns": 4,
+    "rows": 2,
+    "width": 1774,
+    "height": 887,
+    "cellWidth": 443.5,
+    "cellHeight": 443.5,
+    "note": "The app crops one cell at a time and uses CSS transforms for continuous motion."
+  },
+  "assets": [
+    {
+      "id": "mascot-expressions-v1",
+      "file": "mascot-expressions-atlas-v1.png",
+      "frames": ["calm", "closed-eye-smile", "shy", "question", "sigh", "gentle-annoyed", "surprised", "sleepy"],
+      "use": "Short expression echo after a tap; vector face remains the source of truth."
+    },
+    {
+      "id": "mascot-tap-v1",
+      "file": "mascot-tap-frames-v1.png",
+      "frames": ["rest", "lift", "squash", "press", "stretch", "wobble-left", "wobble-right", "settle"],
+      "use": "Tap feedback atlas; rendered as a brief low-opacity paper echo over the live mascot."
+    },
+    {
+      "id": "mascot-cash-v1",
+      "file": "mascot-cash-frames-v1.png",
+      "frames": ["rest", "draw", "hold", "expense-flight", "income-arrives", "catch", "tuck", "settle"],
+      "use": "Cash action reference layer; existing CSS/Web Animations provide the high-frame movement and tears."
+    }
+  ],
+  "alpha": "true RGBA; neutral generator checkerboard removed before use",
+  "constraints": [
+    "No glow, highlight, scanline, text, logo or watermark.",
+    "Keep the existing vector face and state machine for accessibility and crisp small-size rendering.",
+    "Use transform, opacity and compositor-friendly animation; do not swap the whole page or block input."
+  ]
+}

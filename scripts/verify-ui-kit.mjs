@@ -179,6 +179,62 @@ for (const prompt of prompts.rasterAssets) {
   assert.equal(prompt.file, item.file, `${prompt.key} raster prompt file`);
   assert.ok(rasterFiles.has(prompt.file), `${prompt.key} raster prompt path exists`);
 }
+// Responsive keypad assets must remain horizontal, text-free materials. The
+// dimensions and metadata are intentionally explicit so a square/fixed-size
+// replacement cannot silently enter the asset pack.
+const keypadSurface = manifest.rasters.find(item => item.id === 'neumorphic-keypad-surface-atlas-v2');
+const keypadNumericMotion = manifest.rasters.find(item => item.id === 'neumorphic-keypad-motion-numeric-v2');
+const keypadUtilityMotion = manifest.rasters.find(item => item.id === 'neumorphic-keypad-motion-utility-v2');
+for (const item of [keypadSurface, keypadNumericMotion, keypadUtilityMotion]) {
+  assert.ok(item, `missing responsive keypad raster ${item?.id || 'unknown'}`);
+  assert.equal(item.visualReference, true, `${item.id} must be marked visualReference`);
+  assert.equal(item.responsiveSafe, false, `${item.id} must not be treated as a production responsive background`);
+  assert.equal(item.doNotUseAsCssBackground, true, `${item.id} must not be used as a CSS background`);
+  assert.ok(item.responsiveVariants?.includes?.('desktop') || item.responsiveVariants?.desktop, `${item.id} responsive desktop metadata`);
+  assert.ok(item.responsiveVariants?.includes?.('mobile') || item.responsiveVariants?.mobile, `${item.id} responsive mobile metadata`);
+  assert.ok(item.responsiveVariants?.includes?.('compact') || item.responsiveVariants?.compact, `${item.id} responsive compact metadata`);
+  assert.match(item.use, /HTML|SVG|CSS/i, `${item.id} must keep labels in HTML/SVG/CSS`);
+  assert.match(item.avoid, /固定|烘焙|fixed|bake/i, `${item.id} must prohibit baked labels or fixed sizing`);
+  const metrics = item.responsiveMetrics || item.responsiveVariants;
+  assert.ok(metrics.desktop && metrics.mobile && metrics.compact, `${item.id} responsive metrics`);
+}
+assert.equal(keypadSurface.atlasGrid?.columns, 3, 'keypad surface must use 3 columns');
+assert.equal(keypadSurface.atlasGrid?.rows, 4, 'keypad surface must use 4 rows');
+assert.equal(keypadSurface.width / keypadSurface.height, 1.5, 'keypad surface dimensions must stay 3:2');
+for (const item of [keypadNumericMotion, keypadUtilityMotion]) {
+  assert.equal(item.frameCount, 8, `${item.id} frame count`);
+  assert.deepEqual(item.frameOrder, ['rest', 'hover', 'touch', 'press-deep', 'hold', 'release', 'rebound', 'settle'], `${item.id} frame order`);
+  assert.equal(item.frameGrid?.columns, 4, `${item.id} frame columns`);
+  assert.equal(item.frameGrid?.rows, 2, `${item.id} frame rows`);
+  assert.equal(item.width / item.height, 3, `${item.id} dimensions must stay 3:1`);
+}
+for (const key of ['neumorphic-keypad-surface-atlas-v2', 'neumorphic-keypad-motion-numeric-v2', 'neumorphic-keypad-motion-utility-v2']) {
+  const prompt = prompts.rasterAssets.find(item => item.key === key);
+  assert.match(prompt.prompt, /responsive|desktop|mobile|compact/i, `${key} prompt responsive guidance`);
+  assert.match(prompt.prompt, /No digits|No C|No .*backspace|无|text/i, `${key} prompt must keep labels out of raster`);
+}
+// Mascot atlases live beside the ui-kit pack because they are imported by the
+// React source. Keep their metadata here so a missing or flattened (RGB)
+// export cannot silently ship and break the animation layer.
+assert.equal(manifest.mascotAtlases?.length, 3, 'mascot atlas manifest');
+const mascotAtlasFiles = new Set();
+for (const item of manifest.mascotAtlases) {
+  assert.equal(item.width, 1774, `${item.id} width`);
+  assert.equal(item.height, 887, `${item.id} height`);
+  assert.equal(item.frameCount, 8, `${item.id} frame count`);
+  assert.deepEqual(item.frameGrid, { columns:4, rows:2 }, `${item.id} frame grid`);
+  assert.equal(item.format, 'PNG RGBA', `${item.id} format`);
+  const absolute = path.resolve(root, item.file);
+  const data = await readFile(absolute);
+  const decoded = decodeRgbaAlpha(data, item.id);
+  assert.equal(decoded.width, item.width, `${item.id} width`);
+  assert.equal(decoded.height, item.height, `${item.id} height`);
+  assert.equal(decoded.colorType, 6, `${item.id} must stay RGBA`);
+  mascotAtlasFiles.add(path.basename(absolute));
+}
+assert.deepEqual(mascotAtlasFiles, new Set(['mascot-expressions-atlas-v1.png', 'mascot-tap-frames-v1.png', 'mascot-cash-frames-v1.png']), 'mascot atlas manifest files');
+const mascotDirectoryPngs = new Set((await readdir(path.resolve(root, '../mascot'))).filter(name => name.toLowerCase().endsWith('.png')));
+assert.deepEqual(mascotDirectoryPngs, mascotAtlasFiles, 'mascot directory must match manifest');
 const rasterDirectoryPngs = new Set((await readdir(path.join(root, 'rasters'))).filter(name => name.toLowerCase().endsWith('.png')).map(name => `rasters/${name}`));
 assert.deepEqual(rasterDirectoryPngs, rasterFiles, 'rasters directory must match manifest.rasters');
 

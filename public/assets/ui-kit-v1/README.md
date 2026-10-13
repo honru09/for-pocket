@@ -11,12 +11,12 @@
 - `icons/`：36 枚独立 SVG，24 × 24、1.6px 描边、圆角端点，无文字；包含状态、按钮和个性化三组。
 - `pocket-ui-icons.svg`：同一组图标的 symbol 精灵图，用 currentColor 随主题着色。
 - `frames/`：状态卡、插画容器、头像环 3 个可下载 SVG 框架。
-- `rasters/`：4 张真透明 RGBA 拟物图集：主操作按钮、个性化头像徽章、状态卡框架、空态与同步状态。前三张为 2172 × 724 横向 atlas；空态图集为 1536 × 1024 的 3×2 网格，适合裁切或作为大号视觉图块。
+- `rasters/`：7 张真透明 RGBA 拟物图集：主操作按钮、个性化头像徽章、状态卡框架、空态与同步状态，以及响应式数字键盘表面和两组 8 帧按压／回弹参考。前三张原有操作图集为 2172 × 724 横向 atlas；空态图集为 1536 × 1024 的 3×2 网格；键盘表面为 1536 × 1024 的 3×4 横向键帽网格；两组动作图集为 2172 × 724 的 4×2 帧网格。
 - `ui-components.css`：未接入的按钮、状态卡、状态 pill、分段控制、头像框样式；使用语义 token，可复制到正式组件后再按现有 CSS 约束调整。
 - `preview-v2.html`：新增素材的独立预览，含按钮/卡片/头像框交互示意。
 - `manifest.json`：用途、状态条件、禁止场景、建议展示尺寸及目标组件。
 - `copy.zh-en-uk.json`：中文、英文、乌克兰语文案建议；不覆盖现有 i18n。乌克兰语上线前需母语复核。
-- `prompts.json`：4 个完整生成提示词和生成方式；不含账本、凭据或用户个人信息。
+- `prompts.json`：插画与拟物图集的完整生成提示词和生成方式；不含账本、凭据或用户个人信息。
 
 ## 场景对应
 
@@ -38,6 +38,18 @@
 状态图标新增：`storage-read-failed`、`import-no-result`、`file-warning`、`recap-empty`、`recurring-empty`、`recurring-due`、`link-expired`、`location-no-place`；操作图标新增 `button-*`；个性化新增 `avatar-*`。图标只能配合可读文字和真实状态使用。
 
 拟物 PNG 图集新增：`neumorphic-button-atlas-v2.png`（保存／重试／新增／位置）、`neumorphic-avatar-badges-v2.png`（8 枚装饰徽章）、`neumorphic-state-card-frames-v2.png`（4 枚留白状态卡）、`neumorphic-empty-state-atlas-v2.png`（空账本／筛选无结果／导入无结果／文件需更换／连携过期／暂无位置）。四张均已验证为 RGBA 真透明背景；不要把图集里的暖黄环或暖黄点当作业务成功状态，也不要在图片里写入金额、地址、成员名或同步承诺。
+
+数字键盘素材新增：`neumorphic-keypad-surface-atlas-v2.png`（3×4 横向空白键帽表面）、`neumorphic-keypad-motion-numeric-v2.png`（数字键 8 帧）和 `neumorphic-keypad-motion-utility-v2.png`（动态 C/. 与退格等功能键 8 帧）。三张均标记为 **visual reference only**：不是固定尺寸按钮，也不是可直接拉伸的 CSS background。当前首页真实键盘为 3 列，键帽宽度由容器和 gap 计算，数字及动态 `C/.`、退格图标必须继续由 HTML/SVG 渲染。
+
+### 数字键盘响应式使用约定
+
+- **桌面**：核心按键高度约 54–60px，圆角约 15–17px。
+- **移动端**：按键高度至少 44px；在较高可用视口中由网格剩余空间自然扩展到约 84–95px，圆角约 13px。
+- **紧凑高度**：按键高度至少 40px，圆角约 12–13px。
+- 三种尺寸只改变真实 CSS 容器、`grid-template-columns: repeat(3, minmax(0, 1fr))`、gap、圆角和阴影强度；不要按 atlas 的像素格固定按钮宽高，也不要把 atlas 直接作为 CSS background。
+- surface atlas 的单格约 2.7:1 只用于视觉比例验收，不是生产尺寸契约；若用于设计评审，裁切单格后以 `<img>`／遮罩参考，再由真实键帽 DOM 绘制可伸缩表面，内容层叠加实时数字和无障碍名称。
+- 8 帧顺序固定为 `rest → hover → touch → press-deep → hold → release → rebound → settle`。实际产品优先用 CSS `transform`、`box-shadow` 和 opacity 做连续插值；帧图仅用于视觉验收、故事板或需要逐帧导出的场景。
+- `prefers-reduced-motion: reduce` 下跳过逐帧和回弹，只保留可识别的静止／焦点状态；键盘仍必须可读、可聚焦、可用键盘操作。
 
 空账本与筛选无结果应分开：后者使用 `empty-filter` 小图标及清除筛选动作。邀请预览不能用插画遮盖共享范围，尤其需先解决本次审核指出的成员位置及退出后消息更新问题。
 
