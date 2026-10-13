@@ -57,7 +57,7 @@ export function connectedLedgerIds(db, seedLedgerId) {
 function recordStamp(entry) {
   // Deletion is a real state and must win over an older live copy.  Legacy
   // entries may not have updatedAt, so createdAt remains a stable fallback.
-  return String(entry?.updatedAt || entry?.deletedAt || entry?.createdAt || entry?.occurredAt || '');
+  return [entry?.updatedAt, entry?.deletedAt].filter(Boolean).sort().at(-1) || entry?.createdAt || entry?.occurredAt || '';
 }
 
 function newest(a, b) {
@@ -77,7 +77,7 @@ function newest(a, b) {
  * Mirror the union of records across one connected account graph.
  * Returns true when the in-memory database changed.
  */
-export function syncLedgerGroup(db, seedLedgerId) {
+export function syncLedgerGroup(db, seedLedgerId, updatedEntry) {
   const ids = connectedLedgerIds(db, seedLedgerId);
   if (ids.length < 2) return false;
   const union = new Map();
@@ -85,6 +85,9 @@ export function syncLedgerGroup(db, seedLedgerId) {
     const previous = union.get(entry.id);
     union.set(entry.id, previous ? newest(previous, entry) : entry);
   }
+  // A mutation is authoritative within this store transaction. Timestamp
+  // ties must not resurrect an old deletion or add removed split members.
+  if (updatedEntry?.id) union.set(updatedEntry.id, updatedEntry);
   const canonical = [...union.values()];
   let changed = false;
   for (const id of ids) {

@@ -2,6 +2,7 @@ import { randomUUID, randomBytes, randomInt, createHash } from 'node:crypto';
 import { initialSettings, resolveLanguage, validateSettings, validateExpense, validateExpenseUpdate, validateUserProfile, validateEntryTime, dateKey, MAX_CIRCLE_MEMBERS, MAX_CATEGORIES } from './public/shared.mjs';
 import { validTimezone } from './public/timezone.mjs';
 import { syncLedgerGroup, syncAllLedgerGroups } from './ledger-sync.mjs';
+import { handleCircleReactions } from './circle-reactions.mjs';
 
 export class RequestError extends Error { constructor(message, status = 400) { super(message); this.status = status; } }
 export const fail = (message, status) => { throw new RequestError(message, status); };
@@ -104,6 +105,10 @@ function mergeAccounts(db, source, target) {
   for (const c of Object.values(db.circles)) {
     c.members = [...new Set(c.members.map(id => id === source ? target : id))];
     c.admins = [...new Set(c.admins.map(id => id === source ? target : id))];
+    for (const reaction of c.reactions || []) {
+      if (reaction.from === source) reaction.from = target;
+      if (reaction.to === source) reaction.to = target;
+    }
   }
   for (const [key, id] of Object.entries(db.identities)) if (id === source) db.identities[key] = target;
   for (const s of Object.values(db.sessions)) if (s.userId === source) s.userId = target;
@@ -127,6 +132,10 @@ export function googleLogin(db, payload, { link, uid, now }) {
 }
 
 export function handleDomain(db, uid, route, method, body, { now, limit, ledgerQuery }) {
+  if (route === '/circles/reactions' || route === '/circles/reactions/ack') {
+    const ctx = checkLedger(db, uid, body.ledgerId || ledgerQuery);
+    return handleCircleReactions(db, ctx.circle, uid, route, method, body, now, limit, fail);
+  }
   if (route === '/profile' && method === 'GET') return visible(db, uid);
   if (route === '/auth/link-code' && method === 'POST') {
     limit(`link:${uid}`);
@@ -238,7 +247,7 @@ export function handleDomain(db, uid, route, method, body, { now, limit, ledgerQ
     const occurredAt = valid.occurredAt || new Date(now).toISOString();
     const entry = { ...valid, occurredAt, ledgerId, member: structuredClone(consumers.find(c => c.id === valid.consumer)), createdBy: uid, createdAt: new Date(now).toISOString(), dayKey: dateKey(new Date(occurredAt), valid.timezone) };
     ledger.expenses.push(entry);
-    syncLedgerGroup(db, ledgerId);
+    syncLedgerGroup(db, ledgerId, entry);
     return ledger.expenses.find(item => item.id === entry.id) || entry;
   }
   const recordRoute = /^\/expenses\/([a-zA-Z0-9_-]{8,64})(\/restore)?$/.exec(route);
@@ -251,7 +260,7 @@ export function handleDomain(db, uid, route, method, body, { now, limit, ledgerQ
       Object.assign(entry, valid, { member: structuredClone(consumers.find(c => c.id === valid.consumer) || entry.member), updatedAt: new Date(now).toISOString() });
     } else Object.assign(entry, validateEntryTime(body.occurredAt, body.timezone), { updatedAt: new Date(now).toISOString() });
     const sourceLedgerId = entry.ledgerId || activeLedgerId;
-    syncLedgerGroup(db, sourceLedgerId);
+    syncLedgerGroup(db, sourceLedgerId, entry);
     return (db.ledgers[sourceLedgerId]?.expenses || []).find(item => item.id === entry.id) || entry;
   }
   if (recordRoute && (method === 'DELETE' && !recordRoute[2] || method === 'POST' && recordRoute[2])) {
@@ -259,7 +268,7 @@ export function handleDomain(db, uid, route, method, body, { now, limit, ledgerQ
     const entry = ledger.expenses.find(e => e.id === recordRoute[1]); if (!entry) fail('errorMissing', 404);
     if (!canManageEntry(db, uid, entry)) fail('errorEntryPermission', 403);
     if (method === 'DELETE') entry.deletedAt = new Date(now).toISOString(); else { delete entry.deletedAt; entry.updatedAt = new Date(now).toISOString(); }
-    syncLedgerGroup(db, entry.ledgerId || activeLedgerId);
+    syncLedgerGroup(db, entry.ledgerId || activeLedgerId, entry);
     return entry;
   }
   fail('errorNotFound', 404);

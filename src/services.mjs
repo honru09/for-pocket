@@ -191,5 +191,8 @@ export function remoteService(telegram) {
     setAdmin: (circleId, memberId, isAdmin) => profileAction('/circles/admin', { circleId, memberId, isAdmin }),
     removeMember: (circleId, memberId) => profileAction('/circles/remove', { circleId, memberId, confirm: true }),
     leaveCircle: circleId => profileAction('/circles/leave', { circleId, confirm: true }),
+    getReactions: scope => request(`/circles/reactions?ledgerId=${encodeURIComponent(scope)}`),
+    sendReaction: payload => request('/circles/reactions', 'POST', payload),
+    acknowledgeReactions: payload => request('/circles/reactions/ack', 'POST', payload),
   };
 }

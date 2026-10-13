@@ -1,6 +1,9 @@
 /* Compact controls share one rhythm; the entry screen keeps its existing grid. */
-.for-root .history-toolbar{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.25fr) 66px 40px;gap:6px;align-items:center;margin-bottom:14px}
+.for-root .history-title-bar{display:flex;align-items:center;gap:8px;margin-bottom:14px;min-width:0}
+.for-root .history-title-bar h1{font-size:19px;letter-spacing:-.4px;line-height:1.2;flex:none;margin:0}
+.for-root .history-toolbar{display:grid;grid-template-columns:66px minmax(0,1fr) 55px 40px;gap:5px;align-items:center;margin:0;min-width:0;flex:1}
 .for-root .history-toolbar select{width:100%;min-width:0;height:42px;border:0;border-radius:12px;background:var(--control);padding:0 7px;font-size:12px;color:var(--ink);text-overflow:ellipsis;cursor:pointer}
+.for-root #history-view .history-toolbar select{font-size:12px!important;appearance:none;-webkit-appearance:none;padding-left:7px;padding-right:18px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 8 5'%3E%3Cpath d='m1 1 3 3 3-3' fill='none' stroke='%23879077' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 6px center}
 .for-root .history-toolbar .postcard-button{height:42px;min-width:40px;width:40px;padding:10px;background:var(--control)}
 .for-root .history-summary{min-height:0;padding:18px 20px;gap:18px;margin-bottom:16px;flex-direction:row;align-items:center}
 .for-root .history-summary-amount{min-width:0;flex:1;gap:5px}
@@ -9,6 +12,12 @@
 .for-root .history-summary .balance-details>div{display:flex;flex-direction:row;align-items:baseline;justify-content:space-between;gap:12px}
 .for-root .history-summary .balance-details strong{font-size:13px;overflow-wrap:anywhere}
 .for-root .history-summary .balance-details span{font-size:10px;white-space:nowrap}
+.history-summary-tools{display:flex;align-items:center;gap:8px;min-width:0}
+.history-summary-tools small{margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.postcard-export{display:grid;place-items:center;flex:none;border:0;background:transparent;color:var(--muted);width:36px;height:32px;padding:7px;border-radius:10px;cursor:pointer}
+.postcard-export .for-icon{width:16px;height:16px}
+.postcard-preview{display:block;width:100%;border-radius:14px}
+.postcard-download{display:block;width:fit-content;margin:12px auto 0;border-radius:14px;background:var(--yellow);padding:12px 18px;color:var(--ink);font-size:13px;font-weight:700;text-decoration:none}
 .for-root .settings-organized{display:flex;flex-direction:column;gap:12px;max-width:560px;margin-top:0}
 .for-root .settings-profile{width:100%;height:auto;padding:12px 14px;background:var(--sage);border-radius:18px;color:var(--ink)}
 .for-root .settings-profile>h6{display:flex;align-items:center;gap:12px;width:100%;text-align:left}
@@ -43,7 +52,7 @@
 .for-root .swipe-action:disabled{opacity:.4}
 .for-root .entry-more{min-width:32px;width:32px;height:44px;min-height:44px;padding:7px;color:var(--muted);background:transparent}
 .for-root .entry-more .for-icon{width:18px;height:18px}
-@media(max-width:360px){.for-root .history-toolbar{gap:4px;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr) 59px 36px}.for-root .history-toolbar select{font-size:11px;padding:0 4px}.for-root .history-toolbar .postcard-button{width:36px;min-width:36px;padding:9px}.for-root .history-summary{padding:14px;gap:10px}}
+@media(max-width:360px){.for-root .history-title-bar{gap:5px}.for-root .history-title-bar h1{font-size:16px}.for-root .history-toolbar{gap:3px;grid-template-columns:60px minmax(0,1fr) 54px 36px}.for-root #history-view .history-toolbar select{padding-left:5px;padding-right:17px;background-position:right 5px center}.for-root .history-toolbar .postcard-button{width:36px;min-width:36px;padding:9px}.for-root .history-summary{padding:14px;gap:10px}}
 
 /* Final surface polish: make the fast path feel continuous between screens,
    while keeping the paper-like palette quiet and touch-first. */
