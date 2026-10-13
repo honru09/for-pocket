@@ -17,18 +17,24 @@
       "id": "mascot-expressions-v1",
       "file": "mascot-expressions-atlas-v1.png",
       "frames": ["calm", "closed-eye-smile", "shy", "question", "sigh", "gentle-annoyed", "surprised", "sleepy"],
+      "frameDurationMs": 180,
+      "playback": "single-state echo after each tap",
       "use": "Short expression echo after a tap; vector face remains the source of truth."
     },
     {
       "id": "mascot-tap-v1",
       "file": "mascot-tap-frames-v1.png",
       "frames": ["rest", "lift", "squash", "press", "stretch", "wobble-left", "wobble-right", "settle"],
+      "frameDurationMs": 27.5,
+      "playback": "8 frames, 220ms total, once per tap",
       "use": "Tap feedback atlas; rendered as a brief low-opacity paper echo over the live mascot."
     },
     {
       "id": "mascot-cash-v1",
       "file": "mascot-cash-frames-v1.png",
       "frames": ["rest", "draw", "hold", "expense-flight", "income-arrives", "catch", "tuck", "settle"],
+      "frameDurationMs": { "expense": 215, "income": 260 },
+      "playback": "4 frames for each direction; CSS tears and flight interpolate between them",
       "use": "Cash action reference layer; existing CSS/Web Animations provide the high-frame movement and tears."
     }
   ],

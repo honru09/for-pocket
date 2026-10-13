@@ -65,7 +65,7 @@ function paethPredictor(left, up, upLeft) {
   return upLeft;
 }
 
-function decodeRgbaAlpha(data, label) {
+function decodeRgbaAlpha(data, label, includeAlpha = false) {
   assert.ok(data.length >= 33, `${label} PNG is too short`);
   assert.deepEqual(data.subarray(0, 8), pngSignature, `${label} PNG signature`);
 
@@ -117,6 +117,7 @@ function decodeRgbaAlpha(data, label) {
   const stride = width * 4;
   const scanlineSize = stride + 1;
   assert.equal(inflated.length, scanlineSize * height, `${label} RGBA scanline length`);
+  const alphaPlane = includeAlpha ? new Uint8Array(width * height) : null;
 
   let previous = Buffer.alloc(stride);
   let hasTransparent = false;
@@ -142,6 +143,7 @@ function decodeRgbaAlpha(data, label) {
     }
     for (let x = 3; x < stride; x += 4) {
       const alpha = row[x];
+      if (alphaPlane) alphaPlane[y * width + Math.floor(x / 4)] = alpha;
       if (alpha === 0) hasTransparent = true;
       if (alpha >= 250) hasNearOpaque = true;
       if (alpha < minAlpha) minAlpha = alpha;
@@ -151,7 +153,7 @@ function decodeRgbaAlpha(data, label) {
   }
   assert.ok(hasTransparent, `${label} must contain fully transparent pixels`);
   assert.ok(hasNearOpaque, `${label} must contain near-opaque pixels (alpha >= 250)`);
-  return { width, height, bitDepth, colorType, minAlpha, maxAlpha };
+  return { width, height, bitDepth, colorType, minAlpha, maxAlpha, alpha: alphaPlane };
 }
 
 for (const item of manifest.rasters) {
@@ -162,7 +164,7 @@ for (const item of manifest.rasters) {
   assert.ok(relative && !relative.startsWith('..') && !path.isAbsolute(relative), `${item.id} file must stay inside the asset root`);
   assert.ok(item.file.toLowerCase().endsWith('.png'), `${item.id} must be a PNG`);
   const data = await readFile(absolute);
-  const decoded = decodeRgbaAlpha(data, item.id);
+  const decoded = decodeRgbaAlpha(data, item.id, /-v3$/.test(item.id));
   assert.equal(decoded.width, item.width, `${item.id} width`);
   assert.equal(decoded.height, item.height, `${item.id} height`);
   assert.ok(gallery.includes(`src="${item.file}"`) || extendedGallery.includes(`src="${item.file}"`), `${item.id} preview reference`);
@@ -207,6 +209,46 @@ for (const item of [keypadNumericMotion, keypadUtilityMotion]) {
   assert.equal(item.frameGrid?.columns, 4, `${item.id} frame columns`);
   assert.equal(item.frameGrid?.rows, 2, `${item.id} frame rows`);
   assert.equal(item.width / item.height, 3, `${item.id} dimensions must stay 3:1`);
+}
+// v3 motion atlases are deterministically registered by the cleaning pass.
+// Check every frame so a future regeneration cannot introduce a one-pixel
+// jump, a wide transparent halo, or detached particles that only appear in a
+// single state.
+const keypadMotionV3 = manifest.rasters.filter(item => /neumorphic-keypad-motion-(numeric|utility)-v3$/.test(item.id));
+assert.equal(keypadMotionV3.length, 2, 'missing cleaned keypad v3 atlases');
+for (const item of keypadMotionV3) {
+  const data = await readFile(path.resolve(root, item.file));
+  const decoded = decodeRgbaAlpha(data, item.id, true);
+  const cellWidth = 543;
+  const cellHeight = 362;
+  const frameBboxes = [];
+  for (let frame = 0; frame < 8; frame += 1) {
+    const col = frame % 4;
+    const row = Math.floor(frame / 4);
+    const x0 = col * cellWidth;
+    const y0 = row * cellHeight;
+    let minX = cellWidth;
+    let minY = cellHeight;
+    let maxX = -1;
+    let maxY = -1;
+    let lowAlpha = 0;
+    let visible = 0;
+    for (let y = 0; y < cellHeight; y += 1) {
+      for (let x = 0; x < cellWidth; x += 1) {
+        const alpha = decoded.alpha[(y0 + y) * decoded.width + x0 + x];
+        if (alpha > 0 && alpha < 64) lowAlpha += 1;
+        if (alpha < 16) continue;
+        visible += 1;
+        minX = Math.min(minX, x); minY = Math.min(minY, y);
+        maxX = Math.max(maxX, x); maxY = Math.max(maxY, y);
+      }
+    }
+    assert.ok(visible > 0, `${item.id} frame ${frame} is empty`);
+    assert.deepEqual([minX, minY, maxX, maxY], [15, 86, 526, 275], `${item.id} frame ${frame} registration`);
+    assert.ok(lowAlpha / (cellWidth * cellHeight) * 100 < 2, `${item.id} frame ${frame} has too much low-alpha noise`);
+    frameBboxes.push([minX, minY, maxX, maxY]);
+  }
+  assert.equal(new Set(frameBboxes.map(box => box.join(','))).size, 1, `${item.id} frame registration must be stable`);
 }
 for (const key of ['neumorphic-keypad-surface-atlas-v2', 'neumorphic-keypad-motion-numeric-v2', 'neumorphic-keypad-motion-utility-v2']) {
   const prompt = prompts.rasterAssets.find(item => item.key === key);
