@@ -9,6 +9,7 @@ import { validateInitData } from './auth.mjs';
 import { createStore } from './store.mjs';
 import { createLocationResolver } from './location.mjs';
 import { normalizeLocation, currencyForCountry } from './public/location.mjs';
+import { updateCirclePresence } from './circle-presence.mjs';
 import { RequestError, fail, hash, ensureUser, issueSession, googleLogin, handleDomain } from './domain.mjs';
 import { CURRENCIES, MAX_CUSTOM_AVATAR_LENGTH, resolveLanguage } from './public/shared.mjs';
 import { AiError, createExpenseParser, createExpenseSummarizer, createExpenseChat } from './ai.mjs';
@@ -17,6 +18,8 @@ import { createTelegramHandler } from './telegram-ai.mjs';
 import { deriveTelegramWebhookSecret, ensureTelegramWebhook } from './telegram-config.mjs';
 import { createDigestService } from './digest.mjs';
 import { createTelegramExpenseSync } from './telegram-expense-sync.mjs';
+import { createMissingEntryReminderService } from './missing-entry-reminder.mjs';
+import { createReactionNotificationService, createCloudTasksReactionQueue } from './reaction-notifications.mjs';
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 const { version } = JSON.parse(await readFile(path.join(root, 'package.json'), 'utf8'));
@@ -29,7 +32,7 @@ function decodeBase64File(data, mimeType) {
   return { data, mimeType, bytes: Buffer.from(data, 'base64') };
 }
 
-export function createApp({ token = process.env.BOT_TOKEN || '', dataDir = path.resolve(root, process.env.DATA_DIR || 'data'), publicUrl = process.env.PUBLIC_URL || '', maxAgeSeconds = Number(process.env.AUTH_MAX_AGE_SECONDS || 86400), googleClientId = process.env.GOOGLE_CLIENT_ID || '', verifyGoogle, resolveLocation, aiParser = createExpenseParser(), aiSummarizer = createExpenseSummarizer(), aiChat = createExpenseChat(), webhookSecret = process.env.TELEGRAM_WEBHOOK_SECRET || '', cronSecret = process.env.CRON_SECRET || '', callTelegram, now = () => Date.now(), asyncPersist = process.env.STORE_ASYNC_PERSIST === 'true' || !process.env.K_SERVICE, storeOptions } = {}) {
+export function createApp({ token = process.env.BOT_TOKEN || '', dataDir = path.resolve(root, process.env.DATA_DIR || 'data'), publicUrl = process.env.PUBLIC_URL || '', maxAgeSeconds = Number(process.env.AUTH_MAX_AGE_SECONDS || 86400), googleClientId = process.env.GOOGLE_CLIENT_ID || '', verifyGoogle, resolveLocation, aiParser = createExpenseParser(), aiSummarizer = createExpenseSummarizer(), aiChat = createExpenseChat(), webhookSecret = process.env.TELEGRAM_WEBHOOK_SECRET || '', cronSecret = process.env.CRON_SECRET || '', callTelegram, now = () => Date.now(), asyncPersist = process.env.STORE_ASYNC_PERSIST === 'true' || !process.env.K_SERVICE, storeOptions, enqueueReactionTask, reactionOptions } = {}) {
   if (!Number.isSafeInteger(maxAgeSeconds) || maxAgeSeconds < 60) throw new Error('Invalid AUTH_MAX_AGE_SECONDS');
   const resolvedWebhookSecret = token ? deriveTelegramWebhookSecret(token, webhookSecret) : '';
   const store = createStore(dataDir, storeOptions), google = new OAuth2Client(), attempts = new Map();
@@ -48,6 +51,10 @@ export function createApp({ token = process.env.BOT_TOKEN || '', dataDir = path.
       chat: aiParser.chat || ((input, profile) => aiChat.chat({ ...input, profile })),
       classifyIntent: aiParser.classifyIntent || (aiChat.enabled ? input => aiChat.classifyIntent(input) : undefined) } });
   const digestService = createDigestService({ store, summarizer: aiSummarizer, token, callTelegram, now });
+  const missingEntryReminders = createMissingEntryReminderService({ store, token, callTelegram, now });
+  const reactionNotifications = createReactionNotificationService({ store, token, callTelegram, now,
+    enqueueTask:enqueueReactionTask === undefined ? createCloudTasksReactionQueue({ publicUrl, cronSecret }) : enqueueReactionTask,
+    ...reactionOptions });
   function limit(key, max = 12) {
     const at = now(), item = attempts.get(key);
     if (item && item.until > at) { if (item.count >= max) fail('errorRateLimit', 429); item.count++; }
@@ -199,9 +206,16 @@ export function createApp({ token = process.env.BOT_TOKEN || '', dataDir = path.
         }
         const cronDigestRoute = url.pathname === '/api/cron/digest' && req.method === 'POST';
         const cronTickRoute = url.pathname === '/api/cron/tick' && req.method === 'POST';
-        if (cronDigestRoute || cronTickRoute) {
+        const reactionDeliveryRoute = url.pathname === '/api/cron/reactions' && req.method === 'POST';
+        if (cronDigestRoute || cronTickRoute || reactionDeliveryRoute) {
           if (!safeTokenEqual(req.headers['x-cron-secret'], resolvedCronSecret)) fail('errorAuth', 401);
           const cronBody = await bodyOf(req, 32768);
+          if (reactionDeliveryRoute) {
+            if (typeof cronBody.circleId !== 'string' || typeof cronBody.burstId !== 'string' || cronBody.circleId.length > 80 || cronBody.burstId.length > 80) fail('errorReaction',400);
+            const result=await reactionNotifications.deliver({circleId:cronBody.circleId,burstId:cronBody.burstId,scheduledFor:cronBody.scheduledFor,at:now()});
+            await store.flush();
+            await send(res,result.failed ? 503 : 200,result); return;
+          }
           if (cronDigestRoute) {
             if (typeof cronBody.slot !== 'string' || !['morning', 'noon', 'evening'].includes(cronBody.slot)) fail('errorAiInput', 400);
             const ledgerId = cronBody.ledgerId === undefined ? '' : String(cronBody.ledgerId || '').trim();
@@ -210,8 +224,11 @@ export function createApp({ token = process.env.BOT_TOKEN || '', dataDir = path.
             if (status >= 500) await store.flush();
             await send(res, status, result); return;
           }
-          const result = await digestService.tick({ at: now() });
-          const status = result.results?.some(batch => batch?.results?.some(item => item?.deliveryFailed)) ? 503 : 200;
+          const at=now();
+          const result = await digestService.tick({ at });
+          result.reminders = await missingEntryReminders.tick({ at });
+          result.reactions = await reactionNotifications.tick({ at });
+          const status = result.reminders.failed || result.reactions.failed || result.results?.some(batch => batch?.results?.some(item => item?.deliveryFailed)) ? 503 : 200;
           if (status >= 500) await store.flush();
           await send(res, status, result); return;
         }
@@ -237,6 +254,7 @@ export function createApp({ token = process.env.BOT_TOKEN || '', dataDir = path.
           if (context.uid) await store.run(db => {
             const profile = handleDomain(db, context.uid, '/profile', 'GET', {}, { now: now(), limit });
             if (profile.ledgerId !== context.ledgerId) fail('errorLedgerChanged', 409);
+            updateCirclePresence(db,context.uid,context.ledgerId,location,now());
           });
           await send(res, 200, { location: location || null, suggestedCurrency: currencyForCountry(location?.countryCode) || null });
           return;
@@ -331,7 +349,9 @@ export function createApp({ token = process.env.BOT_TOKEN || '', dataDir = path.
         // Telegram companion notifications are best-effort and never change
         // the web request result. References are kept in the server store so
         // later edits/deletes can update or remove the original message.
-        if (['/expenses', '/expenses/import'].includes(route) && req.method === 'POST') {
+        if (route === '/circles/reactions' && req.method === 'POST') {
+          await reactionNotifications.afterReaction(result);
+        } else if (['/expenses', '/expenses/import'].includes(route) && req.method === 'POST') {
           const entries = Array.isArray(result?.entries) ? result.entries : [result];
           for (const entry of entries) { try { await expenseSync.notify(entry); } catch {} }
         } else if (/^\/expenses\/[a-zA-Z0-9_-]{8,64}$/.test(route) && ['PUT','PATCH'].includes(req.method)) {
@@ -370,11 +390,12 @@ export function createApp({ token = process.env.BOT_TOKEN || '', dataDir = path.
   // Stop accepting requests and wait for every active response before flushing:
   // an in-flight login, model parse or webhook can still mutate the store.
   const closeServer = app.close.bind(app);
+  app.on('listening', () => { void reactionNotifications.start().catch(() => {}); });
   let closing;
   app.close = callback => {
     if (!closing) {
       closing = new Promise((resolve, reject) => closeServer(error => error ? reject(error) : resolve()))
-        .then(() => store.close()).catch(error => {
+        .then(() => reactionNotifications.close()).then(() => store.close()).catch(error => {
         try { console.error('Store flush failed during shutdown:', error); } catch {}
         throw error;
       });

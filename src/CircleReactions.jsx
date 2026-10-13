@@ -2,54 +2,132 @@ import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from
 import { createPortal } from 'react-dom';
 import { Tappable } from '@telegram-apps/telegram-ui';
 import { Avatar, Sheet } from './AccountViews.jsx';
-import { REACTION_EMOJIS, normalizeReactionEmoji } from '../public/reactions.mjs';
+import { REACTION_EMOJIS, normalizeReactionEmoji, formatReactionCount } from '../public/reactions.mjs';
+import { locationLabel } from '../public/location.mjs';
 import { createId } from './id.mjs';
 import './circle-reactions.css';
 
 const center = node => {
   const rect = node?.getBoundingClientRect();
-  return rect ? { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 } : { x:innerWidth / 2, y:innerHeight * .7 };
+  return rect?.width && rect?.height ? { x:rect.left + rect.width / 2, y:rect.top + rect.height / 2 } : { x:innerWidth / 2, y:innerHeight * .76 };
 };
+const easeOut = node => getComputedStyle(node).getPropertyValue('--ease-out').trim() || 'cubic-bezier(0.23,1,0.32,1)';
 
-function FlyingEmoji({ event, onFinish }) {
-  const ref = useRef(null), done = useRef(onFinish);
+function FlyingEmoji({ event, onFinish, visible }) {
+  const ref = useRef(null), done = useRef(onFinish), animation = useRef(null);
   done.current = onFinish;
   useLayoutEffect(() => {
-    const node = ref.current, { start, end, incoming } = event;
-    const pose = (x, y, scale, rotate = 0) => `translate3d(${x - 32}px,${y - 32}px,0) rotate(${rotate}deg) scale(${scale})`;
-    const easing = getComputedStyle(node).getPropertyValue('--ease-out').trim() || 'cubic-bezier(0.23,1,0.32,1)';
-    const frames = incoming ? [
-      { transform:pose(start.x,start.y,.48,-12), opacity:0, offset:0 },
-      { transform:pose(start.x,start.y,.7,-8), opacity:1, offset:.12 },
-      { transform:pose(end.x,end.y,1.8,8), opacity:1, offset:.52 },
-      { transform:pose(end.x,end.y,1.58,-4), opacity:1, offset:.7 },
-      { transform:pose(end.x,end.y-20,1.68,1), opacity:0, offset:1 },
-    ] : [
-      { transform:pose(start.x,start.y,.8,-8), opacity:1, offset:0 },
-      { transform:pose(start.x,start.y-12,1.1,6), opacity:1, offset:.22 },
-      { transform:pose((start.x+end.x)/2,Math.min(start.y,end.y)-30,1.04,-10), opacity:1, offset:.6 },
-      { transform:pose(end.x,end.y,.45,12), opacity:0, offset:1 },
-    ];
-    const animation = node.animate(frames.map(frame => ({ ...frame, easing })), { duration:incoming ? 960 : 620, fill:'both' });
+    const node = ref.current, { start, end } = event;
+    const pose = (x,y,scale,rotate = 0) => `translate3d(${x-28}px,${y-28}px,0) rotate(${rotate}deg) scale(${scale})`;
+    animation.current = node.animate([
+      { transform:pose(start.x,start.y,.94,-6), opacity:1, offset:0 },
+      { transform:pose(start.x,start.y-10,1.12,5), opacity:1, offset:.18 },
+      { transform:pose((start.x+end.x)/2,Math.min(start.y,end.y)-28,1.04,-8), opacity:1, offset:.56 },
+      { transform:pose(end.x,end.y,.72,10), opacity:0, offset:1 },
+    ].map(frame => ({ ...frame, easing:easeOut(node) })), { duration:480, fill:'both' });
     let cancelled = false;
-    animation.finished.then(() => { if (!cancelled) done.current(event); }).catch(() => {});
-    return () => { cancelled = true; animation.cancel(); };
+    animation.current.finished.then(() => { if (!cancelled) done.current(event); }).catch(() => {});
+    return () => { cancelled = true; animation.current?.cancel(); };
   }, [event]);
-  return <span ref={ref} className={`flying-emoji ${event.incoming ? 'is-incoming' : ''}`} aria-hidden="true" data-reaction-id={event.id}>{event.emoji}</span>;
+  useEffect(() => { if (visible) animation.current?.play(); else animation.current?.pause(); }, [visible]);
+  return <span ref={ref} className="flying-emoji" aria-hidden="true" data-reaction-id={event.id}>{event.emoji}</span>;
 }
 
-export default function CircleReactions({ circle, ledgerId, userId, service, t, onSelf, onHaptic, disabled }) {
-  const [target, setTarget] = useState(null), [sheetStyle, setSheetStyle] = useState({});
-  const [outgoing, setOutgoing] = useState([]), [incoming, setIncoming] = useState([]);
-  const [custom, setCustom] = useState(''), [invalid, setInvalid] = useState(false), [failures, setFailures] = useState([]);
+// One run of taps has one character and a growing badge. Events remain
+// individually acknowledged, so a partially viewed run can resume safely.
+function IncomingBurst({ events, lane, visible, onSeen, onFinish }) {
+  const ref = useRef(null), glyph = useRef(null), entrance = useRef(null), pulse = useRef(null);
+  const processed = useRef(new Set()), latest = useRef(events), callbacks = useRef({ onSeen, onFinish });
+  const lastShown = useRef(0), [current, setCurrent] = useState(null);
+  latest.current = events; callbacks.current = { onSeen, onFinish };
+  useEffect(() => {
+    if (!visible) return;
+    let nextTimer, finishTimer, cancelled = false;
+    const step = () => {
+      if (cancelled) return;
+      const next = latest.current.find(item => !processed.current.has(item.id));
+      if (next) {
+        processed.current.add(next.id);
+        setCurrent(next); lastShown.current = Date.now();
+        callbacks.current.onSeen(next);
+      }
+      if (processed.current.size && !next && Date.now() - lastShown.current >= 1100) {
+        entrance.current?.cancel();
+        entrance.current = ref.current.animate([
+          { transform:'translate3d(-50%,-50%,0) scale(1)', opacity:1 },
+          { transform:'translate3d(-50%,calc(-50% + 14px),0) scale(.94)', opacity:0 },
+        ], { duration:180, easing:easeOut(ref.current), fill:'both' });
+        finishTimer = setTimeout(() => callbacks.current.onFinish([...processed.current]),180);
+        return;
+      }
+      nextTimer = setTimeout(step,140);
+    };
+    step();
+    return () => { cancelled = true; clearTimeout(nextTimer); clearTimeout(finishTimer); };
+  }, [visible,events.at(-1)?.id]);
+  useLayoutEffect(() => {
+    if (!current || !ref.current) return;
+    const node = ref.current;
+    if (processed.current.size === 1) {
+      entrance.current?.cancel();
+      entrance.current = node.animate([
+        { transform:'translate3d(-50%,calc(-50% + 52px),0) scale(.9,.94)', opacity:0, offset:0 },
+        { transform:'translate3d(-50%,calc(-50% - 5px),0) scale(1.07,.96)', opacity:1, offset:.65 },
+        { transform:'translate3d(-50%,-50%,0) scale(1)', opacity:1, offset:1 },
+      ], { duration:280, easing:easeOut(node), fill:'both' });
+    } else {
+      const currentTransform = getComputedStyle(glyph.current).transform;
+      pulse.current?.cancel();
+      pulse.current = glyph.current.animate([
+        { transform:currentTransform === 'none' ? 'scale(1)' : currentTransform, offset:0 },
+        { transform:'scale(1.14,.93) rotate(-4deg)', offset:.38 },
+        { transform:'scale(.98,1.035) rotate(2deg)', offset:.7 },
+        { transform:'scale(1)', offset:1 },
+      ], { duration:200, easing:easeOut(node) });
+    }
+  }, [current]);
+  useEffect(() => { for (const animation of [entrance.current,pulse.current]) { if (visible) animation?.play(); else animation?.pause(); } }, [visible]);
+  useEffect(() => () => { entrance.current?.cancel(); pulse.current?.cancel(); }, []);
+  const count = current?.burstIndex || 1;
+  return <span ref={ref} className="incoming-emoji is-incoming" aria-hidden="true" data-burst-id={events[0]?.burstId || events[0]?.id} data-reaction-count={count}
+    style={{ left:`${lane % 2 ? 65 : 37}%`, top:`${35 + lane * 15}%` }}>
+    <span ref={glyph} className="incoming-emoji-glyph">{current?.emoji || events[0]?.emoji}</span>
+    {count >= 2 && <span className="emoji-burst-count" key={count}>{formatReactionCount(count)}</span>}
+  </span>;
+}
+
+// Keep this receiver mounted at App level. Only the avatar strip is portalled
+// into the record page, so navigation never drops a receipt or acknowledgement.
+export default function CircleReactions({ circle, ledgerId, userId, service, t, onSelf, onHaptic, disabled, entryTarget }) {
+  const [target,setTarget] = useState(null), [sheetStyle,setSheetStyle] = useState({});
+  const [outgoing,setOutgoing] = useState([]), [incoming,setIncoming] = useState([]);
+  const [custom,setCustom] = useState(''), [customOpen,setCustomOpen] = useState(false), [invalid,setInvalid] = useState(false), [failures,setFailures] = useState([]);
+  const [visible,setVisible] = useState(document.visibilityState !== 'hidden');
+  const [effectHost] = useState(() => document.createElement('div'));
   const portraits = useRef(new Map()), targetPortrait = useRef(null), seen = useRef(new Set()), acknowledgements = useRef(new Set());
   const scope = circle.id + ':' + ledgerId + ':' + userId;
-  const scopeRef = useRef(scope), mounted = useRef(true), ackTimer = useRef(null), ackFlight = useRef(null);
-  scopeRef.current = scope;
+  const scopeRef = useRef(scope), mounted = useRef(true), ackTimer = useRef(null), ackFlight = useRef(null), haptic = useRef(onHaptic);
+  scopeRef.current = scope; haptic.current = onHaptic;
   useEffect(() => {
     mounted.current = true;
-    return () => { mounted.current = false; clearTimeout(ackTimer.current); };
+    const visibility = () => setVisible(document.visibilityState !== 'hidden');
+    document.addEventListener('visibilitychange',visibility);
+    return () => { mounted.current = false; clearTimeout(ackTimer.current); document.removeEventListener('visibilitychange',visibility); };
   }, []);
+  useEffect(() => {
+    const updateHost = () => {
+      const dialogs = [...document.querySelectorAll('dialog[open]')];
+      const host = dialogs.at(-1) || document.body;
+      if (effectHost.parentElement !== host) host.appendChild(effectHost);
+    };
+    const observer = new MutationObserver(changes => {
+      if (changes.some(change => change.type === 'attributes' || [...change.addedNodes,...change.removedNodes].some(node => node.nodeType === 1 && (node.matches?.('dialog') || node.querySelector?.('dialog'))))) updateHost();
+    });
+    observer.observe(document.body,{ childList:true, subtree:true, attributes:true, attributeFilter:['open'] });
+    updateHost();
+    return () => { observer.disconnect(); effectHost.remove(); };
+  }, [effectHost]);
+  useEffect(() => { if (entryTarget === null) { setTarget(null); setOutgoing([]); } }, [entryTarget]);
 
   const flushAck = useCallback(async () => {
     if (ackFlight.current || !acknowledgements.current.size) return;
@@ -60,13 +138,15 @@ export default function CircleReactions({ circle, ledgerId, userId, service, t, 
       await operation;
       if (scopeRef.current === requestScope) for (const id of ids) acknowledgements.current.delete(id);
     } catch {} finally { if (ackFlight.current === operation) ackFlight.current = null; }
-  }, [service, circle.id, ledgerId, scope]);
+  }, [service,circle.id,ledgerId,scope]);
 
   useEffect(() => {
-    let cancelled = false, running = false;
+    let cancelled = false, running = false, timer;
+    const schedule = delay => { clearTimeout(timer); if (!cancelled) timer = setTimeout(poll,delay); };
     const poll = async () => {
       if (cancelled || running || document.visibilityState === 'hidden') return;
       running = true;
+      let delay = 1500;
       try {
         await flushAck();
         const response = await service.getReactions(ledgerId);
@@ -75,25 +155,26 @@ export default function CircleReactions({ circle, ledgerId, userId, service, t, 
         if (fresh.length) {
           fresh.forEach(item => seen.current.add(item.id));
           if (seen.current.size > 2000) seen.current = new Set([...seen.current].slice(-1000));
-          setIncoming(queue => [...queue, ...fresh.map((item,index) => ({ ...item, incoming:true,
-            start:center(portraits.current.get(item.sender.id)),
-            end:{ x:innerWidth * (.38 + index % 3 * .12), y:innerHeight * (.35 + index % 2 * .13) },
-          }))]);
-          onHaptic?.();
+          setIncoming(queue => [...queue,...fresh]);
+          if (document.visibilityState !== 'hidden') haptic.current?.();
         }
-      } catch {} finally { running = false; }
+        if (response.hasMore) delay = 500;
+      } catch {} finally { running = false; schedule(delay); }
     };
     void poll();
-    const timer = setInterval(poll, 8000);
-    window.addEventListener('focus',poll); document.addEventListener('visibilitychange',poll);
-    return () => { cancelled = true; clearInterval(timer); window.removeEventListener('focus',poll); document.removeEventListener('visibilitychange',poll); };
-  }, [service, ledgerId, circle.id, flushAck, onHaptic]);
+    const foreground = () => { if (document.visibilityState !== 'hidden') void poll(); else clearTimeout(timer); };
+    window.addEventListener('focus',foreground); document.addEventListener('visibilitychange',foreground);
+    return () => { cancelled = true; clearTimeout(timer); window.removeEventListener('focus',foreground); document.removeEventListener('visibilitychange',foreground); };
+  }, [service,ledgerId,circle.id,flushAck]);
 
-  const finishIncoming = useCallback(event => {
-    setIncoming(queue => queue.filter(item => item.id !== event.id));
+  const markSeen = useCallback(event => {
     acknowledgements.current.add(event.id);
-    clearTimeout(ackTimer.current);
-    ackTimer.current = setTimeout(flushAck, 300);
+    if (!ackTimer.current) ackTimer.current = setTimeout(() => { ackTimer.current = null; void flushAck(); },180);
+  }, [flushAck]);
+  const finishIncoming = useCallback(ids => {
+    const finished = new Set(ids);
+    setIncoming(queue => queue.filter(item => !finished.has(item.id)));
+    void flushAck();
   }, [flushAck]);
   const transmit = async payload => {
     const requestScope = scope;
@@ -108,40 +189,49 @@ export default function CircleReactions({ circle, ledgerId, userId, service, t, 
     const emoji = normalizeReactionEmoji(value);
     if (!emoji || !target || disabled) { setInvalid(true); return; }
     setInvalid(false);
-    const id = createId(), payload = { id, circleId:circle.id, ledgerId, recipientId:target.id, emoji };
-    setOutgoing(items => [...items,{ id, emoji, start:center(node), end:center(targetPortrait.current) }]);
-    onHaptic?.();
-    void transmit(payload);
+    const id = createId(), payload = { id,circleId:circle.id,ledgerId,recipientId:target.id,emoji };
+    setOutgoing(items => [...items,{ id,emoji,start:center(node),end:center(targetPortrait.current) }]);
+    onHaptic?.(); void transmit(payload);
   };
   const open = (person,event) => {
     onHaptic?.();
     if (person.id === userId) { onSelf?.(); return; }
-    const rect = event.currentTarget.getBoundingClientRect(), width = Math.min(340,innerWidth-28);
-    const left = Math.max(14,Math.min(innerWidth-width-14,rect.left+rect.width/2-width/2));
-    setSheetStyle({ left, bottom:Math.max(12,Math.min(innerHeight-rect.top+8,innerHeight-400)), '--emoji-origin':`${rect.left+rect.width/2-left}px 100%` });
-    setTarget(person); setCustom(''); setInvalid(false);
+    const rect = event.currentTarget.getBoundingClientRect(), width = Math.min(380,innerWidth-24);
+    const left = Math.max(12,Math.min(innerWidth-width-12,rect.left+rect.width/2-width/2));
+    setSheetStyle({ left,bottom:Math.max(12,Math.min(innerHeight-rect.top+10,innerHeight-230)),'--emoji-origin':`${rect.left+rect.width/2-left}px 100%` });
+    setTarget(person); setCustom(''); setCustomOpen(false); setInvalid(false);
   };
-  const finishOutgoing = useCallback(event => setOutgoing(items => items.filter(item => item.id !== event.id)), []);
-  const effects = <div className="emoji-flight-layer">{incoming.slice(0,3).map(event => <FlyingEmoji key={event.id} event={event} onFinish={finishIncoming}/>)}</div>;
+  const finishOutgoing = useCallback(event => setOutgoing(items => items.filter(item => item.id !== event.id)),[]);
+  const bursts = new Map();
+  for (const event of incoming) {
+    const key = event.burstId || event.id;
+    if (!bursts.has(key)) bursts.set(key,[]);
+    bursts.get(key).push(event);
+  }
+  const people = <div className="consumer-buttons circle-presence" role="group" aria-label={t('circlePeople')}>
+    {circle.members.map(person => <Tappable Component="button" type="button" key={person.id} ref={node => { if (node) portraits.current.set(person.id,node); else portraits.current.delete(person.id); }}
+      className={`consumer-chip presence-chip consumer-color-${person.color}`} data-member-id={person.id} data-self={person.id === userId}
+      aria-label={person.id === userId ? t('myProfile') : t('sendEmojiTo',{ name:person.name })} aria-haspopup={person.id === userId ? undefined : 'dialog'} aria-expanded={person.id === userId ? undefined : target?.id === person.id}
+      disabled={disabled} onClick={event => open(person,event)}><Avatar person={person}/><span>{person.name}</span></Tappable>)}
+  </div>;
+  const person = circle.members.find(member => member.id === target?.id) || target;
+  const place = locationLabel(person?.location);
   return <>
-    <div className="consumer-buttons circle-presence" role="group" aria-label={t('circlePeople')}>
-      {circle.members.map(person => <Tappable Component="button" type="button" key={person.id} ref={node => { if (node) portraits.current.set(person.id,node); else portraits.current.delete(person.id); }}
-        className={`consumer-chip presence-chip consumer-color-${person.color}`} data-member-id={person.id} data-self={person.id === userId}
-        aria-label={person.id === userId ? t('myProfile') : t('sendEmojiTo',{ name:person.name })} aria-haspopup={person.id === userId ? undefined : 'dialog'} aria-expanded={person.id === userId ? undefined : target?.id === person.id}
-        disabled={disabled} onClick={event => open(person,event)}><Avatar person={person}/><span>{person.name}</span></Tappable>)}
-    </div>
-    {!target && createPortal(effects,document.body)}
-    {target && <Sheet title={t('sendEmojiTo',{name:target.name})} className="emoji-sheet" style={sheetStyle} onClose={() => { setTarget(null); setOutgoing([]); }}>
-      <span className="emoji-recipient" ref={targetPortrait}><Avatar person={target}/></span>
-      <div className="emoji-grid" role="group" aria-label={t('emojiChoices')}>{REACTION_EMOJIS.map(emoji => <Tappable Component="button" type="button" key={emoji} aria-label={t('sendEmoji',{emoji})} data-emoji={emoji} disabled={disabled} onClick={event => send(emoji,event.currentTarget)}>{emoji}</Tappable>)}</div>
-      <form className="emoji-custom" onSubmit={event => { event.preventDefault(); send(custom,event.currentTarget); }}>
-        <input aria-label={t('customEmoji')} placeholder={t('customEmoji')} value={custom} maxLength={64} onChange={event => { setCustom(event.target.value); setInvalid(false); }}/>
+    {entryTarget ? createPortal(people,entryTarget) : entryTarget === undefined ? people : null}
+    {target && <Sheet title={person.name} className="emoji-sheet" style={sheetStyle} onClose={() => { setTarget(null); setOutgoing([]); }}>
+      <div className="emoji-person-row"><span className="emoji-recipient" ref={targetPortrait}><Avatar person={person}/></span><div className="emoji-person-info"><strong>{person.name}</strong>{place && <span className="emoji-person-location"><span aria-hidden="true">📍</span>{place}</span>}</div></div>
+      <div className="emoji-drawer" role="group" aria-label={t('emojiChoices')}>{REACTION_EMOJIS.map(emoji => <Tappable Component="button" type="button" key={emoji} aria-label={t('sendEmoji',{emoji})} data-emoji={emoji} disabled={disabled} onClick={event => send(emoji,event.currentTarget)}>{emoji}</Tappable>)}<Tappable Component="button" type="button" className="emoji-custom-toggle" aria-label={t('customEmoji')} aria-expanded={customOpen} onClick={() => setCustomOpen(value => !value)}>⌨️</Tappable></div>
+      {customOpen && <form className="emoji-custom" onSubmit={event => { event.preventDefault(); send(custom,event.currentTarget); }}>
+        <input aria-label={t('customEmoji')} placeholder="☺︎" value={custom} maxLength={64} onChange={event => { setCustom(event.target.value); setInvalid(false); }}/>
         <Tappable Component="button" type="submit" disabled={!custom.trim() || disabled} aria-label={t('sendEmoji',{emoji:custom})}>↑</Tappable>
-      </form>
+      </form>}
       {invalid && <span className="emoji-error" role="status">{t('errorReaction')}</span>}
       {failures.length > 0 && <button type="button" className="emoji-retry" onClick={() => failures.forEach(payload => void transmit(payload))}>{t('reactionRetry',{n:failures.length})}</button>}
-      <div className="emoji-flight-layer">{outgoing.map(event => <FlyingEmoji key={event.id} event={event} onFinish={finishOutgoing}/>)}{incoming.slice(0,3).map(event => <FlyingEmoji key={event.id} event={event} onFinish={finishIncoming}/>)}</div>
     </Sheet>}
+    {effectHost && createPortal(<div className="emoji-flight-layer" hidden={!visible}>
+      {outgoing.map(event => <FlyingEmoji key={event.id} event={event} onFinish={finishOutgoing} visible={visible}/>)}
+      {[...bursts].slice(0,3).map(([id,events],lane) => <IncomingBurst key={id} events={events} lane={lane} visible={visible} onSeen={markSeen} onFinish={finishIncoming}/>)}
+    </div>,effectHost)}
     {!target && failures.length > 0 && <button type="button" className="emoji-retry emoji-retry-capsule" onClick={() => failures.forEach(payload => void transmit(payload))}>{t('reactionRetry',{n:failures.length})}</button>}
   </>;
 }

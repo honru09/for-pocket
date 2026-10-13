@@ -19,21 +19,42 @@ export function createStore(dataDir, { debounceMs = 40, logger = console } = {})
 
   async function load() {
     if (state) return state;
+    let source;
     try {
-      state = JSON.parse(await readFile(file, 'utf8'));
-      if (state.version !== 2) throw new Error('Unsupported data version');
-      // Apply the account-wide ledger rule to existing v2 data as soon as it
-      // is loaded.  This is intentionally in-memory first; the normal
-      // debounced snapshot writes the migrated history without delaying the
-      // first response.
-      if (syncAllLedgerGroups(state)) { needsPersist = true; dirty = true; }
+      source = await readFile(file, 'utf8');
     } catch (error) {
+      // Only an absent primary snapshot starts the legacy migration. A backup
+      // or projection failure must never fall back to an empty database.
       if (error.code !== 'ENOENT') throw error;
-      state = await migrate();
-      syncAllLedgerGroups(state);
+      const candidate = await migrate();
+      syncAllLedgerGroups(candidate);
+      candidate.ledgerSyncVersion = 2;
+      state = candidate;
       needsPersist = true;
       dirty = true;
+      return state;
     }
+    const candidate = JSON.parse(source);
+    if (candidate.version !== 2) throw new Error('Unsupported data version');
+    const migrationNeeded = candidate.ledgerSyncVersion !== 2;
+    if (migrationNeeded) {
+      // Publish no cached state until backup + migration succeed. A failed
+      // first request therefore cannot make a second request bypass recovery.
+      const backup = path.join(dataDir, '_pocket-before-owned-ledgers-v2.json');
+      try { await writeFile(backup, source, { flag:'wx', mode:0o600, flush:true }); }
+      catch (error) {
+        if (error.code !== 'EEXIST') throw error;
+        // A prior interrupted write can leave this name occupied by an empty
+        // or truncated file. Preserve it, but do not treat it as a safe backup.
+        const saved = JSON.parse(await readFile(backup, 'utf8'));
+        if (saved?.version !== 2 || !saved.users || typeof saved.users !== 'object' || Array.isArray(saved.users)
+          || !saved.ledgers || typeof saved.ledgers !== 'object' || Array.isArray(saved.ledgers)) throw new Error('Invalid ledger migration backup');
+      }
+      candidate.ledgerSyncVersion = 2;
+    }
+    const changed = syncAllLedgerGroups(candidate);
+    state = candidate;
+    if (migrationNeeded || changed) { needsPersist = true; dirty = true; }
     return state;
   }
   async function migrate() {
@@ -47,7 +68,7 @@ export function createStore(dataDir, { debounceMs = 40, logger = console } = {})
       if (!Array.isArray(profile.expenses)) continue;
       const settings = validateSettings(profile.settings);
       const legacyMembers = settings.consumers;
-      db.ledgers[id] = { settings: { ...settings, consumers: [] }, expenses: profile.expenses.map(entry => ({ ...entry, member: entry.member || legacyMembers.find(m => m.id === entry.consumer) || null })) };
+      db.ledgers[id] = { settings: { ...settings, consumers: [] }, expenses: profile.expenses.map(entry => ({ ...entry, ledgerId:entry.ledgerId || id, member: entry.member || legacyMembers.find(m => m.id === entry.consumer) || null })) };
       if (!id.startsWith('cir_')) db.users[id] = { id, name: 'Me', color: 'blue', avatar: 'cat', settings: { ...settings, consumers: [] }, activeCircleId: null };
     }
     for (const [id, p] of Object.entries(shares.userProfiles || {})) {

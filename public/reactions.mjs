@@ -1,5 +1,20 @@
 const segmenter = new Intl.Segmenter('en', { granularity: 'grapheme' });
-export const REACTION_EMOJIS = ['❤️', '😀', '🥰', '😘', '💕', '🤗', '😊', '😎', '😴', '🤭', '🍜', '☕', '🍰', '🌷', '🐱', '🧀'];
+export const REACTION_EMOJIS = [
+  '❤️', '😀', '🥰', '😘', '💕', '🤗', '😊', '😎', '🤭', '😂', '🥹', '😍',
+  '😚', '😋', '😛', '🤪', '😇', '🫠', '🤩', '🥳', '😏', '🙃', '😉', '😌',
+  '😴', '🥱', '😮', '😳', '🥺', '😭', '😤', '😶‍🌫️', '🫣', '🤔', '🙄', '🤫',
+  '🫶', '💛', '💗', '💌', '💋', '👍', '👌', '✌️', '🤞', '👏', '🙌', '💪',
+  '🐱', '🐶', '🐻', '🐼', '🐰', '🐹', '🐥', '🦊', '🐸', '🐣', '🦋', '🐾',
+  '🧀', '🍜', '☕', '🍰', '🍓', '🍒', '🍑', '🍙', '🍣', '🍔', '🍟', '🧋',
+  '🌷', '🌻', '🌸', '🍀', '🌈', '☀️', '🌙', '☁️', '🎈', '🎁', '🎉', '🧸',
+];
+
+const EMOJI_DIGITS = ['0️⃣', '1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣'];
+export function formatReactionCount(value) {
+  const count = Math.floor(Number(value));
+  if (!Number.isSafeInteger(count) || count < 2) return '';
+  return `✖️${count === 10 ? '🔟' : String(count).split('').map(digit => EMOJI_DIGITS[Number(digit)]).join('')}`;
+}
 
 export function normalizeReactionEmoji(value) {
   if (typeof value !== 'string') return null;

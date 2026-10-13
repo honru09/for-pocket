@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { createStore } from '../store.mjs';
 import { createApp } from '../server.mjs';
-import { createHmac } from 'node:crypto';
+import { createHmac, randomInt } from 'node:crypto';
 import { once } from 'node:events';
 import { deriveTelegramWebhookSecret } from '../telegram-config.mjs';
 
@@ -18,14 +18,24 @@ function signed() {
 }
 async function appFixture(t, options) {
   const dataDir = await mkdtemp(path.join(os.tmpdir(), 'for-store-test-'));
-  const server = createApp({ dataDir, storeOptions: { debounceMs: 5000 }, token, ...options });
-  server.listen(0, '127.0.0.1');
-  await once(server, 'listening');
+  let server, base;
+  // This host can allocate ephemeral ports in Fetch's forbidden low range.
+  // Pick from a safe high range and retry collisions without making an HTTP
+  // probe that would interfere with intentional persistence-failure tests.
+  for (let attempt = 0; attempt < 12; attempt++) {
+    server = createApp({ dataDir, storeOptions: { debounceMs: 5000 }, token, ...options });
+    server.listen(randomInt(20000,60000), '127.0.0.1');
+    try { await once(server, 'listening'); base = `http://127.0.0.1:${server.address().port}`; break; }
+    catch (error) {
+      await new Promise(resolve => server.close(resolve));
+      if (error.code !== 'EADDRINUSE' || attempt === 11) throw error;
+    }
+  }
   t.after(async () => {
     await new Promise((resolve, reject) => server.close(error => error ? reject(error) : resolve()));
     await rm(dataDir, { recursive: true, force: true });
   });
-  return { server, dataDir, base: `http://127.0.0.1:${server.address().port}` };
+  return { server, dataDir, base };
 }
 
 function cloudEnvironment(t, asyncMode) {

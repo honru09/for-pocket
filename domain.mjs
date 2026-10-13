@@ -1,8 +1,9 @@
 import { randomUUID, randomBytes, randomInt, createHash } from 'node:crypto';
 import { initialSettings, resolveLanguage, validateSettings, validateExpense, validateExpenseUpdate, validateUserProfile, validateEntryTime, dateKey, MAX_CIRCLE_MEMBERS, MAX_CATEGORIES } from './public/shared.mjs';
 import { validTimezone } from './public/timezone.mjs';
-import { syncLedgerGroup, syncAllLedgerGroups } from './ledger-sync.mjs';
+import { expenseOwnerId, syncLedgerGroup, syncAllLedgerGroups } from './ledger-sync.mjs';
 import { handleCircleReactions } from './circle-reactions.mjs';
+import { circleMemberLocation, updateCirclePresence } from './circle-presence.mjs';
 
 export class RequestError extends Error { constructor(message, status = 400) { super(message); this.status = status; } }
 export const fail = (message, status) => { throw new RequestError(message, status); };
@@ -37,9 +38,7 @@ function context(db, uid) {
   }
   const circle = circleFor(db, uid), ledgerId = circle?.ledgerId || uid;
   db.ledgers[ledgerId] ||= { settings: initialSettings(), expenses: [] };
-  // A profile read is also the migration boundary for historical records in
-  // this connected account graph.  It keeps circle switching instantaneous
-  // while making old entries available in the newly selected ledger.
+  // Refresh ownership-based views, including removal of old leaked mirrors.
   syncLedgerGroup(db, ledgerId);
   return { circle, ledgerId, ledger: db.ledgers[ledgerId], consumers: (circle?.members || [uid]).map(id => member(db, id)) };
 }
@@ -50,7 +49,7 @@ function canManageEntry(db, uid, entry) {
   const circle = entryCircle(db, entry);
   return entry?.createdBy === uid || (!entry?.createdBy && entry?.ledgerId === uid) || Boolean(circle?.admins.includes(uid));
 }
-function viewCircle(db, c, uid) { return { id: c.id, name: c.name, isAdmin: c.admins.includes(uid), memberCount: c.members.length, members: c.members.map(id => ({ ...member(db, id), isAdmin: c.admins.includes(id) })) }; }
+function viewCircle(db, c, uid) { return { id: c.id, name: c.name, isAdmin: c.admins.includes(uid), memberCount: c.members.length, members: c.members.map(id => ({ ...member(db, id), isAdmin: c.admins.includes(id), ...(circleMemberLocation(c,id) ? {location:circleMemberLocation(c,id)} : {}) })) }; }
 function requireAdmin(c, uid) { if (!c.admins.includes(uid)) fail('errorAdminOnly', 403); }
 export function visible(db, uid) {
   const user = db.users[uid], { circle, ledgerId, ledger, consumers } = context(db, uid);
@@ -97,10 +96,12 @@ function mergeAccounts(db, source, target) {
     if (!existing) to.expenses.push(entry);
     else if (JSON.stringify(existing) !== JSON.stringify(entry)) to.expenses.push({ ...entry, id: randomUUID() });
   }
-  for (const ledger of Object.values(db.ledgers)) for (const entry of ledger.expenses) {
-    if (entry.consumer === memberId(source)) { entry.consumer = memberId(target); if (entry.member) entry.member.id = memberId(target); }
+  for (const entries of [...Object.values(db.ledgers).map(ledger => ledger.expenses), db.ledgerSyncArchive || []]) for (const entry of entries) {
+    if (entry.consumer === memberId(source)) entry.consumer = memberId(target);
+    if (entry.member?.id === memberId(source)) entry.member.id = memberId(target);
     if (Array.isArray(entry.splitParticipants)) entry.splitParticipants = [...new Set(entry.splitParticipants.map(id => id === memberId(source) ? memberId(target) : id))];
     if (entry.createdBy === source) entry.createdBy = target;
+    if (entry.ledgerId === source) entry.ledgerId = target;
   }
   for (const c of Object.values(db.circles)) {
     c.members = [...new Set(c.members.map(id => id === source ? target : id))];
@@ -109,17 +110,35 @@ function mergeAccounts(db, source, target) {
       if (reaction.from === source) reaction.from = target;
       if (reaction.to === source) reaction.to = target;
     }
+    for (const burst of c.reactionBursts || []) {
+      if (burst.from === source) burst.from = target;
+      if (burst.to === source) burst.to = target;
+    }
+    if (c.locations?.[source]) {
+      if (!c.locations[target] || Number(c.locations[source].updatedAt) > Number(c.locations[target].updatedAt)) c.locations[target] = c.locations[source];
+      delete c.locations[source];
+    }
   }
   for (const [key, id] of Object.entries(db.identities)) if (id === source) db.identities[key] = target;
   for (const s of Object.values(db.sessions)) if (s.userId === source) s.userId = target;
+  if (db.telegram?.preferences?.[source]) {
+    const previous = db.telegram.preferences[target], incoming = db.telegram.preferences[source];
+    const recent = !previous || Number(incoming.seenAt || incoming.updatedAt || 0) > Number(previous.seenAt || previous.updatedAt || 0);
+    db.telegram.preferences[target] = recent ? { ...previous, ...incoming } : { ...incoming, ...previous };
+    delete db.telegram.preferences[source];
+  }
+  for (const [key, reminder] of Object.entries(db.cron?.missingEntryReminders || {})) if (reminder?.uid === source || key.startsWith(`${source}:`)) {
+    const targetKey = `${target}:${reminder.localDate || key.slice(source.length + 1)}`;
+    const current = db.cron.missingEntryReminders[targetKey];
+    if (!current || reminder.status === 'sent' && current.status !== 'sent') db.cron.missingEntryReminders[targetKey] = { ...reminder, uid:target };
+    delete db.cron.missingEntryReminders[key];
+  }
   db.users[target].googleEmail ||= db.users[source].googleEmail;
   db.users[target].activeCircleId ||= db.users[source].activeCircleId;
   for (const [key, item] of Object.entries(db.links)) if ([source, target].includes(item.userId)) delete db.links[key];
   forgetPendingLocations(db, source, target);
   delete db.ledgers[source]; delete db.users[source];
-  // Account linking can connect previously separate personal/circle graphs.
-  // Rebuild those mirrors once so the merged account sees the complete old
-  // history from every ledger it can access.
+  // Re-project the merged person's records into their own ledgers.
   syncAllLedgerGroups(db);
 }
 export function googleLogin(db, payload, { link, uid, now }) {
@@ -137,6 +156,11 @@ export function handleDomain(db, uid, route, method, body, { now, limit, ledgerQ
     return handleCircleReactions(db, ctx.circle, uid, route, method, body, now, limit, fail);
   }
   if (route === '/profile' && method === 'GET') return visible(db, uid);
+  if (route === '/location/presence-clear' && method === 'POST') {
+    const ctx=checkLedger(db,uid,body.ledgerId);
+    updateCirclePresence(db,uid,ctx.ledgerId,null,now);
+    return {ok:true};
+  }
   if (route === '/auth/link-code' && method === 'POST') {
     limit(`link:${uid}`);
     for (const [key, entry] of Object.entries(db.links)) if (entry.userId === uid || entry.expiresAt <= now) delete db.links[key];
@@ -219,6 +243,7 @@ export function handleDomain(db, uid, route, method, body, { now, limit, ledgerQ
       const departing = route === '/circles/leave' ? uid : c.members.find(id => memberId(id) === body.memberId);
       if (!departing) fail('errorMembership', 403);
       forgetPendingLocations(db, departing);
+      if (c.locations) delete c.locations[departing];
       c.members = c.members.filter(id => id !== departing); c.admins = c.admins.filter(id => id !== departing);
       if (c.members.length && !c.admins.length) c.admins = [c.members[0]];
       if (db.users[departing].activeCircleId === c.id) db.users[departing].activeCircleId = null;
@@ -241,7 +266,14 @@ export function handleDomain(db, uid, route, method, body, { now, limit, ledgerQ
   }
   if (route === '/expenses' && method === 'POST') {
     const { ledger, ledgerId, consumers } = checkLedger(db, uid, body.ledgerId), existing = ledger.expenses.find(e => e.id === body.id);
-    if (existing) { if (existing.deletedAt) fail('errorDeleted', 409); return existing; }
+    if (existing) {
+      if (existing.createdBy !== uid && expenseOwnerId(db, existing) !== uid) fail('errorExpenseId', 409);
+      if (existing.deletedAt) fail('errorDeleted', 409);
+      return existing;
+    }
+    // Client-generated IDs are only idempotent for their own visible record.
+    // A guessed ID in another ledger must never replace or reveal that record.
+    if ([...Object.values(db.ledgers).map(item => item.expenses || []), db.ledgerSyncArchive || []].some(entries => entries.some(entry => entry.id === body.id))) fail('errorExpenseId', 409);
     if (ledger.expenses.length >= 10000) fail('errorCapacity', 409);
     const valid = validateExpense(body, { ...ledger.settings, consumers });
     const occurredAt = valid.occurredAt || new Date(now).toISOString();
