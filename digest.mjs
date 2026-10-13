@@ -359,7 +359,7 @@ export function createDigestService({ store, summarizer, callTelegram, token = '
             if (!checkpoint.sent) {
               let recipientStatus = 'sent';
               try {
-                const response = await telegram('sendMessage', { chat_id: recipient.chatId, text: generated[language] });
+                const response = await telegram('sendMessage', { chat_id: recipient.chatId, text: generated[language], disable_notification: true });
                 await store.run(db => {
                   const item = db.cron?.digestDeliveries?.[checkpoint.key];
                   if (item) Object.assign(item, { status: 'sent', sentAt: at, messageId: response?.message_id ?? null });

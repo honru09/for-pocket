@@ -448,7 +448,10 @@ export function createTelegramHandler({
   }
 
   async function sendMessage(chatId, text, extra = {}) {
-    return botCall('sendMessage', { chat_id: chatId, text, ...extra });
+    // Keep every bot reply quiet. This covers previews, confirmations,
+    // reminders and casual chat without relying on each call site to remember
+    // Telegram's notification flag.
+    return botCall('sendMessage', { chat_id: chatId, text, ...extra, disable_notification: true });
   }
 
   async function editMessage(chatId, messageId, text, extra = {}) {

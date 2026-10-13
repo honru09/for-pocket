@@ -32,6 +32,7 @@ test('ordinary Telegram conversation is answered in the chat branch', async t =>
   assert.equal(result.kind, 'chat');
   assert.equal(parsed.length, 0);
   assert.match(calls[0].params.text, /辛苦/);
+  assert.equal(calls[0].params.disable_notification, true);
   const db = await store.run(value => structuredClone(value));
   assert.equal(db.telegram.preferences['101'].chatId, '101');
 });
@@ -46,6 +47,7 @@ test('a spending sentence still uses the existing parser', async t => {
   assert.equal(result.kind, 'draft');
   assert.equal(parsed.length, 1);
   assert.match(calls[0].params.text, /850/);
+  assert.equal(calls[0].params.disable_notification, true);
 });
 
 test('ordinary numbers and future shopping plans stay in conversation while bare amounts remain recordable', async t => {
@@ -100,6 +102,18 @@ test('expense notifications are silent and edits/deletes reuse stored Telegram m
   const db = await store.run(value => structuredClone(value));
   assert.deepEqual(db.telegram.expenseMessages, {});
   assert.match(expenseNotificationText(entry, 'uk'), /850/);
+});
+
+test('expense notification fan-out excludes the Telegram account that recorded it', async t => {
+  const { store } = await storeFixture(t, syncState()), calls = [];
+  const sync = createTelegramExpenseSync({ store, now: () => at, callTelegram: async (method, params) => {
+    calls.push({ method, params }); return { message_id: 900 + calls.length };
+  } });
+  const entry = await store.run(db => structuredClone(db.ledgers.cir_ledger.expenses[0]));
+  const result = await sync.notify(entry, { excludeUid: '101' });
+  assert.equal(result.sent, 1);
+  assert.deepEqual(calls.map(item => item.params.chat_id), ['202']);
+  assert.equal(calls[0].params.disable_notification, true);
 });
 
 test('expense sync deduplicates concurrent sends and never leaks a personal ledger', async t => {

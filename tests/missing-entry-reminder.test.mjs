@@ -44,7 +44,7 @@ test('22:00 reminders use each user timezone and recent Telegram language, with 
   assert.equal((await f.service.tick()).sent, 1);
   assert.equal(f.calls[0].params.chat_id, '101');
   assert.equal(f.calls[0].params.text, missingEntryReminderText('zh'));
-  assert.equal(f.calls[0].params.disable_notification, undefined);
+  assert.equal(f.calls[0].params.disable_notification, true);
   assert.equal((await f.service.tick({ at: tokyo22 + 15 * 60000 })).sent, 0);
   const newYork22 = Date.parse('2026-10-14T02:00:00.000Z');
   assert.equal((await f.service.tick({ at: newYork22 })).sent, 1);

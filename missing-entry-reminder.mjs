@@ -142,7 +142,7 @@ export function createMissingEntryReminderService({ store, token = '', callTeleg
       let accepted = false;
       try {
         await store.flush?.();
-        const response = await telegram('sendMessage', { chat_id: claim.recipient.chatId, text: missingEntryReminderText(claim.recipient.language) });
+        const response = await telegram('sendMessage', { chat_id: claim.recipient.chatId, text: missingEntryReminderText(claim.recipient.language), disable_notification: true });
         const messageId = Number(response?.message_id);
         if (!Number.isSafeInteger(messageId) || messageId <= 0) throw new Error('Telegram returned no message id');
         accepted = true;

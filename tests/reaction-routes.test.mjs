@@ -126,7 +126,7 @@ test('cron HTTP tick dispatches local 22:00 missing-entry reminders only once an
   assert.equal(first.status, 200); assert.equal(first.body.reminders.sent, 2);
   assert.equal(f.calls.find(item => item.parameters.chat_id === '101').parameters.text, missingEntryReminderText('zh'));
   assert.equal(f.calls.find(item => item.parameters.chat_id === '202').parameters.text, missingEntryReminderText('uk'));
-  assert.ok(f.calls.every(item => item.method === 'sendMessage' && item.parameters.disable_notification === undefined));
+  assert.ok(f.calls.every(item => item.method === 'sendMessage' && item.parameters.disable_notification === true));
   f.advance(15 * 60000);
   const duplicate = await f.request('/api/cron/tick', { secret: cronSecret, body: {} });
   assert.equal(duplicate.body.reminders.sent, 0); assert.equal(f.calls.length, 2);

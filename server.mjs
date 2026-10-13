@@ -325,6 +325,10 @@ export function createApp({ token = process.env.BOT_TOKEN || '', dataDir = path.
           } catch { fail('errorGoogleCredential', 401); }
         }
         const route = url.pathname.slice(4);
+        // Keep the authenticated actor available to post-commit hooks.  The
+        // Telegram companion sync uses it to avoid sending the entry back to
+        // the person who just recorded it from the Mini App.
+        let actorUid = '';
         const result = await store.run(db => {
           // Logout is deliberately idempotent and does not authenticate via
           // Telegram initData, so a stale payload cannot mint a replacement
@@ -344,6 +348,7 @@ export function createApp({ token = process.env.BOT_TOKEN || '', dataDir = path.
           }
           if (googlePayload) return googleLogin(db, { ...googlePayload, locale: resolveLanguage(body.language || googlePayload.locale || 'en') }, { link: body.link === true, uid: body.link === true ? resolveAuth(db, req) : null, now: now() });
           const uid = resolveAuth(db, req);
+          actorUid = uid;
           return handleDomain(db, uid, route, req.method, body, { now: now(), limit, ledgerQuery: url.searchParams.get('ledgerId') });
         });
         // Telegram companion notifications are best-effort and never change
@@ -353,13 +358,13 @@ export function createApp({ token = process.env.BOT_TOKEN || '', dataDir = path.
           await reactionNotifications.afterReaction(result);
         } else if (['/expenses', '/expenses/import'].includes(route) && req.method === 'POST') {
           const entries = Array.isArray(result?.entries) ? result.entries : [result];
-          for (const entry of entries) { try { await expenseSync.notify(entry); } catch {} }
+          for (const entry of entries) { try { await expenseSync.notify(entry, { excludeUid: actorUid }); } catch {} }
         } else if (/^\/expenses\/[a-zA-Z0-9_-]{8,64}$/.test(route) && ['PUT','PATCH'].includes(req.method)) {
           try { await expenseSync.sync(result, 'edit'); } catch {}
         } else if (/^\/expenses\/[a-zA-Z0-9_-]{8,64}$/.test(route) && req.method === 'DELETE') {
           try { await expenseSync.sync(result, 'delete'); } catch {}
         } else if (/^\/expenses\/[a-zA-Z0-9_-]{8,64}\/restore$/.test(route) && req.method === 'POST') {
-          try { await expenseSync.notify(result); } catch {}
+          try { await expenseSync.notify(result, { excludeUid: actorUid }); } catch {}
         }
         // Return a shallow response envelope after the store commit. Never
         // mutate an object returned from store.run: domain entries can still

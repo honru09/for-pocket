@@ -89,7 +89,7 @@ export function createTelegramExpenseSync({ store, token = '', callTelegram, now
   const inflight = new Map();
   const CLAIM_TTL = 2 * 60 * 1000;
 
-  async function notify(entry, { excludeChatId = '' } = {}) {
+  async function notify(entry, { excludeChatId = '', excludeUid = '' } = {}) {
     if (!telegram || !entry?.id || entry.deletedAt) return { sent: 0, skipped: true };
     const snapshot = await store.run(db => {
       const state = ensureSyncState(db);
@@ -99,7 +99,14 @@ export function createTelegramExpenseSync({ store, token = '', callTelegram, now
       const actual = ledger?.expenses?.find(item => item.id === entry.id);
       if (!actual || actual.deletedAt) return { key, done: true, recipients: [] };
       const covered = new Set(existing.filter(item => Number(item?.messageId) > 0 && !['failed', 'sending'].includes(item?.status)).map(item => String(item.chatId)));
-      const recipients = knownChats(db, entry.ledgerId).filter(item => !covered.has(String(item.chatId)));
+      // A Telegram-authenticated request can identify the account that just
+      // created the entry. Keep that account out of the companion fan-out even
+      // when its chat is bound to the same circle. The chat-id exclusion is
+      // retained for bot confirmations, where the sender chat is authoritative.
+      const actorUid = String(excludeUid || '').trim();
+      const recipients = knownChats(db, entry.ledgerId)
+        .filter(item => !covered.has(String(item.chatId)))
+        .filter(item => !actorUid || String(item.uid) !== actorUid);
       return { key, done: Boolean(existing.length && !recipients.length), recipients, actual: structuredClone(actual) };
     });
     if (snapshot.done) return { sent: 0, skipped: true };

@@ -473,11 +473,15 @@ export default function App() {
     }
   }, []);
   useEffect(() => {
-    if (!ready || !locationEnabled) return;
+    // A route change inside the SPA does not fire a visibility/focus event.
+    // Refresh when the record surface is opened so a previously granted
+    // location is current before the next entry, while keeping history and
+    // settings free from background GPS work.
+    if (!ready || !locationEnabled || view !== 'record') return;
     const refresh = () => { void captureLocation({ refresh:true }); };
     refresh();
     return bindForegroundRefresh({ telegram, refresh });
-  }, [ready, locationEnabled, locationScope, locationGeneration, captureLocation]);
+  }, [ready, locationEnabled, locationScope, locationGeneration, view, captureLocation]);
   useEffect(() => {
     if (!ready || !locationScope) return;
     const sync = async () => {

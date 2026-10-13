@@ -104,7 +104,7 @@ test('preferences keyed by uid discover a bound chat and failed recipients retry
   assert.equal(firstShared.deliveryFailed, true);
   assert.equal(firstShared.recipients.find(item => item.chatId === '101').status, 'sent');
   assert.equal(firstShared.recipients.find(item => item.chatId === '202').status, 'failed');
-  assert.equal(f.calls[0].params.disable_notification, undefined, 'digest notifications are ordinary');
+  assert.equal(f.calls[0].params.disable_notification, true, 'digest notifications are silent');
   fail202 = false;
   const second = await f.service.processSlot('morning', { at: at + 1 });
   const retried = f.calls.filter(call => String(call.params.chat_id) === '202');
