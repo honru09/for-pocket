@@ -55,6 +55,26 @@
 .for-root .entry-more .for-icon{width:18px;height:18px}
 @media(max-width:360px){.for-root .history-title-bar{gap:5px}.for-root .history-title-bar h1{font-size:16px}.for-root .history-toolbar{gap:3px;grid-template-columns:60px minmax(0,1fr) 54px 36px}.for-root #history-view .history-toolbar select{padding-left:5px;padding-right:17px;background-position:right 5px center}.for-root .history-toolbar .postcard-button{width:36px;min-width:36px;padding:9px}.for-root .history-summary{padding:14px;gap:10px}}
 
+/* On the smallest usable WebViews the empty-ledger action used to sit
+   underneath the fixed tab bar on first paint. Keep the button in the
+   visible portion of the page while retaining the calm vertical spacing on
+   taller phones. */
+@media (max-width:600px) and (max-height:520px) {
+  .for-root[data-view="history"] .empty-state { padding-top:0; padding-bottom:24px; }
+  .for-root[data-view="history"] .empty-state > .empty-face {
+    width:52px;
+    height:52px;
+    margin-bottom:0;
+    font-size:28px;
+  }
+  .for-root[data-view="history"] .empty-state > button {
+    position:relative;
+    z-index:11;
+    transform:none;
+    margin-top:0;
+  }
+}
+
 /* Final surface polish: make the fast path feel continuous between screens,
    while keeping the paper-like palette quiet and touch-first. */
 .for-root .page {
@@ -110,6 +130,144 @@
 }
 .for-root .settings-group .settings-row:active:not(:disabled) {
   background:var(--paper);
+}
+
+/* One visual rhythm for the quiet settings surface. Telegram UI wraps Button
+   children in a heading element, so keep the icon, label, value and chevron
+   on the same baseline at every language length. */
+.for-root .settings-organized {
+  width:min(100%,520px);
+  gap:10px;
+  padding-bottom:8px;
+}
+.for-root .settings-profile {
+  min-height:68px;
+  padding:10px 14px;
+  border-radius:20px;
+}
+.for-root .settings-profile>h6 {
+  display:flex;
+  align-items:center;
+  gap:12px;
+  width:100%;
+  margin:0;
+  text-align:left;
+  font-size:13px;
+  line-height:1.25;
+}
+.for-root .settings-profile .person-avatar {
+  width:44px;
+  height:44px;
+  border-radius:15px;
+}
+.for-root .settings-profile .person-avatar :is(svg,.cloud-avatar) { width:36px; height:36px; }
+.for-root .settings-profile>h6>span:nth-child(2) {
+  display:flex;
+  flex:1;
+  min-width:0;
+  flex-direction:column;
+  align-items:flex-start;
+  gap:3px;
+}
+.for-root .settings-profile strong { font-size:15px; line-height:20px; }
+.for-root .settings-profile small { font-size:11px; line-height:15px; }
+.for-root .settings-group {
+  padding:2px 14px;
+  border-radius:18px;
+  background:color-mix(in srgb,var(--control) 30%,var(--paper));
+}
+.for-root .settings-group .settings-row,
+.for-root .settings-choice {
+  min-height:50px;
+  height:50px;
+  padding:6px 0;
+  border-bottom:1px solid color-mix(in srgb,var(--soft-line) 70%,transparent);
+}
+.for-root .settings-group .settings-row>h6 {
+  display:flex;
+  align-items:center;
+  gap:10px;
+  width:100%;
+  margin:0;
+  font-size:13px;
+  line-height:18px;
+  font-weight:700;
+}
+.for-root .settings-group .settings-row>h6>.for-icon { width:19px; height:19px; flex:none; color:var(--muted); }
+.for-root .settings-group .settings-row>h6>span:nth-child(2) { flex:1; min-width:0; margin:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.for-root .settings-group .settings-row>h6>span:last-child { margin-left:auto; color:var(--muted); font-size:17px; font-weight:500; }
+.for-root .settings-choice { gap:12px; font-size:13px; line-height:18px; }
+.for-root .settings-choice>span { flex:1; min-width:0; }
+.for-root .settings-choice select { width:auto; max-width:58%; height:36px; padding:0 22px 0 8px; font-size:13px; line-height:18px; font-weight:600; color:#66745b; text-align:right; }
+
+/* On the record fast path the member control is an avatar rail. Names are
+   available from the sheet/card labels, while the keypad keeps its width. */
+.for-root .circle-presence-host { flex:1 1 auto; min-width:0; overflow:visible; }
+.for-root .circle-presence { align-items:center; justify-content:flex-start; gap:8px; padding:2px 1px; overflow:visible; }
+.for-root .circle-presence .presence-chip {
+  flex:0 0 44px;
+  width:44px;
+  min-width:44px;
+  height:44px;
+  padding:3px;
+  border-radius:15px;
+  gap:0;
+  background:transparent;
+  border:1px solid transparent;
+}
+.for-root .circle-presence .presence-chip .person-avatar,
+.for-root .circle-presence .presence-chip .person-avatar :is(svg,.cloud-avatar) { width:36px; height:36px; }
+.for-root .circle-presence .presence-chip[aria-expanded=true] { background:var(--owner-tint); border-color:var(--owner-line); }
+.for-root .circle-presence .presence-chip:active { transform:scale(.9); }
+
+/* Keep the reaction rail available on secondary pages without competing
+   with the circle switcher or profile button. The record page still uses the
+   wider footer rail; this compact variant only holds the avatar targets. */
+.for-root .app-header .app-header-reactions {
+  display:flex;
+  flex:0 0 auto;
+  width:auto;
+  max-width:96px;
+  min-width:0;
+  overflow:hidden;
+  margin-left:4px;
+}
+.for-root .app-header .app-header-reactions .circle-presence {
+  flex:0 0 auto;
+  max-width:96px;
+  gap:4px;
+  padding:1px;
+  overflow:hidden;
+}
+.for-root .app-header .app-header-reactions .presence-chip {
+  flex:0 0 38px;
+  width:38px;
+  min-width:38px;
+  height:38px;
+  padding:2px;
+  border-radius:13px;
+}
+.for-root .app-header .app-header-reactions .presence-chip .person-avatar,
+.for-root .app-header .app-header-reactions .presence-chip .person-avatar :is(svg,.cloud-avatar) {
+  width:32px;
+  height:32px;
+}
+
+/* Keep the upper record hierarchy airy while preserving the one-screen grid. */
+@media (max-width:600px) {
+  .for-root[data-view=record] .app-header { height:42px; margin-bottom:4px; }
+  .for-root[data-view=record] .app-shell { padding-left:12px; padding-right:12px; }
+  .for-root[data-view=record] #record-view .today-strip { margin-bottom:2px; }
+  .for-root[data-view=record] #record-view .amount-stage { border-radius:22px; padding-left:14px; padding-right:14px; }
+  .for-root[data-view=record] #record-view .record-layout { gap:5px; }
+  .for-root[data-view=record] #record-view .key { border-radius:14px; }
+  .for-root[data-view=record] #record-view .finish { padding-top:1px; }
+  .for-root .settings-organized { max-width:none; }
+  .for-root .app-header .app-header-reactions { max-width:84px; margin-left:2px; }
+  .for-root .app-header .app-header-reactions .circle-presence { max-width:84px; gap:3px; }
+  .for-root .app-header .app-header-reactions .presence-chip { flex-basis:36px; width:36px; min-width:36px; height:36px; }
+  .for-root .app-header .app-header-reactions .presence-chip .person-avatar,
+  .for-root .app-header .app-header-reactions .presence-chip .person-avatar :is(svg,.cloud-avatar) { width:30px; height:30px; }
 }
 
 /* The fixed tab bar already owns the bottom edge of the record screen. Keep

@@ -1,0 +1,125 @@
+/* for. UI kit v2 — optional, not wired into the application. */
+:root {
+  --pocket-paper: #f8f7f1;
+  --pocket-ink: #333a30;
+  --pocket-secondary: #606b55;
+  --pocket-muted: #879077;
+  --pocket-line: #d9dece;
+  --pocket-sage: #e6ebd7;
+  --pocket-cloud: #f9c678;
+  --pocket-coral: #ed885f;
+  --pocket-focus: #596d40;
+  --pocket-radius-card: 22px;
+  --pocket-radius-control: 14px;
+  --pocket-shadow-soft: 0 8px 24px rgba(51, 58, 48, .08);
+}
+
+.pocket-button {
+  --button-bg: var(--pocket-ink);
+  --button-fg: var(--pocket-paper);
+  --button-border: var(--pocket-ink);
+  display: inline-flex;
+  min-height: 46px;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  padding: 10px 16px;
+  border: 1px solid var(--button-border);
+  border-radius: var(--pocket-radius-control);
+  background: var(--button-bg);
+  color: var(--button-fg);
+  font: 700 13px/1.2 "Nunito", "Microsoft YaHei", system-ui, sans-serif;
+  text-decoration: none;
+  cursor: pointer;
+  transition: transform 160ms ease-out, background-color 160ms ease-out, border-color 160ms ease-out;
+}
+
+.pocket-button:hover { transform: translateY(-1px); }
+.pocket-button:active { transform: translateY(0); }
+.pocket-button:focus-visible { outline: 3px solid var(--pocket-focus); outline-offset: 3px; }
+.pocket-button[aria-disabled="true"], .pocket-button:disabled { cursor: not-allowed; opacity: .55; transform: none; }
+.pocket-button[data-tone="outline"] { --button-bg: transparent; --button-fg: var(--pocket-ink); --button-border: var(--pocket-line); }
+.pocket-button[data-tone="soft"] { --button-bg: var(--pocket-sage); --button-fg: var(--pocket-ink); --button-border: var(--pocket-sage); }
+.pocket-button[data-tone="warm"] { --button-bg: var(--pocket-cloud); --button-fg: var(--pocket-ink); --button-border: var(--pocket-cloud); }
+.pocket-button[data-tone="quiet"] { --button-bg: transparent; --button-fg: var(--pocket-secondary); --button-border: transparent; }
+.pocket-button[data-size="compact"] { min-height: 40px; padding: 8px 12px; font-size: 12px; }
+.pocket-button[data-size="icon"] { width: 44px; min-height: 44px; padding: 9px; }
+.pocket-button__icon { width: 20px; height: 20px; flex: none; }
+
+.pocket-state-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+  padding: 18px;
+  border: 1px solid var(--pocket-line);
+  border-radius: var(--pocket-radius-card);
+  background: var(--pocket-paper);
+  box-shadow: var(--pocket-shadow-soft);
+}
+.pocket-state-card[data-status="review"] { background: #fff8f2; border-color: #edc7aa; }
+.pocket-state-card[data-status="pending"] { background: #f4f6eb; border-color: #cad6b8; }
+.pocket-state-card[data-status="error"] { background: #fff4ee; border-color: #e7b59d; }
+.pocket-state-card__icon { width: 28px; height: 28px; color: var(--pocket-secondary); }
+.pocket-state-card__title { margin: 0; color: var(--pocket-ink); font-size: 14px; line-height: 1.35; }
+.pocket-state-card__body { margin: 5px 0 0; color: var(--pocket-secondary); font-size: 12px; line-height: 1.55; }
+.pocket-state-card__actions { grid-column: 2; display: flex; flex-wrap: wrap; gap: 8px; margin-top: 2px; }
+
+.pocket-status-pill {
+  display: inline-flex;
+  min-height: 32px;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: var(--pocket-sage);
+  color: var(--pocket-secondary);
+  font-size: 11px;
+  font-weight: 800;
+}
+.pocket-status-pill[data-status="review"] { background: #fff0e4; color: #9b6148; }
+.pocket-status-pill[data-status="pending"] { background: #eef3e5; color: #68795a; }
+.pocket-status-pill[data-status="error"] { background: #f7e3da; color: #a75a43; }
+.pocket-status-pill__icon { width: 16px; height: 16px; }
+
+.pocket-avatar-frame {
+  --avatar-ring: var(--pocket-cloud);
+  position: relative;
+  display: grid;
+  width: 56px;
+  height: 56px;
+  place-items: center;
+  border: 3px solid var(--avatar-ring);
+  border-radius: 50%;
+  background: var(--pocket-sage);
+  color: var(--pocket-ink);
+}
+.pocket-avatar-frame::after {
+  position: absolute;
+  inset: 4px;
+  border: 1px dashed color-mix(in srgb, var(--avatar-ring) 75%, transparent);
+  border-radius: inherit;
+  content: "";
+}
+.pocket-avatar-frame[data-tone="matcha"] { --avatar-ring: #9aab7c; background: #e6ebd7; }
+.pocket-avatar-frame[data-tone="cheese"] { --avatar-ring: #e9ae4b; background: #f5e6b9; }
+.pocket-avatar-frame[data-tone="peach"] { --avatar-ring: #d78372; background: #f7e1df; }
+.pocket-avatar-frame[data-tone="sea"] { --avatar-ring: #72a8ae; background: #d9eff0; }
+.pocket-avatar-frame__icon { width: 24px; height: 24px; z-index: 1; }
+
+.pocket-segmented {
+  display: inline-flex;
+  gap: 3px;
+  padding: 4px;
+  border: 1px solid var(--pocket-line);
+  border-radius: 999px;
+  background: var(--pocket-paper);
+}
+.pocket-segmented__item { min-height: 38px; padding: 8px 13px; border: 0; border-radius: 999px; background: transparent; color: var(--pocket-secondary); font: 700 12px/1.2 inherit; cursor: pointer; }
+.pocket-segmented__item[aria-pressed="true"] { background: var(--pocket-ink); color: var(--pocket-paper); }
+.pocket-segmented__item:focus-visible { outline: 3px solid var(--pocket-focus); outline-offset: 2px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .pocket-button { transition: none; }
+  .pocket-button:hover, .pocket-button:active { transform: none; }
+}

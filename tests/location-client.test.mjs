@@ -218,7 +218,7 @@ test('a stalled Permissions API is also bounded and silently leaves capture unav
   assert.equal(nav.calls.positions, 0);
 });
 
-test('location opt-in is scoped to an account/ledger and tolerates blocked browser storage', t => {
+test('successful location opt-in follows an account across its ledgers and tolerates blocked storage', t => {
   const descriptor = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
   t.after(() => descriptor ? Object.defineProperty(globalThis, 'localStorage', descriptor) : delete globalThis.localStorage);
   const values = new Map();
@@ -227,9 +227,47 @@ test('location opt-in is scoped to an account/ledger and tolerates blocked brows
   } });
   assert.equal(locationPreference('user-1:ledger-1'), false);
   assert.equal(locationPreference('user-1:ledger-1', true), true);
-  assert.equal(locationPreference('user-1:ledger-2'), false);
+  assert.equal(locationPreference('user-1:ledger-2'), true);
   assert.equal(locationPreference('user-2:ledger-1'), false);
   assert.equal(locationPreference('user-1:ledger-1', false), false);
+  assert.equal(locationPreference('user-1:ledger-2'), false);
   Object.defineProperty(globalThis, 'localStorage', { configurable: true, get() { throw new Error('storage blocked'); } });
   assert.equal(locationPreference('blocked', true), false);
+});
+
+test('a failed foreground refresh drops the prior GPS cache so it cannot reattach after revocation', async () => {
+  const nav = browser();
+  const client = createLocationClient({navigator:nav.navigator});
+  assert.ok(await client.capture());
+  nav.navigator.permissions.query = async()=>({state:'denied'});
+  assert.equal(await client.capture({refresh:true,previouslyGranted:true}),null);
+  assert.equal(await client.capture({previouslyGranted:true}),null);
+  assert.equal(nav.calls.positions,1);
+});
+
+test('legacy ledger opt-in migrates across the same account and explicit off cannot be undone by old keys', t => {
+  const descriptor = Object.getOwnPropertyDescriptor(globalThis,'localStorage');
+  t.after(()=>descriptor?Object.defineProperty(globalThis,'localStorage',descriptor):delete globalThis.localStorage);
+  const values = new Map([['for-pocket.location.user-1:old-circle','on'],['for-pocket.location.user-2:other-circle','on']]);
+  Object.defineProperty(globalThis,'localStorage',{configurable:true,value:{
+    get length(){return values.size;},key(index){return [...values.keys()][index];},
+    getItem(key){return values.get(key)??null;},setItem(key,value){values.set(key,value);},removeItem(key){values.delete(key);},
+  }});
+  assert.equal(locationPreference('user-1:personal'),true);
+  assert.equal(locationPreference('user-3:personal'),false);
+  assert.equal(locationPreference('user-1:personal',false),false);
+  assert.equal(locationPreference('user-1:old-circle'),false);
+  assert.equal(locationPreference('user-2:personal'),true);
+});
+
+test('a previous successful grant supports browsers without Permissions API but never overrides known denial or prompt', async () => {
+  const unsupported = browser();
+  delete unsupported.navigator.permissions;
+  assert.ok(await createLocationClient({navigator:unsupported.navigator}).capture({previouslyGranted:true,refresh:true}));
+  assert.equal(unsupported.calls.positions,1);
+  for (const permission of ['prompt','denied']) {
+    const nav = browser({permission});
+    assert.equal(await createLocationClient({navigator:nav.navigator}).capture({previouslyGranted:true,refresh:true}),null);
+    assert.equal(nav.calls.positions,0);
+  }
 });

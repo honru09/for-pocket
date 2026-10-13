@@ -1,7 +1,8 @@
 # Circle emoji bursts and quiet Telegram delivery
 
-An individual tap remains an individual inbox item so the recipient can play
-every animation. `burstId`, `burstIndex`, `burstCount`, and `burstLastAt` travel
+An individual tap remains an individual inbox item so receipt acknowledgements
+remain precise. The screen merges those items into one bounded animated scene;
+it never queues one animation per tap. `burstId`, `burstIndex`, `burstCount`, and `burstLastAt` travel
 with both GET items and POST acknowledgements. `burstIndex` belongs to that
 particular event; `burstCount` is the current total and may continue growing.
 
@@ -11,6 +12,22 @@ Changing emoji or waiting longer starts another burst. An idempotent POST
 retry does not increment the count or move the deadline. Reactions created
 before this feature remain playable as single events and are not retrospectively
 sent to Telegram.
+
+## Receiver animation
+
+One to five taps appear with a soft pop. A burst above five taps becomes one
+full-screen emoji wave with at most 32 animated particles and a large cumulative
+counter. The first page of a 100-tap burst immediately shows ×100. Subsequent
+40-item pages acknowledge only fetched IDs and do not add the cumulative total
+again or replay the wave.
+
+The full-screen wave lasts 2.6 seconds even during continuous delivery. Ongoing
+taps then update a compact corner counter; 2.4 seconds of quiet starts its exit.
+A new receipt can interrupt that exit. Recently shown burst summaries suppress
+replays after the visual closes, with a 32-burst memory limit. Different bursts
+received together share the same scene, with at most three visible counters.
+The effect ignores pointer input, follows the active page/dialog, pauses while
+hidden, and acknowledges receipts only after a foreground render.
 
 ## Durable delivery
 

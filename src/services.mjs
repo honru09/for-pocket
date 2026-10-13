@@ -168,7 +168,7 @@ export function remoteService(telegram) {
     updateExpense: (id, value, scope = ledgerId) => request(`/expenses/${encodeURIComponent(id)}`, 'PATCH', { ...value, id, ledgerId: scope }),
     deleteExpense: (id, scope = ledgerId) => request(`/expenses/${encodeURIComponent(id)}?ledgerId=${encodeURIComponent(scope)}`, 'DELETE'),
     restoreExpense: (id, scope = ledgerId) => request(`/expenses/${encodeURIComponent(id)}/restore`, 'POST', { ledgerId: scope }),
-    resolveLocation: location => request('/location/reverse', 'POST', { location, ledgerId }, { timeout: 7000 }),
+    resolveLocation: (location, scope = ledgerId) => request('/location/reverse', 'POST', { location, ledgerId:scope }, { timeout: 7000 }),
     clearLocationPresence: scope => request('/location/presence-clear', 'POST', { ledgerId:scope || ledgerId }),
     aiParseExpense,
     aiSummary: async input => { await exchangeTelegram(); return request('/ai/summary', 'POST', { ledgerId, ...input }, { timeout: 60000 }); },

@@ -6,8 +6,9 @@ import { locationLabel } from '../public/location.mjs';
 import './location.css';
 
 export function LocationSheet({ t, location, enabled, loading, onCapture, onRemove, onDisable, onClose }) {
+  const label = locationLabel(location);
   return <Sheet title={t('locationTitle')} onClose={onClose}>
-    {location && <div className="location-preview"><Icon name="pin"/><div><strong>{locationLabel(location) || t('locationAttached')}</strong>{location.address && <span>{location.address}</span>}</div></div>}
+    {label && <div className="location-preview"><Icon name="pin"/><div><strong>{label}</strong>{location.address && location.address !== label && <span>{location.address}</span>}</div></div>}
     <p className="location-hint">{t('locationPrivacy')}</p>
     <div className="location-actions"><Button className="compact-save" disabled={loading} onClick={onCapture}>{t(loading ? 'locationLoading' : location ? 'locationRefresh' : 'locationUse')}</Button>
       {location && <Button mode="plain" onClick={onRemove}>{t('locationRemove')}</Button>}

@@ -2,9 +2,10 @@ import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from
 import { createPortal } from 'react-dom';
 import { Tappable } from '@telegram-apps/telegram-ui';
 import { Avatar, Sheet } from './AccountViews.jsx';
-import { REACTION_EMOJIS, normalizeReactionEmoji, formatReactionCount } from '../public/reactions.mjs';
+import { REACTION_EMOJIS, normalizeReactionEmoji } from '../public/reactions.mjs';
 import { locationLabel } from '../public/location.mjs';
 import { createId } from './id.mjs';
+import ReactionReception from './ReactionReception.jsx';
 import './circle-reactions.css';
 
 const center = node => {
@@ -29,71 +30,15 @@ function FlyingEmoji({ event, onFinish, visible }) {
     animation.current.finished.then(() => { if (!cancelled) done.current(event); }).catch(() => {});
     return () => { cancelled = true; animation.current?.cancel(); };
   }, [event]);
-  useEffect(() => { if (visible) animation.current?.play(); else animation.current?.pause(); }, [visible]);
-  return <span ref={ref} className="flying-emoji" aria-hidden="true" data-reaction-id={event.id}>{event.emoji}</span>;
-}
-
-// One run of taps has one character and a growing badge. Events remain
-// individually acknowledged, so a partially viewed run can resume safely.
-function IncomingBurst({ events, lane, visible, onSeen, onFinish }) {
-  const ref = useRef(null), glyph = useRef(null), entrance = useRef(null), pulse = useRef(null);
-  const processed = useRef(new Set()), latest = useRef(events), callbacks = useRef({ onSeen, onFinish });
-  const lastShown = useRef(0), [current, setCurrent] = useState(null);
-  latest.current = events; callbacks.current = { onSeen, onFinish };
   useEffect(() => {
-    if (!visible) return;
-    let nextTimer, finishTimer, cancelled = false;
-    const step = () => {
-      if (cancelled) return;
-      const next = latest.current.find(item => !processed.current.has(item.id));
-      if (next) {
-        processed.current.add(next.id);
-        setCurrent(next); lastShown.current = Date.now();
-        callbacks.current.onSeen(next);
-      }
-      if (processed.current.size && !next && Date.now() - lastShown.current >= 1100) {
-        entrance.current?.cancel();
-        entrance.current = ref.current.animate([
-          { transform:'translate3d(-50%,-50%,0) scale(1)', opacity:1 },
-          { transform:'translate3d(-50%,calc(-50% + 14px),0) scale(.94)', opacity:0 },
-        ], { duration:180, easing:easeOut(ref.current), fill:'both' });
-        finishTimer = setTimeout(() => callbacks.current.onFinish([...processed.current]),180);
-        return;
-      }
-      nextTimer = setTimeout(step,140);
-    };
-    step();
-    return () => { cancelled = true; clearTimeout(nextTimer); clearTimeout(finishTimer); };
-  }, [visible,events.at(-1)?.id]);
-  useLayoutEffect(() => {
-    if (!current || !ref.current) return;
-    const node = ref.current;
-    if (processed.current.size === 1) {
-      entrance.current?.cancel();
-      entrance.current = node.animate([
-        { transform:'translate3d(-50%,calc(-50% + 52px),0) scale(.9,.94)', opacity:0, offset:0 },
-        { transform:'translate3d(-50%,calc(-50% - 5px),0) scale(1.07,.96)', opacity:1, offset:.65 },
-        { transform:'translate3d(-50%,-50%,0) scale(1)', opacity:1, offset:1 },
-      ], { duration:280, easing:easeOut(node), fill:'both' });
-    } else {
-      const currentTransform = getComputedStyle(glyph.current).transform;
-      pulse.current?.cancel();
-      pulse.current = glyph.current.animate([
-        { transform:currentTransform === 'none' ? 'scale(1)' : currentTransform, offset:0 },
-        { transform:'scale(1.14,.93) rotate(-4deg)', offset:.38 },
-        { transform:'scale(.98,1.035) rotate(2deg)', offset:.7 },
-        { transform:'scale(1)', offset:1 },
-      ], { duration:200, easing:easeOut(node) });
-    }
-  }, [current]);
-  useEffect(() => { for (const animation of [entrance.current,pulse.current]) { if (visible) animation?.play(); else animation?.pause(); } }, [visible]);
-  useEffect(() => () => { entrance.current?.cancel(); pulse.current?.cancel(); }, []);
-  const count = current?.burstIndex || 1;
-  return <span ref={ref} className="incoming-emoji is-incoming" aria-hidden="true" data-burst-id={events[0]?.burstId || events[0]?.id} data-reaction-count={count}
-    style={{ left:`${lane % 2 ? 65 : 37}%`, top:`${35 + lane * 15}%` }}>
-    <span ref={glyph} className="incoming-emoji-glyph">{current?.emoji || events[0]?.emoji}</span>
-    {count >= 2 && <span className="emoji-burst-count" key={count}>{formatReactionCount(count)}</span>}
-  </span>;
+    const current = animation.current;
+    if (!current || current.playState === 'finished' || current.playState === 'idle') return;
+    if (visible) {
+      const end = current.effect?.getComputedTiming?.().endTime;
+      if (end == null || Number(current.currentTime) < Number(end)) current.play();
+    } else current.pause();
+  }, [visible]);
+  return <span ref={ref} className="flying-emoji" aria-hidden="true" data-reaction-id={event.id}>{event.emoji}</span>;
 }
 
 // Keep this receiver mounted at App level. Only the avatar strip is portalled
@@ -104,7 +49,7 @@ export default function CircleReactions({ circle, ledgerId, userId, service, t, 
   const [custom,setCustom] = useState(''), [customOpen,setCustomOpen] = useState(false), [invalid,setInvalid] = useState(false), [failures,setFailures] = useState([]);
   const [visible,setVisible] = useState(document.visibilityState !== 'hidden');
   const [effectHost] = useState(() => document.createElement('div'));
-  const portraits = useRef(new Map()), targetPortrait = useRef(null), seen = useRef(new Set()), acknowledgements = useRef(new Set());
+  const portraits = useRef(new Map()), targetPortrait = useRef(null), seen = useRef(new Set()), acknowledgements = useRef(new Set()), receivedCounts = useRef(new Map());
   const scope = circle.id + ':' + ledgerId + ':' + userId;
   const scopeRef = useRef(scope), mounted = useRef(true), ackTimer = useRef(null), ackFlight = useRef(null), haptic = useRef(onHaptic);
   scopeRef.current = scope; haptic.current = onHaptic;
@@ -151,11 +96,17 @@ export default function CircleReactions({ circle, ledgerId, userId, service, t, 
         await flushAck();
         const response = await service.getReactions(ledgerId);
         if (cancelled || response.circleId !== circle.id) return;
-        const fresh = (response.items || []).filter(item => !seen.current.has(item.id));
+        const fresh = (response.items || []).filter(item => {
+          const key = item.burstId || item.id, count = Math.max(item.burstCount || 0,item.burstIndex || 1);
+          const changed = count > (receivedCounts.current.get(key) || 0);
+          if (changed) { receivedCounts.current.delete(key); receivedCounts.current.set(key,count); }
+          return !seen.current.has(item.id) || changed;
+        });
         if (fresh.length) {
           fresh.forEach(item => seen.current.add(item.id));
           if (seen.current.size > 2000) seen.current = new Set([...seen.current].slice(-1000));
-          setIncoming(queue => [...queue,...fresh]);
+          if (receivedCounts.current.size > 64) receivedCounts.current = new Map([...receivedCounts.current].slice(-32));
+          setIncoming(queue => [...new Map([...queue,...fresh].map(item => [item.id,item])).values()]);
           if (document.visibilityState !== 'hidden') haptic.current?.();
         }
         if (response.hasMore) delay = 500;
@@ -202,17 +153,11 @@ export default function CircleReactions({ circle, ledgerId, userId, service, t, 
     setTarget(person); setCustom(''); setCustomOpen(false); setInvalid(false);
   };
   const finishOutgoing = useCallback(event => setOutgoing(items => items.filter(item => item.id !== event.id)),[]);
-  const bursts = new Map();
-  for (const event of incoming) {
-    const key = event.burstId || event.id;
-    if (!bursts.has(key)) bursts.set(key,[]);
-    bursts.get(key).push(event);
-  }
   const people = <div className="consumer-buttons circle-presence" role="group" aria-label={t('circlePeople')}>
     {circle.members.map(person => <Tappable Component="button" type="button" key={person.id} ref={node => { if (node) portraits.current.set(person.id,node); else portraits.current.delete(person.id); }}
       className={`consumer-chip presence-chip consumer-color-${person.color}`} data-member-id={person.id} data-self={person.id === userId}
       aria-label={person.id === userId ? t('myProfile') : t('sendEmojiTo',{ name:person.name })} aria-haspopup={person.id === userId ? undefined : 'dialog'} aria-expanded={person.id === userId ? undefined : target?.id === person.id}
-      disabled={disabled} onClick={event => open(person,event)}><Avatar person={person}/><span>{person.name}</span></Tappable>)}
+      disabled={disabled} onClick={event => open(person,event)}><Avatar person={person}/></Tappable>)}
   </div>;
   const person = circle.members.find(member => member.id === target?.id) || target;
   const place = locationLabel(person?.location);
@@ -230,7 +175,7 @@ export default function CircleReactions({ circle, ledgerId, userId, service, t, 
     </Sheet>}
     {effectHost && createPortal(<div className="emoji-flight-layer" hidden={!visible}>
       {outgoing.map(event => <FlyingEmoji key={event.id} event={event} onFinish={finishOutgoing} visible={visible}/>)}
-      {[...bursts].slice(0,3).map(([id,events],lane) => <IncomingBurst key={id} events={events} lane={lane} visible={visible} onSeen={markSeen} onFinish={finishIncoming}/>)}
+      <ReactionReception events={incoming} visible={visible} onSeen={markSeen} onFinish={finishIncoming}/>
     </div>,effectHost)}
     {!target && failures.length > 0 && <button type="button" className="emoji-retry emoji-retry-capsule" onClick={() => failures.forEach(payload => void transmit(payload))}>{t('reactionRetry',{n:failures.length})}</button>}
   </>;

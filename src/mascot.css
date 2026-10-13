@@ -25,7 +25,8 @@
 .cloud-blush { fill:#ed885f; }
 .cloud-blush-lines { fill:none; stroke:#bc725b; stroke-width:1.5; stroke-linecap:round; }
 .cloud-brows { fill:none; stroke:#635b3c; stroke-width:3.5; stroke-linecap:round; }
-.cloud-vein { fill:none; stroke:#b96854; stroke-width:2.2; stroke-linecap:round; stroke-linejoin:round; transform-box:fill-box; transform-origin:center; animation:cloud-anger-mark 1.4s ease-in-out infinite; }
+.cloud-anger-symbol { fill:#eb826d; stroke:#b96854; stroke-width:1.7; stroke-linecap:round; stroke-linejoin:round; transform-box:fill-box; transform-origin:center; animation:cloud-anger-symbol 1.65s ease-in-out infinite; }
+.cloud-anger-symbol path:last-child { fill:none; stroke:#fff1df; stroke-width:1.8; }
 .cloud-question { font:900 28px 'Nunito',sans-serif; fill:#635b3c; paint-order:stroke; stroke:#f9c678; stroke-width:2px; }
 .cloud-sigh { fill:none; stroke:#a3a58a; stroke-width:2.1; stroke-linecap:round; stroke-linejoin:round; transform-box:fill-box; transform-origin:50% 50%; animation:cloud-sigh-drift 2.1s ease-in-out infinite; }
 .cloud-teardrop { fill:#9ec7da; stroke:#8eb5c4; stroke-width:1.5; stroke-linejoin:round; transform-box:fill-box; transform-origin:center; will-change:transform,opacity; animation:cloud-sweat 1.8s ease-in-out infinite; }
@@ -73,10 +74,13 @@
 .mascot-toy[data-mood="4"] .cloud-face { transform:rotate(2deg) translateY(1px); }
 .mascot-toy[data-mood="5"] .cloud-motion { transform:translate3d(0,0,0) rotate(-3deg) scale(1.04); }
 .mascot-toy[data-mood="5"] .cloud-face { transform:rotate(-3deg) translateY(1px); }
-.mascot-toy[data-mood="5"] .mascot-body { fill:#f6bd7d; }
+.mascot-toy[data-mood="5"] .mascot-body { fill:#f7bc7e; }
+.mascot-toy[data-mood="5"] .cloud-blush { fill:#e98972; }
 .mascot-toy[data-mood="6"] .cloud-motion { transform:translate3d(0,0,0) rotate(0) scale(1.06); }
 .mascot-toy[data-mood="6"] .cloud-face { transform:rotate(1deg) scale(1.015); }
-.mascot-toy[data-mood="6"] .mascot-body { fill:#f2b879; }
+.mascot-toy[data-mood="6"] .mascot-body { fill:#f4b67d; }
+.mascot-toy[data-mood="6"] .cloud-blush { fill:#e47b6b; }
+.mascot-toy[data-mood="6"] .cloud-anger-symbol { transform:scale(1.08); }
 .mascot-toy[data-phase="cloud"] .cloud-touch { animation:cloud-idle-breathe 4.8s ease-in-out infinite; }
 .mascot-toy[data-phase="cloud"] .cloud-face-idle { animation:cloud-idle-face 4.8s ease-in-out infinite; }
 .mascot-toy[data-phase="cloud"] .cloud-eyes { animation:cloud-blink 6.4s linear infinite; }
@@ -116,7 +120,7 @@
 @keyframes cloud-idle-face { 0%,100% { transform:translate3d(0,0,0) rotate(0); } 42% { transform:translate3d(0,-.7px,0) rotate(-.7deg); } 70% { transform:translate3d(0,-.2px,0) rotate(.35deg); } }
 @keyframes cloud-blink { 0%,89%,100% { transform:scaleY(1); } 90.2% { transform:scaleY(.18); } 91.5% { transform:scaleY(1); } 92.8% { transform:scaleY(.22); } 94.1% { transform:scaleY(1); } }
 @keyframes cloud-state-pop { 0% { transform:scale(.96) rotate(-1deg); } 58% { transform:scale(1.025) rotate(1deg); } 100% { transform:scale(1) rotate(0); } }
-@keyframes cloud-anger-mark { 0%,100% { opacity:.62; transform:translateY(0) rotate(-3deg); } 50% { opacity:.96; transform:translateY(-1px) rotate(3deg); } }
+@keyframes cloud-anger-symbol { 0%,100% { opacity:.72; transform:translate3d(0,1px,0) rotate(-4deg) scale(.96); } 50% { opacity:1; transform:translate3d(0,-1px,0) rotate(4deg) scale(1.04); } }
 @keyframes cloud-soft-pop { 0% {opacity:1;transform:rotate(0) scale(1.1)} 35% {opacity:1;transform:rotate(-3deg) scale(1.2,.92)} 100% {opacity:0;transform:rotate(3deg) scale(1.15)} }
 @keyframes cloud-pop-word { 0% {opacity:0;transform:translate(-50%,-50%) rotate(-8deg) scale(.94)} 35% {opacity:1;transform:translate(-50%,-65%) rotate(-8deg)} 100% {opacity:0;transform:translate(-50%,-90%) rotate(-8deg)} }
 @keyframes cloud-puff { 0% {opacity:.9;transform:translate(-50%,-50%) scale(.95)} 100% {opacity:0;transform:translate(-50%,-50%) translate(var(--puff-x),var(--puff-y)) scale(1.1)} }

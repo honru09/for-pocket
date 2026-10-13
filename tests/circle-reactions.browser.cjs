@@ -63,6 +63,10 @@ function signed(id, language) {
       const sender=pages[0].page, recipient=pages[1].page;
       await recipient.locator('[data-view="history"]').tap();
       await expect(recipient.locator('#history-category')).toBeVisible();
+      await expect(recipient.locator('.app-header-reactions .presence-chip')).toHaveCount(2);
+      assert.ok(await recipient.locator('.app-header-reactions').evaluate(node=>{
+        const box=node.getBoundingClientRect(); return box.width>0 && box.right<=innerWidth && box.bottom<=innerHeight;
+      }),'reaction avatars remain available in the compact header on secondary pages');
       await recipient.evaluate(()=>window.__setReactionVisible(false));
       const beforeCount = (await request(101,'/profile')).expenses.length;
       await sender.locator('[data-key="8"]').tap();

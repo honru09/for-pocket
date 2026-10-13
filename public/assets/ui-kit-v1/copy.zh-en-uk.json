@@ -1,0 +1,105 @@
+{
+  "metadata": {
+    "status": "proposed-copy-not-applied",
+    "locales": [
+      "zh",
+      "en",
+      "uk"
+    ],
+    "note": "乌克兰语为初稿，上线前建议母语复核。不要将条件文案当作持久化、共享或权限保证。"
+  },
+  "emptyLedger": {
+    "zh": {
+      "title": "从第一笔开始",
+      "body": "选个用途，记下今天的小花费。",
+      "action": "记一笔"
+    },
+    "en": {
+      "title": "Start with one entry",
+      "body": "Choose a category and record an everyday expense.",
+      "action": "Add an entry"
+    },
+    "uk": {
+      "title": "Почніть із першого запису",
+      "body": "Оберіть категорію та запишіть щоденну витрату.",
+      "action": "Додати запис"
+    }
+  },
+  "importReview": {
+    "zh": {
+      "title": "核对后，再入账",
+      "body": "请检查金额、币种、用途和日期。识别结果尚未保存。",
+      "action": "确认并保存"
+    },
+    "en": {
+      "title": "Review before saving",
+      "body": "Check the amount, currency, category and date. These results are not saved yet.",
+      "action": "Confirm and save"
+    },
+    "uk": {
+      "title": "Перевірте перед збереженням",
+      "body": "Перевірте суму, валюту, категорію та дату. Ці результати ще не збережено.",
+      "action": "Підтвердити й зберегти"
+    }
+  },
+  "circleInvite": {
+    "zh": {
+      "title": "一起记账前",
+      "body": "先确认圈子成员和记录共享范围，再接受邀请。",
+      "action": "查看邀请"
+    },
+    "en": {
+      "title": "Before you join",
+      "body": "Review the members and which entries are shared before accepting.",
+      "action": "Review invitation"
+    },
+    "uk": {
+      "title": "Перш ніж приєднатися",
+      "body": "Перед прийняттям запрошення перевірте учасників і доступ до записів.",
+      "action": "Переглянути запрошення"
+    }
+  },
+  "saveUnconfirmed": {
+    "zh": {
+      "title": "保存尚未确认",
+      "body": "请保持当前页面，检查连接后重试。",
+      "action": "重试"
+    },
+    "en": {
+      "title": "Save not confirmed",
+      "body": "Keep this page open and retry after checking your connection.",
+      "action": "Retry"
+    },
+    "uk": {
+      "title": "Збереження ще не підтверджено",
+      "body": "Залиште цю сторінку відкритою та спробуйте ще раз після перевірки з’єднання.",
+      "action": "Повторити"
+    }
+  },
+  "localRetentionConfirmed": {
+    "condition": "Only after successful local storage write/read verification.",
+    "zh": "这笔记录已保留在当前浏览器，可用原记录重试。",
+    "en": "This entry is kept in this browser. Retry the same entry.",
+    "uk": "Цей запис збережено в цьому браузері. Повторіть спробу з тим самим записом."
+  },
+  "offlineDraft": {
+    "zh": { "title": "先留在本机", "body": "本机已保留，服务器还没有确认同步。", "action": "稍后重试" },
+    "en": { "title": "Kept on this device", "body": "This device kept the draft; the server has not confirmed sync yet.", "action": "Retry later" },
+    "uk": { "title": "Збережено на цьому пристрої", "body": "Чернетку збережено на пристрої, але сервер ще не підтвердив синхронізацію.", "action": "Спробувати пізніше" }
+  },
+  "partialImport": {
+    "zh": { "title": "有一条需要核对", "body": "识别结果还没有保存。请检查缺少的日期、用途或金额。", "action": "查看并核对" },
+    "en": { "title": "One item needs review", "body": "The recognition result is not saved yet. Check its date, category or amount.", "action": "Review item" },
+    "uk": { "title": "Один запис потребує перевірки", "body": "Результат ще не збережено. Перевірте дату, категорію або суму.", "action": "Перевірити запис" }
+  },
+  "locationOptional": {
+    "zh": { "title": "位置是可选的", "body": "只有你主动允许并完成记账后，地点才会附在这笔记录上。", "action": "了解位置" },
+    "en": { "title": "Location is optional", "body": "A place is attached only after you allow it and save an entry.", "action": "Learn about location" },
+    "uk": { "title": "Місцезнаходження необов’язкове", "body": "Місце додається лише після вашого дозволу та збереження запису.", "action": "Про місцезнаходження" }
+  },
+  "buttonLabels": {
+    "zh": { "add": "记一笔", "save": "保存记录", "retry": "重试", "clear": "清空草稿", "invite": "邀请成员", "location": "添加位置", "summary": "打开回顾", "link": "核对连携" },
+    "en": { "add": "Add entry", "save": "Save entry", "retry": "Retry", "clear": "Clear draft", "invite": "Invite members", "location": "Add location", "summary": "Open recap", "link": "Review link" },
+    "uk": { "add": "Додати запис", "save": "Зберегти запис", "retry": "Повторити", "clear": "Очистити чернетку", "invite": "Запросити учасників", "location": "Додати місце", "summary": "Відкрити підсумок", "link": "Перевірити зв’язок" }
+  }
+}

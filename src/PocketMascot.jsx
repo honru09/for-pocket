@@ -58,13 +58,14 @@ function WeatherAccessory({ environment }) {
 }
 
 function Cloud({ mood, cashAction, cashId, environment }) {
-  const faceMood = cashAction === 'income' ? 1 : mood;
+  // The final two taps are playful annoyance, not a threatening angry face.
+  // Keep the familiar soft face and communicate the mood with one small mark.
+  const faceMood = cashAction === 'income' ? 1 : mood >= 5 ? 2 : mood;
   const resting = mood === 0 && !cashAction;
   return <svg className="mascot" id="mascot" viewBox="0 0 130 126" aria-hidden="true">
     <path className="mascot-body" d={BODY}/>
     <g className="cloud-face-idle">
       <g className="cloud-face">
-      {mood >= 5 && !cashAction && <path className="cloud-brows" d={mood === 6 ? 'M40 52q6 3 12 0m22 0q-6 3-12 0' : 'M40 52q6 2 12 0m22 0q-6 2-12 0'}/>}
       {cashAction !== 'expense' && <><g className={resting && environment === 'night' ? 'cloud-sleep-eyes' : 'cloud-eyes'}><MorphFacePath pose={resting && environment === 'night' ? SLEEP_EYES : EYE_POSES[faceMood]} kind="eyes" className="face-eyes"/></g><MorphFacePath pose={MOUTH_POSES[faceMood]} kind="mouth" className={`face-mouth ${faceMood === 6 ? 'cloud-angry-mouth' : ''}`}/></>}
       <ellipse className="cloud-blush" cx="35" cy="74" rx={mood === 2 ? 11 : 7} ry={mood === 2 ? 6 : 4}/>
       <ellipse className="cloud-blush" cx="88" cy="72" rx={mood === 2 ? 11 : 7} ry={mood === 2 ? 6 : 4}/>
@@ -82,7 +83,10 @@ function Cloud({ mood, cashAction, cashId, environment }) {
       </g>
       <path className="cloud-teardrop" d="M92 54q5 7 0 11q-5-4 0-11Z"/>
     </>}
-    {mood >= 5 && !cashAction && <path className="cloud-vein" d="M94 23v5h-5m9-1v6h5"/>}
+    {mood >= 5 && !cashAction && <g className={`cloud-anger-symbol ${mood === 6 ? 'is-strong' : ''}`} aria-hidden="true">
+      <path d="M96 16l4 4 6-2-1 6 5 4-5 4 1 6-6-2-4 5-4-5-6 2 1-6-5-4 5-4-1-6 6 2 4-4Z"/>
+      <path d="m96 26 5 5m0-5-5 5"/>
+    </g>}
   </svg>;
 }
 

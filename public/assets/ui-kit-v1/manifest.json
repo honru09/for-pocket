@@ -1,0 +1,406 @@
+{
+  "version": 1,
+  "date": "2026-10-13",
+  "product": "for. · 花给生活",
+  "status": "generated-and-reviewed-not-integrated",
+  "sourceBaseline": "27a8d73b559ef1a5e1519c3fba4987c8a2546532",
+  "palette": {
+    "paper": "#f8f7f1",
+    "ink": "#333a30",
+    "sage": "#e6ebd7",
+    "cloud": "#f9c678",
+    "coral": "#ed885f"
+  },
+  "illustrations": [
+    {
+      "id": "empty-ledger",
+      "title": "第一笔，还没开始",
+      "surface": "小账本 · 真正的空账本",
+      "when": "当前账本没有任何记录，且没有激活筛选。",
+      "avoid": "不能用于筛选无结果、加载中或读取失败。",
+      "size": "手机 180–240px；桌面不超过 320px",
+      "source": "src/App.jsx · history-list / empty-state",
+      "file": "illustrations/empty-ledger.png",
+      "width": 1536,
+      "height": 1024,
+      "background": "opaque warm cream, not transparent",
+      "generator": "built-in image_gen",
+      "altPolicy": "decorative when paired with real UI title and description; then alt empty"
+    },
+    {
+      "id": "import-review",
+      "title": "识别之后，先核对",
+      "surface": "快捷记账 · 导入预览",
+      "when": "文件已解析，正在核对金额、币种、类别与日期。",
+      "avoid": "识别完成不等于保存；不用成功勾、礼花或完成文案。",
+      "size": "导入说明 160–220px；结果列表不重复插入",
+      "source": "src/AiImportPage.jsx · ai-import-intro / ai-import-results",
+      "file": "illustrations/import-review.png",
+      "width": 1536,
+      "height": 1024,
+      "background": "opaque warm cream, not transparent",
+      "generator": "built-in image_gen",
+      "altPolicy": "decorative when paired with real UI title and description; then alt empty"
+    },
+    {
+      "id": "shared-circle",
+      "title": "一起记，但先说明共享",
+      "surface": "圈子 · 创建与邀请说明",
+      "when": "尚未加入圈子，展示协作概念及共享范围。",
+      "avoid": "不能替代真实成员列表；不暗示邀请已接受或数据完全隔离。",
+      "size": "空圈子 200–260px；邀请确认页不挤占权限说明",
+      "source": "src/AccountViews.jsx · CirclesPage",
+      "file": "illustrations/shared-circle.png",
+      "width": 1536,
+      "height": 1024,
+      "background": "opaque warm cream, not transparent",
+      "generator": "built-in image_gen",
+      "altPolicy": "decorative when paired with real UI title and description; then alt empty"
+    },
+    {
+      "id": "pending-retry",
+      "title": "待确认，不是假成功",
+      "surface": "失败恢复 · 尚未确认保存",
+      "when": "服务器未确认写入；根据真实持久化结果显示重试说明。",
+      "avoid": "只有确认本机持久化成功，才可说“已保留”；不用于每次保存弹窗。",
+      "size": "恢复说明页 180–220px；日常待同步只用小图标",
+      "source": "src/App.jsx · pendingWrites / failedWrites / persistOutbox",
+      "file": "illustrations/pending-retry.png",
+      "width": 1536,
+      "height": 1024,
+      "background": "opaque warm cream, not transparent",
+      "generator": "built-in image_gen",
+      "altPolicy": "decorative when paired with real UI title and description; then alt empty"
+    },
+    {
+      "id": "offline-draft",
+      "title": "仅本机草稿",
+      "surface": "保存状态 · 本机已保留但未确认同步",
+      "when": "本机写入与读取已验证，但服务器尚未确认；保留重试入口。",
+      "avoid": "不能表达已同步、云端备份或跨设备可见。",
+      "size": "状态说明 180–240px；日常待同步优先使用图标",
+      "source": "src/App.jsx · pendingWrites / storageStatus",
+      "file": "illustrations/offline-draft.png",
+      "width": 1536,
+      "height": 1024,
+      "background": "opaque warm cream, not transparent",
+      "generator": "built-in image_gen",
+      "altPolicy": "decorative when paired with HTML state copy; then alt empty"
+    },
+    {
+      "id": "partial-import",
+      "title": "部分导入待核对",
+      "surface": "快捷记账 · 部分结果需要人工检查",
+      "when": "导入有结果，但至少一条记录缺少日期、用途、金额或需要复核。",
+      "avoid": "不能表示自动入账完成，也不能隐藏失败文件或未知分摊人。",
+      "size": "导入说明 160–220px；列表内优先使用 import-partial 图标",
+      "source": "src/AiImportPage.jsx · ai-import-review / ai-import-warnings",
+      "file": "illustrations/partial-import.png",
+      "width": 1536,
+      "height": 1024,
+      "background": "opaque warm cream, not transparent",
+      "generator": "built-in image_gen",
+      "altPolicy": "decorative when paired with HTML review reason; then alt empty"
+    },
+    {
+      "id": "location-privacy",
+      "title": "位置可选",
+      "surface": "位置权限 · 首次说明与暂无地点",
+      "when": "用户尚未授予位置、主动关闭位置，或需要说明地点只在记账后附加。",
+      "avoid": "不能烘焙地址、坐标、成员位置或“已授权”事实。",
+      "size": "权限说明 180–240px；录入页使用 button-location 图标",
+      "source": "src/LocationViews.jsx · LocationSheet / src/App.jsx · captureLocation",
+      "file": "illustrations/location-privacy.png",
+      "width": 1536,
+      "height": 1024,
+      "background": "opaque warm cream, not transparent",
+      "generator": "built-in image_gen",
+      "altPolicy": "decorative when paired with explicit permission copy; then alt empty"
+    }
+  ],
+  "icons": [
+    {
+      "id": "receipt-review",
+      "title": "识别待核对",
+      "file": "icons/receipt-review.svg",
+      "viewBox": "0 0 24 24",
+      "strokeWidth": 1.6
+    },
+    {
+      "id": "draft-device",
+      "title": "仅本机草稿",
+      "file": "icons/draft-device.svg",
+      "viewBox": "0 0 24 24",
+      "strokeWidth": 1.6
+    },
+    {
+      "id": "sync-pending",
+      "title": "等待服务器确认",
+      "file": "icons/sync-pending.svg",
+      "viewBox": "0 0 24 24",
+      "strokeWidth": 1.6
+    },
+    {
+      "id": "save-confirmed",
+      "title": "已确认写入",
+      "file": "icons/save-confirmed.svg",
+      "viewBox": "0 0 24 24",
+      "strokeWidth": 1.6
+    },
+    {
+      "id": "retry-entry",
+      "title": "重试同一条记录",
+      "file": "icons/retry-entry.svg",
+      "viewBox": "0 0 24 24",
+      "strokeWidth": 1.6
+    },
+    {
+      "id": "import-partial",
+      "title": "部分导入待处理",
+      "file": "icons/import-partial.svg",
+      "viewBox": "0 0 24 24",
+      "strokeWidth": 1.6
+    },
+    {
+      "id": "file-image",
+      "title": "图片文件",
+      "file": "icons/file-image.svg",
+      "viewBox": "0 0 24 24",
+      "strokeWidth": 1.6
+    },
+    {
+      "id": "file-pdf",
+      "title": "PDF 文件",
+      "file": "icons/file-pdf.svg",
+      "viewBox": "0 0 24 24",
+      "strokeWidth": 1.6
+    },
+    {
+      "id": "file-sheet",
+      "title": "表格文件",
+      "file": "icons/file-sheet.svg",
+      "viewBox": "0 0 24 24",
+      "strokeWidth": 1.6
+    },
+    {
+      "id": "file-document",
+      "title": "文字文档",
+      "file": "icons/file-document.svg",
+      "viewBox": "0 0 24 24",
+      "strokeWidth": 1.6
+    },
+    {
+      "id": "circle-invite",
+      "title": "圈子邀请待接受",
+      "file": "icons/circle-invite.svg",
+      "viewBox": "0 0 24 24",
+      "strokeWidth": 1.6
+    },
+    {
+      "id": "account-link-review",
+      "title": "账号连携待核对",
+      "file": "icons/account-link-review.svg",
+      "viewBox": "0 0 24 24",
+      "strokeWidth": 1.6
+    },
+    {
+      "id": "split-even",
+      "title": "均分参与者",
+      "file": "icons/split-even.svg",
+      "viewBox": "0 0 24 24",
+      "strokeWidth": 1.6
+    },
+    {
+      "id": "transfer-neutral",
+      "title": "非日常收支往来",
+      "file": "icons/transfer-neutral.svg",
+      "viewBox": "0 0 24 24",
+      "strokeWidth": 1.6
+    },
+    {
+      "id": "location-optional",
+      "title": "位置可选",
+      "file": "icons/location-optional.svg",
+      "viewBox": "0 0 24 24",
+      "strokeWidth": 1.6
+    },
+    {
+      "id": "empty-filter",
+      "title": "筛选没有结果",
+      "file": "icons/empty-filter.svg",
+      "viewBox": "0 0 24 24",
+      "strokeWidth": 1.6
+    },
+    {
+      "id": "storage-read-failed",
+      "title": "本机数据暂时不可读",
+      "file": "icons/storage-read-failed.svg",
+      "viewBox": "0 0 24 24",
+      "strokeWidth": 1.6,
+      "group": "state"
+    },
+    {
+      "id": "import-no-result",
+      "title": "没有可识别记录",
+      "file": "icons/import-no-result.svg",
+      "viewBox": "0 0 24 24",
+      "strokeWidth": 1.6,
+      "group": "state"
+    },
+    {
+      "id": "file-warning",
+      "title": "文件需要更换",
+      "file": "icons/file-warning.svg",
+      "viewBox": "0 0 24 24",
+      "strokeWidth": 1.6,
+      "group": "state"
+    },
+    {
+      "id": "recap-empty",
+      "title": "回顾暂无记录",
+      "file": "icons/recap-empty.svg",
+      "viewBox": "0 0 24 24",
+      "strokeWidth": 1.6,
+      "group": "state"
+    },
+    {
+      "id": "recurring-empty",
+      "title": "暂无周期账单",
+      "file": "icons/recurring-empty.svg",
+      "viewBox": "0 0 24 24",
+      "strokeWidth": 1.6,
+      "group": "state"
+    },
+    {
+      "id": "recurring-due",
+      "title": "周期账单待带入确认",
+      "file": "icons/recurring-due.svg",
+      "viewBox": "0 0 24 24",
+      "strokeWidth": 1.6,
+      "group": "state"
+    },
+    {
+      "id": "link-expired",
+      "title": "账号连携已过期或冲突",
+      "file": "icons/link-expired.svg",
+      "viewBox": "0 0 24 24",
+      "strokeWidth": 1.6,
+      "group": "state"
+    },
+    {
+      "id": "location-no-place",
+      "title": "暂无位置",
+      "file": "icons/location-no-place.svg",
+      "viewBox": "0 0 24 24",
+      "strokeWidth": 1.6,
+      "group": "state"
+    },
+    {
+      "id": "button-add-entry",
+      "title": "新增一笔按钮图形",
+      "file": "icons/button-add-entry.svg",
+      "viewBox": "0 0 24 24",
+      "strokeWidth": 1.6,
+      "group": "action"
+    },
+    {
+      "id": "button-save-entry",
+      "title": "保存记录按钮图形",
+      "file": "icons/button-save-entry.svg",
+      "viewBox": "0 0 24 24",
+      "strokeWidth": 1.6,
+      "group": "action"
+    },
+    {
+      "id": "button-retry",
+      "title": "重试按钮图形",
+      "file": "icons/button-retry.svg",
+      "viewBox": "0 0 24 24",
+      "strokeWidth": 1.6,
+      "group": "action"
+    },
+    {
+      "id": "button-clear",
+      "title": "清空草稿按钮图形",
+      "file": "icons/button-clear.svg",
+      "viewBox": "0 0 24 24",
+      "strokeWidth": 1.6,
+      "group": "action"
+    },
+    {
+      "id": "button-invite",
+      "title": "邀请成员按钮图形",
+      "file": "icons/button-invite.svg",
+      "viewBox": "0 0 24 24",
+      "strokeWidth": 1.6,
+      "group": "action"
+    },
+    {
+      "id": "button-location",
+      "title": "添加位置按钮图形",
+      "file": "icons/button-location.svg",
+      "viewBox": "0 0 24 24",
+      "strokeWidth": 1.6,
+      "group": "action"
+    },
+    {
+      "id": "button-summary",
+      "title": "打开回顾按钮图形",
+      "file": "icons/button-summary.svg",
+      "viewBox": "0 0 24 24",
+      "strokeWidth": 1.6,
+      "group": "action"
+    },
+    {
+      "id": "button-link",
+      "title": "核对账号连携按钮图形",
+      "file": "icons/button-link.svg",
+      "viewBox": "0 0 24 24",
+      "strokeWidth": 1.6,
+      "group": "action"
+    },
+    {
+      "id": "avatar-orbit",
+      "title": "头像轨道装饰",
+      "file": "icons/avatar-orbit.svg",
+      "viewBox": "0 0 24 24",
+      "strokeWidth": 1.6,
+      "group": "personalization"
+    },
+    {
+      "id": "avatar-spark",
+      "title": "头像亮点装饰",
+      "file": "icons/avatar-spark.svg",
+      "viewBox": "0 0 24 24",
+      "strokeWidth": 1.6,
+      "group": "personalization"
+    },
+    {
+      "id": "avatar-leaf",
+      "title": "头像叶片装饰",
+      "file": "icons/avatar-leaf.svg",
+      "viewBox": "0 0 24 24",
+      "strokeWidth": 1.6,
+      "group": "personalization"
+    },
+    {
+      "id": "avatar-badge",
+      "title": "头像徽章装饰",
+      "file": "icons/avatar-badge.svg",
+      "viewBox": "0 0 24 24",
+      "strokeWidth": 1.6,
+      "group": "personalization"
+    }
+  ],
+  "sprite": "pocket-ui-icons.svg",
+  "components": "ui-components.css",
+  "frames": ["frames/state-card.svg", "frames/illustration-shell.svg", "frames/avatar-ring.svg"],
+  "previewV2": "preview-v2.html",
+  "copy": "copy.zh-en-uk.json",
+  "prompts": "prompts.json",
+  "integration": {
+    "vitePublicDir": false,
+    "method": "Import file URLs from source so Vite emits hashed dist/assets files. Do not use /public/... or /assets/ui-kit-v1/... as production URLs.",
+    "loading": "Secondary illustrations lazy, explicit width/height, no preloading all four. Keep original PNG source; optimize delivery before production."
+  }
+}

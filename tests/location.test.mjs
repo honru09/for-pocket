@@ -132,6 +132,20 @@ test('reverse nearby streets and distant POIs are not reported as visited busine
   assert.equal((await distant({ ...tokyo, accuracy: 1 })).name, undefined);
 });
 
+test('Photon geographic feature names remain useful when hierarchy fields are absent', async () => {
+  for (const [type,name] of [['suburb','新宿'],['city','Kyiv'],['village','Kamakura']]) {
+    const resolve = resolver(`named-area-${type}`,{fetchImpl:async()=>response(photon({osm_key:'place',osm_value:type,name,district:undefined,city:undefined}))});
+    const place = await resolve(tokyo);
+    assert.equal(place.area,name);
+    assert.equal(locationLabel(place),name);
+    assert.equal(place.name,undefined,'a geographic area is not a visited merchant');
+  }
+  const road = resolver('named-road',{fetchImpl:async()=>response(photon({osm_key:'highway',osm_value:'residential',name:'神楽坂通り',district:undefined,city:undefined}))});
+  assert.equal(locationLabel(await road(tokyo)),'神楽坂通り');
+  const unknown = resolver('unclassified-name',{fetchImpl:async()=>response(photon({osm_key:'building',osm_value:'yes',name:'Some building',district:undefined,city:undefined}))});
+  assert.equal(locationLabel(await unknown(tokyo)),'');
+});
+
 test('singleflight cache shares geographic data without leaking one callers explicit venue to another', async () => {
   let calls = 0, release;
   const waiting = new Promise(resolve => { release = resolve; });

@@ -38,9 +38,11 @@ function photonContext(data) {
   const item = data?.features?.[0];
   const p = item?.properties;
   if (!p || typeof p !== 'object') return {};
-  const area = p.district || p.locality || p.city || p.county || p.state;
+  const geographicName = p.osm_key === 'place' && ['neighbourhood','quarter','suburb','borough','city_district','city','town','village','hamlet','locality','county','state'].includes(p.osm_value) ? p.name : undefined;
+  const area = p.district || p.locality || geographicName || p.city || p.county || p.state;
+  const street = p.street || (p.osm_key === 'highway' ? p.name : undefined);
   return {
-    location: normalizeLocation({ area, address: compactAddress([p.street, area, p.city, p.state]), countryCode: p.countrycode }),
+    location: normalizeLocation({ area, address: compactAddress([street, area, p.city, p.state]), countryCode: p.countrycode }),
     candidate: item.geometry?.type === 'Point' ? candidate(p.name, item.geometry.coordinates?.[1], item.geometry.coordinates?.[0], p.osm_key, p.osm_value) : undefined,
   };
 }
