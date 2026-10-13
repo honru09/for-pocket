@@ -117,3 +117,19 @@
 }
 .for-root .category-pill:focus-visible { transform:translateY(-1px) scale(1.02); }
 .for-root .key:focus-visible { background:#e5e8d8; }
+
+/* Telegram-like tactile settling: only compositor-friendly properties move,
+   so a state change stays smooth even in a busy mobile WebView. */
+.for-root :is(.type-pill-btn,.category-pill,.consumer-chip,.mascot-confirm,.key) {
+  will-change:transform,opacity,background-color,box-shadow;
+  backface-visibility:hidden;
+}
+.for-root .type-pill-btn.active,
+.for-root .consumer-chip[aria-pressed="true"] {
+  animation:control-settle 280ms var(--spring-bouncy) both;
+}
+@keyframes control-settle {
+  0% { transform:translate3d(0,1px,0) scale(.96); }
+  58% { transform:translate3d(0,-.5px,0) scale(1.025); }
+  100% { transform:translate3d(0,0,0) scale(1); }
+}

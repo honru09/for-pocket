@@ -21,6 +21,7 @@ import { parseClipboardExpense } from '../public/clipboard.mjs';
 import { createEntryMutations } from './entry-mutations.mjs';
 import ExpenseEditor from './ExpenseEditor.jsx';
 import SettingsPage from './SettingsPage.jsx';
+import { createWeatherClient, weatherCell, mascotEnvironment as resolveMascotEnvironment } from './weather.mjs';
 
 const telegram = window.Telegram?.WebApp;
 const language = resolveLanguage(telegram?.initDataUnsafe?.user?.language_code || navigator.language);
@@ -203,6 +204,9 @@ export default function App() {
   const [clipboardSuggestion, setClipboardSuggestion] = useState(null), [ratePreview, setRatePreview] = useState(null), [weather, setWeather] = useState(null), [clock, setClock] = useState(() => new Date());
   const locationClient = useRef(null), locationRound = useRef(0), locationSuppressed = useRef(false), activeCapture = useRef(null), suggestedPlace = useRef(null);
   if (!locationClient.current) locationClient.current = createLocationClient({ telegram });
+  const weatherClient = useRef(null);
+  if (!weatherClient.current) weatherClient.current = createWeatherClient();
+  const currentWeatherCell = weatherCell(draft.location);
 
   const service = useRef(null), busyRef = useRef(false), state = useRef({}), settingsRef = useRef(settings), currentProfile = useRef(null), pending = useRef(null), drafts = useRef(new Map());
   const pendingWrites = useRef(new Map()), failedWrites = useRef(new Map()), entryOperations = useRef(null), settingWrites = useRef(new Map()), settingQueue = useRef(Promise.resolve());
@@ -378,19 +382,19 @@ export default function App() {
     return () => { clearTimeout(timer); controller.abort(); };
   }, [ready, amountMinor, draftCurrency, settings.currency, digits]);
   useEffect(() => {
-    const location = draft.location;
-    if (!Number.isFinite(location?.lat) || !Number.isFinite(location?.lng)) { setWeather(null); return undefined; }
+    if (!currentWeatherCell || !locationEnabled) { setWeather(null); return; }
+    if (view !== 'record') return;
+    const [lat, lng] = currentWeatherCell.split(',').map(Number);
     const controller = new AbortController();
-    const timer = setTimeout(async () => {
-      try {
-        const response = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${encodeURIComponent(location.lat)}&longitude=${encodeURIComponent(location.lng)}&current=weather_code`, { signal:controller.signal });
-        if (!response.ok) return;
-        const code = Number((await response.json())?.current?.weather_code);
-        if (Number.isFinite(code)) setWeather({ rain:[51,53,55,56,57,61,63,65,66,67,80,81,82,95,96,99].includes(code), sun:[0,1].includes(code) });
-      } catch {}
-    }, 250);
-    return () => { clearTimeout(timer); controller.abort(); };
-  }, [draft.location?.lat, draft.location?.lng]);
+    const refresh = async () => {
+      const value = await weatherClient.current.load({ lat, lng }, { signal:controller.signal });
+      if (!controller.signal.aborted) setWeather(value);
+    };
+    setWeather(null);
+    void refresh();
+    const unbind = bindForegroundRefresh({ telegram, refresh });
+    return () => { unbind(); controller.abort(); };
+  }, [currentWeatherCell, locationEnabled, view]);
   useEffect(() => {
     const back = () => navigate('record'); telegram?.BackButton?.onClick?.(back);
     try { view === 'record' ? telegram?.BackButton?.hide?.() : telegram?.BackButton?.show?.(); } catch {}
@@ -729,7 +733,7 @@ export default function App() {
     && e.dayKey.startsWith(today.slice(0,7)) && (historyCategory === 'all' || categoryKey(e) === historyCategory))), [expenses, historyCurrency, historyCategory, today]);
   const historyExpense = total(history, 'expense'), historyIncome = total(history, 'income');
   const days = [...new Set(history.map(e => e.dayKey))];
-  const mascotEnvironment = (clock.getHours() >= 23 || clock.getHours() < 6) ? 'night' : weather?.rain ? 'rain' : weather?.sun ? 'sun' : null;
+  const mascotEnvironment = resolveMascotEnvironment(weather, clock, timezone);
   const keypadKeys = ['1','2','3','4','5','6','7','8','9',digits ? '.' : 'clear','0','backspace'];
   const saveLabel = t(busy ? 'saving' : !amountMinor ? 'enterAmount' : !draft.selected ? 'selectCategory' : draft.type === 'income' ? 'saveIncome' : 'save');
   const storageStatus = <div className="storage-state"><span id="storage-status" role="status">{t(failed ? 'unavailable' : !ready ? 'loading' : syncFailed ? 'syncFailed' : isRemote ? 'remoteStorage' : 'localStorage')}</span>{failed && <Button mode="plain" size="s" onClick={() => setRetryCount(n => n + 1)}>{t('retry')}</Button>}</div>;

@@ -2,14 +2,13 @@ import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from
 import { Tappable } from '@telegram-apps/telegram-ui';
 import { createPortal } from 'react-dom';
 import { Icon } from './icons.jsx';
-import weatherAtlas from '../public/assets/weather-accessories.png';
-import cloudStateAtlas from '../public/assets/cloud-state-atlas.png';
+import weatherAtlas from '../public/assets/weather-accessories-v2.png';
 import confirmButtonAtlas from '../public/assets/confirm-button-atlas.png';
+import MorphFacePath from './MorphFacePath.jsx';
+import { EYE_POSES, MOUTH_POSES, SLEEP_EYES } from './mascot-face.mjs';
 
 const BODY = 'M24 53C16 18 48 7 68 18C86-1 121 23 107 52C130 74 113 107 87 101C70 128 38 116 35 98C4 105-5 68 24 53Z';
 const MOODS = ['cloudHappy', 'cloudSmile', 'cloudShy', 'cloudQuestion', 'cloudSigh', 'cloudGrumpy', 'cloudFurious'];
-const EYES = ['M45 58v7m28-10v7', 'M39 63q6-9 12 0m18-2q6-9 12 0', 'M40 63q5-6 10 0m20-2q5-6 10 0', 'M45 58v7m28-10v7', 'M40 61h12m18-2h12', 'M45 62v5m29-7v5', 'M41 58l10 5-9 3m39-10-10 5 9 3'];
-const MOUTHS = ['M50 78q10 10 20-3', 'M50 78q10 10 20-3', 'M56 79q5 5 10-1', 'M60 79a3 4 0 1 0 6 0a3 4 0 1 0-6 0', 'M56 83q7-3 13-1', 'M54 84q9-9 17-2', 'M52 81q12-7 23-2l-2 10q-12 5-20-1Z'];
 const CASH_DURATION = { expense: 860, income: 1040 };
 const TEAR = 'M0-5C-2-2-4 0-4 3A4 4 0 0 0 4 3C4 0 2-2 0-5Z';
 
@@ -38,36 +37,35 @@ function ExpenseFace() {
 }
 
 const WEATHER_CROP = {
-  rain: { x:-9, y:-27, width:70, height:70, viewBox:'0 0 724 724' },
-  sun: { x:22, y:22, width:81, height:81, viewBox:'724 0 724 724' },
-  night: { x:22, y:-25, width:84, height:84, viewBox:'1448 0 724 724' },
+  rain: { x:-9, y:-27, width:70, height:70, viewBox:'0 0 512 512' },
+  sun: { x:22, y:22, width:81, height:81, viewBox:'512 0 512 512' },
+  night: { x:22, y:-25, width:84, height:84, viewBox:'1024 0 512 512' },
+  snow: { x:17, y:64, width:91, height:54, viewBox:'0 512 512 512' },
+  wind: { x:73, y:8, width:58, height:58, viewBox:'512 512 512 512' },
+  storm: { x:91, y:12, width:35, height:60, viewBox:'1024 512 512 512' },
 };
 function WeatherAccessory({ environment }) {
   const crop = WEATHER_CROP[environment];
-  if (!crop) return null;
-  return <g className={`cloud-weather cloud-${environment}`}>
-    <svg {...crop}><image href={weatherAtlas} width="2172" height="724"/></svg>
+  if (!crop && environment !== 'fog') return null;
+  return <g key={environment} className={`cloud-weather cloud-${environment}`}>
+    {crop && <g className="weather-art-shell"><svg {...crop} preserveAspectRatio="xMidYMid meet"><image href={weatherAtlas} width="1536" height="1024"/></svg></g>}
+    {environment === 'fog' && <g className="cloud-fog-lines"><path d="M18 38h37"/><path d="M75 47h38"/><path d="M28 57h48"/></g>}
+    {environment === 'rain' && <g className="cloud-weather-drops"><path d="M14 80l-2 7m17-6-2 7m80-7-2 7"/></g>}
+    {environment === 'snow' && <g className="cloud-snow-dots"><circle cx="18" cy="29" r="2"/><circle cx="104" cy="34" r="2"/><circle cx="96" cy="18" r="1.6"/></g>}
+    {environment === 'storm' && <g className="cloud-storm-drops"><path d="M16 78l-2 7m26-7-2 7"/></g>}
     {environment === 'night' && <text className="cloud-sleep-z" x="100" y="24">z</text>}
   </g>;
-}
-
-function CloudRaster({ frame }) {
-  return <svg className="cloud-raster" viewBox={`${frame * 256} 0 256 256`} preserveAspectRatio="xMidYMid meet" aria-hidden="true">
-    <image href={cloudStateAtlas} width="1536" height="256" />
-  </svg>;
 }
 
 function Cloud({ mood, cashAction, cashId, environment }) {
   const faceMood = cashAction === 'income' ? 1 : mood;
   const resting = mood === 0 && !cashAction;
-  const rasterFrame = cashAction ? null : mood >= 5 ? 5 : Math.min(4, mood);
   return <svg className="mascot" id="mascot" viewBox="0 0 130 126" aria-hidden="true">
     <path className="mascot-body" d={BODY}/>
-    {rasterFrame != null && <CloudRaster frame={rasterFrame}/>}
     <g className="cloud-face-idle">
       <g className="cloud-face">
       {mood >= 5 && !cashAction && <path className="cloud-brows" d={mood === 6 ? 'M39 48l15 8m30-10-16 9' : 'M40 51l13 5m29-7-12 5'}/>}
-      {cashAction !== 'expense' && <><g className={resting && environment === 'night' ? 'cloud-sleep-eyes' : 'cloud-eyes'}><path d={resting && environment === 'night' ? 'M40 62q6 5 12 0m18-2q6 5 12 0' : EYES[faceMood]} className="face-eyes"/></g><path d={MOUTHS[faceMood]} className={`face-mouth ${faceMood === 6 ? 'cloud-angry-mouth' : ''}`}/></>}
+      {cashAction !== 'expense' && <><g className={resting && environment === 'night' ? 'cloud-sleep-eyes' : 'cloud-eyes'}><MorphFacePath pose={resting && environment === 'night' ? SLEEP_EYES : EYE_POSES[faceMood]} kind="eyes" className="face-eyes"/></g><MorphFacePath pose={MOUTH_POSES[faceMood]} kind="mouth" className={`face-mouth ${faceMood === 6 ? 'cloud-angry-mouth' : ''}`}/></>}
       <ellipse className="cloud-blush" cx="35" cy="74" rx={mood === 2 ? 11 : 7} ry={mood === 2 ? 6 : 4}/>
       <ellipse className="cloud-blush" cx="88" cy="72" rx={mood === 2 ? 11 : 7} ry={mood === 2 ? 6 : 4}/>
       {mood === 2 && <g className="cloud-blush-lines"><path d="m30 72 2 4m3-5 2 4m45-5 2 4m3-5 2 4"/></g>}
