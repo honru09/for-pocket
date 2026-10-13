@@ -34,10 +34,17 @@
     .demo-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
     .frame-row { display: flex; flex-wrap: wrap; gap: 16px; align-items: center; }
     .frame-row img { display: block; width: 120px; height: auto; }
+    .raster-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+    .raster { margin: 0; padding: 12px; border: 1px solid var(--pocket-line); border-radius: 18px; background: #fffdf7; }
+    .raster img { display: block; width: 100%; height: auto; border-radius: 12px; background-color: #d8d6cf; background-image: linear-gradient(45deg, rgba(255,255,255,.26) 25%, transparent 25%, transparent 75%, rgba(255,255,255,.26) 75%), linear-gradient(45deg, rgba(255,255,255,.26) 25%, transparent 25%, transparent 75%, rgba(255,255,255,.26) 75%); background-position: 0 0, 8px 8px; background-size: 16px 16px; }
+    .raster figcaption { padding: 10px 2px 2px; }
+    .raster strong { display: block; margin-bottom: 4px; font-size: 14px; }
+    .raster p { margin: 0; font-size: 12px; }
+    .raster-note { margin: 12px 0 0; font-size: 12px; }
     .notes { margin-top: 18px; padding: 15px 17px; border-left: 4px solid var(--pocket-cloud); background: #fff8e9; border-radius: 0 14px 14px 0; }
     .notes p { margin: 0; font-size: 12px; }
     a { color: inherit; }
-    @media (max-width: 820px) { header { display: block; } .art-grid { grid-template-columns: 1fr 1fr; } .icon-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } .demo-grid { grid-template-columns: 1fr; } }
+    @media (max-width: 820px) { header { display: block; } .art-grid { grid-template-columns: 1fr 1fr; } .icon-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } .demo-grid, .raster-grid { grid-template-columns: 1fr; } }
     @media (max-width: 520px) { main { padding: 24px 16px 46px; } .art-grid { grid-template-columns: 1fr; } .icon-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } .pocket-state-card { grid-template-columns: 1fr; } .pocket-state-card__actions { grid-column: 1; } }
   </style>
 </head>
@@ -45,7 +52,7 @@
 <main>
   <header>
     <div><h1>for<span>.</span> UI Kit v2</h1><p class="lede">根据现有平台真实状态补齐：状态插画、按钮图标、可复用状态卡、操作框架和个性化头像元素。全部未接入业务页面。</p></div>
-    <p class="meta">新增 3 张状态插画 · 20 枚图标 · 3 个 SVG 框架 · 1 个组件样式包<br>不表达金额、权限、同步成功或个人地址。</p>
+    <p class="meta">新增 3 张状态插画 · 36 枚 SVG 图标 · 3 个 SVG 框架 · 4 个拟物 PNG 图集<br>不表达金额、权限、同步成功或个人地址。</p>
   </header>
 
   <section class="section" aria-labelledby="arts"><h2 id="arts">新增场景插画</h2><div class="art-grid">
@@ -53,6 +60,13 @@
     <figure class="art"><img src="illustrations/partial-import.png" alt="部分导入待核对场景插画" width="1536" height="1024" loading="lazy"><figcaption><strong>部分导入待核对</strong><p>适用：解析后有记录需人工检查。不要用成功勾替代核对。</p></figcaption></figure>
     <figure class="art"><img src="illustrations/location-privacy.png" alt="位置可选与隐私说明场景插画" width="1536" height="1024" loading="lazy"><figcaption><strong>位置可选</strong><p>适用：首次说明位置权限。图中不出现地址、坐标或授权承诺。</p></figcaption></figure>
   </div></section>
+
+  <section class="section" aria-labelledby="rasters"><h2 id="rasters">拟物化可复用图集</h2><p class="lede">沿用奶油纸材质、浅凹槽、深鼠尾草绿和暖黄微点。每张图集都是真透明 RGBA；图中只放可复用表面和抽象符号，业务文案、金额和结果由 HTML 负责。</p><div class="raster-grid">
+    <figure class="raster"><img src="rasters/neumorphic-button-atlas-v2.png" alt="四枚拟物主操作按钮图集：保存、重试、新增和添加位置" width="2172" height="724"><figcaption><strong>主操作按钮图集</strong><p>64–96px 强调图块：保存、重试、新增、位置。默认态统一，焦点环和按下态交给 CSS。</p></figcaption></figure>
+    <figure class="raster"><img src="rasters/neumorphic-avatar-badges-v2.png" alt="八枚拟物个性化头像徽章图集" width="2172" height="724" loading="lazy"><figcaption><strong>头像个性化徽章</strong><p>叶片、太阳、月亮、星芒、共享圆、亮点、书签和双点；仅装饰头像，不暗示认证或权限。</p></figcaption></figure>
+    <figure class="raster"><img src="rasters/neumorphic-state-card-frames-v2.png" alt="四枚拟物状态卡框架图集" width="2172" height="724" loading="lazy"><figcaption><strong>状态卡框架</strong><p>导入待核对、仅本机草稿、回顾暂无记录、位置可选；中心留白给真实文案和动作。</p></figcaption></figure>
+    <figure class="raster"><img src="rasters/neumorphic-empty-state-atlas-v2.png" alt="六枚拟物空态与同步状态图集" width="1536" height="1024" loading="lazy"><figcaption><strong>空态与同步状态</strong><p>空账本、筛选无结果、导入无结果、文件需更换、连携过期、暂无位置；语义由旁边的 HTML 文案确认。</p></figcaption></figure>
+  </div><p class="raster-note">使用建议：24px 行内操作继续用 SVG；PNG 图集用于大按钮、头像选择器和空态说明卡，避免纸纹缩小后变糊。</p></section>
 
   <section class="section" aria-labelledby="states"><h2 id="states">真实状态图标</h2><div class="icon-grid">
     <div class="icon"><svg aria-hidden="true"><use href="pocket-ui-icons.svg#storage-read-failed"/></svg><span>本机数据不可读</span></div>

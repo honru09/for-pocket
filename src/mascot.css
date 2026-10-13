@@ -18,6 +18,11 @@
 .cloud-cash-motion { transform-origin:50% 78%; }
 .for-root .mascot-toy .mascot { position:static; width:100%; height:100%; transform:none; pointer-events:none; overflow:visible; opacity:1; }
 .mascot-toy .mascot { shape-rendering:geometricPrecision; }
+.mascot-main-art { opacity:0; transform-origin:50% 52%; transform:scale(.98); transition:opacity 180ms var(--ease-out),transform 260ms var(--spring); }
+.cloud-vector-art { opacity:1; transition:opacity 180ms var(--ease-out); }
+.mascot[data-raster="true"] .mascot-main-art { opacity:1; transform:scale(1); }
+.mascot[data-raster="true"] .cloud-vector-art { opacity:0; }
+.mascot[data-raster="false"] .mascot-main-art { opacity:0; transform:scale(.96); }
 .mascot-toy .mascot-body { fill:#f9c678; }
 .cloud-face-idle { transform-origin:65px 67px; }
 .cloud-face { transform-origin:65px 67px; transition:transform 180ms var(--ease-out); }

@@ -11,6 +11,7 @@
 - `icons/`：36 枚独立 SVG，24 × 24、1.6px 描边、圆角端点，无文字；包含状态、按钮和个性化三组。
 - `pocket-ui-icons.svg`：同一组图标的 symbol 精灵图，用 currentColor 随主题着色。
 - `frames/`：状态卡、插画容器、头像环 3 个可下载 SVG 框架。
+- `rasters/`：4 张真透明 RGBA 拟物图集：主操作按钮、个性化头像徽章、状态卡框架、空态与同步状态。前三张为 2172 × 724 横向 atlas；空态图集为 1536 × 1024 的 3×2 网格，适合裁切或作为大号视觉图块。
 - `ui-components.css`：未接入的按钮、状态卡、状态 pill、分段控制、头像框样式；使用语义 token，可复制到正式组件后再按现有 CSS 约束调整。
 - `preview-v2.html`：新增素材的独立预览，含按钮/卡片/头像框交互示意。
 - `manifest.json`：用途、状态条件、禁止场景、建议展示尺寸及目标组件。
@@ -35,6 +36,8 @@
 | location-privacy | 位置权限说明 | 未授予、主动关闭或暂无地点 | 真实地图、成员地点详情、已授权承诺 |
 
 状态图标新增：`storage-read-failed`、`import-no-result`、`file-warning`、`recap-empty`、`recurring-empty`、`recurring-due`、`link-expired`、`location-no-place`；操作图标新增 `button-*`；个性化新增 `avatar-*`。图标只能配合可读文字和真实状态使用。
+
+拟物 PNG 图集新增：`neumorphic-button-atlas-v2.png`（保存／重试／新增／位置）、`neumorphic-avatar-badges-v2.png`（8 枚装饰徽章）、`neumorphic-state-card-frames-v2.png`（4 枚留白状态卡）、`neumorphic-empty-state-atlas-v2.png`（空账本／筛选无结果／导入无结果／文件需更换／连携过期／暂无位置）。四张均已验证为 RGBA 真透明背景；不要把图集里的暖黄环或暖黄点当作业务成功状态，也不要在图片里写入金额、地址、成员名或同步承诺。
 
 空账本与筛选无结果应分开：后者使用 `empty-filter` 小图标及清除筛选动作。邀请预览不能用插画遮盖共享范围，尤其需先解决本次审核指出的成员位置及退出后消息更新问题。
 
@@ -67,6 +70,7 @@ import iconSpriteUrl from '../public/assets/ui-kit-v1/pocket-ui-icons.svg';
 ## 图像与性能约束
 
 - PNG 为不透明暖奶油底，不是透明抠图。模型生成的底色带细微纸纹，并非每个像素都是 #f8f7f1。
+- 上述 `rasters/` PNG 图集是例外：它们是真透明 RGBA，可叠在现有奶油背景上；保留软阴影但不要再套一层强阴影。
 - 插画是原始母版，不建议原尺寸直接进入每次打开的记账首屏。按实际显示尺寸生成投放版本，二级页懒加载；无需一次预载四张。
 - v2 新增插画仍是原始母版；按实际显示尺寸生成投放版本，二级页懒加载；不要一次预载全部七张。
 - 未对原图做无授权的重画、抠图或转换。没有把图片工具的默认目录当作项目资源路径。

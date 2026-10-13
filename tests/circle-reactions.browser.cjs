@@ -63,10 +63,10 @@ function signed(id, language) {
       const sender=pages[0].page, recipient=pages[1].page;
       await recipient.locator('[data-view="history"]').tap();
       await expect(recipient.locator('#history-category')).toBeVisible();
-      await expect(recipient.locator('.app-header-reactions .presence-chip')).toHaveCount(2);
-      assert.ok(await recipient.locator('.app-header-reactions').evaluate(node=>{
-        const box=node.getBoundingClientRect(); return box.width>0 && box.right<=innerWidth && box.bottom<=innerHeight;
-      }),'reaction avatars remain available in the compact header on secondary pages');
+      await expect(recipient.locator('.app-header-reactions')).toHaveCount(0);
+      await expect(recipient.locator('.footprints')).toHaveCount(0);
+      await expect(recipient.locator('.expense-location')).toHaveCount(0);
+      await expect(recipient.locator('.profile-trigger .person-avatar')).toHaveCount(1);
       await recipient.evaluate(()=>window.__setReactionVisible(false));
       const beforeCount = (await request(101,'/profile')).expenses.length;
       await sender.locator('[data-key="8"]').tap();
@@ -83,8 +83,7 @@ function signed(id, language) {
       assert.ok(await sender.locator('.emoji-drawer [data-emoji]').count()>=80,'many emoji choices');
       const palette = await sender.locator('.emoji-drawer').evaluate(node=>({horizontal:node.scrollWidth>node.clientWidth,row:new Set([...node.children].map(el=>Math.round(el.getBoundingClientRect().top))).size,buttonSize:node.firstElementChild.getBoundingClientRect().width}));
       assert.ok(palette.horizontal && palette.row===1 && palette.buttonSize>=44,JSON.stringify(palette));
-      if(language==='zh') assert.equal(await sender.locator('.emoji-person-location').count(),0,'missing location takes no space');
-      else await expect(sender.locator('.emoji-person-location')).toContainText('新宿');
+      assert.equal(await sender.locator('.emoji-person-location').count(),0,'emoji dialog keeps the recipient row compact');
       await sender.locator('.emoji-drawer').evaluate(node=>node.scrollTo({left:node.scrollWidth,behavior:'instant'}));
       await expect(sender.locator('[data-emoji="🧸"]')).toBeInViewport();
       await sender.locator('.emoji-drawer').evaluate(node=>node.scrollTo({left:0,behavior:'instant'}));
@@ -147,7 +146,7 @@ function signed(id, language) {
       await expect(sender.locator('#ai-import-view')).toBeVisible();
       for (const item of pages) { assert.deepEqual(item.errors,[]); await item.context.close(); }
       checks+=24;
-      console.log(`PASS ${width}x${height} ${language}: horizontal emoji/location, burst count in ledger, receipt/ack, self payer, clipboard-free navigation and quick entry hit targets`);
+      console.log(`PASS ${width}x${height} ${language}: horizontal emoji drawer, compact ledger, burst count, receipt/ack, self payer, clipboard-free navigation and quick entry hit targets`);
     }
     console.log(`PASS: ${checks} circle and compact ledger checks; screenshots: ${artifactDir}`);
   } finally {

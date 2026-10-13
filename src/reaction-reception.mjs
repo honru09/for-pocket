@@ -1,3 +1,5 @@
+import { normalizeReactionCount } from '../public/reactions.mjs';
+
 // A receipt is presented in one scene, never one animation per network item.
 // Keep only small burst summaries after acknowledging the actual received IDs.
 export const RECEPTION_HISTORY_LIMIT = 32;
@@ -19,7 +21,7 @@ export function receiveReactions(state, events, now) {
     if (!event?.id || !event.emoji) continue;
     receivedIds.push(event.id);
     const id = event.burstId || event.id;
-    const count = Math.max(1,Number(event.burstCount) || 0,Number(event.burstIndex) || 0);
+    const count = Math.max(1, normalizeReactionCount(event.burstCount), normalizeReactionCount(event.burstIndex));
     const old = history.get(id);
     if (!old || count > old.count) {
       const summary = { ...old,id,emoji:event.emoji,count:Math.max(old?.count || 0,count),order:state.sequence+1 };

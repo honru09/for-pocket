@@ -10,9 +10,16 @@ export const REACTION_EMOJIS = [
 ];
 
 const EMOJI_DIGITS = ['0️⃣', '1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣'];
+export const MAX_REACTION_COUNT = 1000;
+export function normalizeReactionCount(value) {
+  let count;
+  try { count = Number(value); } catch { return 0; }
+  if (!Number.isFinite(count) || count <= 0) return 0;
+  return Math.min(MAX_REACTION_COUNT, Math.floor(count));
+}
 export function formatReactionCount(value) {
-  const count = Math.floor(Number(value));
-  if (!Number.isSafeInteger(count) || count < 2) return '';
+  const count = normalizeReactionCount(value);
+  if (count < 2) return '';
   return `✖️${count === 10 ? '🔟' : String(count).split('').map(digit => EMOJI_DIGITS[Number(digit)]).join('')}`;
 }
 

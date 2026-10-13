@@ -50,8 +50,9 @@ is invented.
 
 ## Telegram delivery and retry behavior
 
-The message is sent to each bound Telegram chat with ordinary notification
-behavior. A successful recipient is checkpointed in the store and is not sent
+The message is sent to each bound Telegram chat as a silent Telegram notification
+(`disable_notification: true`), so it never rings or vibrates. A successful
+recipient is checkpointed in the store and is not sent
 again if another recipient fails. A failed delivery leaves that recipient
 retryable and the slot claim in `failed` state, so Cloud Scheduler can retry
 the request. A process crash between Telegram acceptance and its checkpoint
@@ -81,8 +82,8 @@ The HTTP tick handler must include the result and return `503` when its
   successful message ID. Repeated ticks, service restarts and switching circles
   do not resend a successful reminder. Failed sends can retry until local
   midnight, after checking again whether the user has since recorded a bill.
-- The reminder uses an ordinary Telegram notification. Expense companion
-  messages and emoji summaries have their own silent-delivery behavior.
+- The reminder is also a silent Telegram notification (`disable_notification: true`).
+  Expense companion messages and emoji summaries use the same quiet delivery.
 
 The narrow Telegram-accepted/store-not-checkpointed crash window described
 above also applies to these reminders. No live test message is needed: the
@@ -113,6 +114,12 @@ Keep its value out of screenshots, Git, logs and command-line history. For a
 private Cloud Run target, configure a Scheduler service account with
 `roles/run.invoker` and an OIDC token; the app still requires `X-Cron-Secret`.
 See Google's [HTTP target authentication guide](https://docs.cloud.google.com/scheduler/docs/http-target-auth).
+
+Live verification (2026-10-14, project `project-175c4bc7-52ff-4b6d-b53`): the
+`for-pocket-reminders-tick` job is enabled in `asia-northeast1`, runs every 15
+minutes in `Etc/UTC`, targets the tick URL above, and its latest status is
+reported as successful. The `for-pocket-reactions` Cloud Tasks queue is running
+in `asia-northeast1`. No manual production run was triggered.
 
 After deployment, check the job is enabled, its next scheduled run and its
 last response status. A successful request should have a `200` response;

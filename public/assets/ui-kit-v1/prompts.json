@@ -30,5 +30,27 @@
       "key": "location-privacy",
       "prompt": "Use case: illustration-story. Asset type: polished editorial spot illustration for the existing for. Telegram expense Mini App, not an interface screenshot and not a replacement app logo. Existing visual world: warm cream paper #f8f7f1, sage #e6ebd7, charcoal olive #333a30, warm yellow #f9c678, coral #ed885f. Mascot: one small soft yellow irregular five-lobed cloud, two dark olive short vertical eyes, a tiny curved smile, two coral oval cheeks, chunky ivory outline; quiet friendly expression, no clothing or human body. Style: carefully composed flat 2D cut-paper/gouache editorial illustration with subtle paper texture, simple organic shapes, clean silhouettes, mature restrained kawaii, sparse sage and terracotta details, no glossy 3D. Format: landscape 1536x1024, opaque warm cream full-bleed background, centered composition with generous empty margins, no frame. Text: none, no letters, numbers, currency symbols, watermark, gradients, UI boxes, or claims. Keep all objects fully inside frame.\nPrimary request: optional location and privacy explanation. The cloud holds a simple abstract sage map card with one generic coral pin while a soft paper curtain covers part of the map, making the choice to keep location private feel calm and normal. Do not draw a real map, street, address, coordinate, tracking trail, target reticle, satellite, lock, shield, or permission-granted badge. The picture must not imply that a location was attached to an expense; let nearby HTML copy explain that location is optional and only attached after the user records an entry."
     }
+  ],
+  "rasterAssets": [
+    {
+      "key": "neumorphic-button-atlas-v2",
+      "file": "rasters/neumorphic-button-atlas-v2.png",
+      "prompt": "Use case: ui-mockup. Asset type: production-ready transparent PNG action-tile atlas for a personal expense app. Four separate square button tiles in one wide row: save entry, retry entry, add entry, add location. Match a tactile warm-cream pressed-paper surface, shallow inset rim, soft upper-left contact shadow, deep muted sage glyphs, and a restrained warm-yellow accent. All four are identical default raised states; no focus or disabled styling baked in. Genuine transparent alpha outside tiles and in gaps; no checkerboard. No text, amounts, addresses, success claims, logos, glossy plastic, harsh outlines, edge halos, or watermark."
+    },
+    {
+      "key": "neumorphic-avatar-badges-v2",
+      "file": "rasters/neumorphic-avatar-badges-v2.png",
+      "prompt": "Use case: ui-mockup. Asset type: production-ready transparent PNG personalization badge atlas for a personal expense app. Eight separate circular cream-paper badges: leaf, sun, moon, star, shared-circle, sparkle, bookmark, and paired dots. Tactile raised/inset material, muted sage symbols, tiny warm-yellow accents, isolated objects, genuine alpha outside each badge. Decorative only: no face, name, letter, number, verification, rank, permission, lock, or watermark."
+    },
+    {
+      "key": "neumorphic-state-card-frames-v2",
+      "file": "rasters/neumorphic-state-card-frames-v2.png",
+      "prompt": "Use case: ui-mockup. Asset type: production-ready transparent PNG state-card-frame atlas. Four rounded landscape cream-paper frames with shallow inset rims and generous empty centers for HTML copy: review-needed document, device-only draft, empty history, optional location. Tiny abstract corner motifs only. Genuine transparent outer background, no text, amounts, addresses, names, permissions, success checkmarks, logos, checkerboard, strong gradients, or watermark."
+    },
+    {
+      "key": "neumorphic-empty-state-atlas-v2",
+      "file": "rasters/neumorphic-empty-state-atlas-v2.png",
+      "prompt": "Use case: ui-mockup. Asset type: production-ready transparent PNG atlas of six reusable empty and recovery state tiles in a 3 by 2 grid: empty ledger, empty filter, no import result, file needs replacement, account link expired or conflict, and no location. Match warm cream pressed-paper material, subtle microtexture, soft raised square tile, deep muted sage symbols, and restrained warm-yellow accents. True transparent alpha in the gaps and outside each tile; no checkerboard. No text, amounts, addresses, names, permission claims, success checkmarks, logos, glossy plastic, hard outlines, or watermark. Keep symbols universal and let HTML provide the actual state explanation and action."
+    }
   ]
 }

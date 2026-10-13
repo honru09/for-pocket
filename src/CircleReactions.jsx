@@ -1,10 +1,10 @@
-import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Tappable } from '@telegram-apps/telegram-ui';
 import { Avatar, Sheet } from './AccountViews.jsx';
 import { REACTION_EMOJIS, normalizeReactionEmoji } from '../public/reactions.mjs';
-import { locationLabel } from '../public/location.mjs';
 import { createId } from './id.mjs';
+import { createReactionSendQueue } from './reaction-send.mjs';
 import ReactionReception from './ReactionReception.jsx';
 import './circle-reactions.css';
 
@@ -50,9 +50,35 @@ export default function CircleReactions({ circle, ledgerId, userId, service, t, 
   const [visible,setVisible] = useState(document.visibilityState !== 'hidden');
   const [effectHost] = useState(() => document.createElement('div'));
   const portraits = useRef(new Map()), targetPortrait = useRef(null), seen = useRef(new Set()), acknowledgements = useRef(new Set()), receivedCounts = useRef(new Map());
+  const payloadScopes = useRef(new Map()), failureById = useRef(new Map());
   const scope = circle.id + ':' + ledgerId + ':' + userId;
   const scopeRef = useRef(scope), mounted = useRef(true), ackTimer = useRef(null), ackFlight = useRef(null), haptic = useRef(onHaptic);
   scopeRef.current = scope; haptic.current = onHaptic;
+  const reactionSender = useMemo(() => createReactionSendQueue({
+    send: payload => service.sendReaction(payload),
+    onSuccess: payload => {
+      const requestScope = payloadScopes.current.get(payload.id);
+      payloadScopes.current.delete(payload.id);
+      failureById.current.delete(payload.id);
+      if (mounted.current && requestScope === scopeRef.current) setFailures([...failureById.current.values()]);
+    },
+    onFailure: payload => {
+      const requestScope = payloadScopes.current.get(payload.id);
+      payloadScopes.current.delete(payload.id);
+      if (mounted.current && requestScope === scopeRef.current) {
+        failureById.current.set(payload.id, payload);
+        setFailures([...failureById.current.values()]);
+      }
+    },
+  }), [service, scope]);
+  useEffect(() => () => reactionSender.close(), [reactionSender]);
+  useEffect(() => {
+    // A switched circle/ledger must never inherit a retry badge belonging to
+    // the previous scope. The queue itself is recreated by the scope key.
+    payloadScopes.current.clear();
+    failureById.current.clear();
+    setFailures([]);
+  }, [scope]);
   useEffect(() => {
     mounted.current = true;
     const visibility = () => setVisible(document.visibilityState !== 'hidden');
@@ -127,22 +153,21 @@ export default function CircleReactions({ circle, ledgerId, userId, service, t, 
     setIncoming(queue => queue.filter(item => !finished.has(item.id)));
     void flushAck();
   }, [flushAck]);
-  const transmit = async payload => {
-    const requestScope = scope;
-    try {
-      await service.sendReaction(payload);
-      if (mounted.current && scopeRef.current === requestScope) setFailures(items => items.filter(item => item.id !== payload.id));
-    } catch {
-      if (mounted.current && scopeRef.current === requestScope) setFailures(items => items.some(item => item.id === payload.id) ? items : [...items,payload]);
-    }
+  const transmit = (payload, retry = false) => {
+    if (!payload?.id || !scopeRef.current) return;
+    payloadScopes.current.set(payload.id, scopeRef.current);
+    failureById.current.delete(payload.id);
+    setFailures([...failureById.current.values()]);
+    if (!retry || !reactionSender.retry(payload.id)) void reactionSender.enqueue(payload);
   };
+  const retryFailures = payloads => payloads.forEach(payload => transmit(payload, true));
   const send = (value,node) => {
     const emoji = normalizeReactionEmoji(value);
     if (!emoji || !target || disabled) { setInvalid(true); return; }
     setInvalid(false);
     const id = createId(), payload = { id,circleId:circle.id,ledgerId,recipientId:target.id,emoji };
     setOutgoing(items => [...items,{ id,emoji,start:center(node),end:center(targetPortrait.current) }]);
-    onHaptic?.(); void transmit(payload);
+    onHaptic?.(); transmit(payload);
   };
   const open = (person,event) => {
     onHaptic?.();
@@ -153,30 +178,35 @@ export default function CircleReactions({ circle, ledgerId, userId, service, t, 
     setTarget(person); setCustom(''); setCustomOpen(false); setInvalid(false);
   };
   const finishOutgoing = useCallback(event => setOutgoing(items => items.filter(item => item.id !== event.id)),[]);
+  // The compact header only needs the other members. The record page keeps
+  // the self avatar because it is also the payer/profile entry point.
+  const headerRail = entryTarget?.classList?.contains('app-header-reactions');
+  const visibleMembers = headerRail ? circle.members.filter(person => person.id !== userId) : circle.members;
   const people = <div className="consumer-buttons circle-presence" role="group" aria-label={t('circlePeople')}>
-    {circle.members.map(person => <Tappable Component="button" type="button" key={person.id} ref={node => { if (node) portraits.current.set(person.id,node); else portraits.current.delete(person.id); }}
+    {visibleMembers.map(person => <Tappable Component="button" type="button" key={person.id} ref={node => { if (node) portraits.current.set(person.id,node); else portraits.current.delete(person.id); }}
       className={`consumer-chip presence-chip consumer-color-${person.color}`} data-member-id={person.id} data-self={person.id === userId}
       aria-label={person.id === userId ? t('myProfile') : t('sendEmojiTo',{ name:person.name })} aria-haspopup={person.id === userId ? undefined : 'dialog'} aria-expanded={person.id === userId ? undefined : target?.id === person.id}
       disabled={disabled} onClick={event => open(person,event)}><Avatar person={person}/></Tappable>)}
   </div>;
   const person = circle.members.find(member => member.id === target?.id) || target;
-  const place = locationLabel(person?.location);
+  const scopedFailures = failures.filter(payload => payload.circleId === circle.id && payload.ledgerId === ledgerId);
+  const targetFailures = target ? scopedFailures.filter(payload => payload.recipientId === target.id) : scopedFailures;
   return <>
     {entryTarget ? createPortal(people,entryTarget) : entryTarget === undefined ? people : null}
     {target && <Sheet title={person.name} className="emoji-sheet" style={sheetStyle} onClose={() => { setTarget(null); setOutgoing([]); }}>
-      <div className="emoji-person-row"><span className="emoji-recipient" ref={targetPortrait}><Avatar person={person}/></span><div className="emoji-person-info"><strong>{person.name}</strong>{place && <span className="emoji-person-location"><span aria-hidden="true">📍</span>{place}</span>}</div></div>
+      <div className="emoji-person-row"><span className="emoji-recipient" ref={targetPortrait}><Avatar person={person}/></span><div className="emoji-person-info"><strong>{person.name}</strong></div></div>
       <div className="emoji-drawer" role="group" aria-label={t('emojiChoices')}>{REACTION_EMOJIS.map(emoji => <Tappable Component="button" type="button" key={emoji} aria-label={t('sendEmoji',{emoji})} data-emoji={emoji} disabled={disabled} onClick={event => send(emoji,event.currentTarget)}>{emoji}</Tappable>)}<Tappable Component="button" type="button" className="emoji-custom-toggle" aria-label={t('customEmoji')} aria-expanded={customOpen} onClick={() => setCustomOpen(value => !value)}>⌨️</Tappable></div>
       {customOpen && <form className="emoji-custom" onSubmit={event => { event.preventDefault(); send(custom,event.currentTarget); }}>
         <input aria-label={t('customEmoji')} placeholder="☺︎" value={custom} maxLength={64} onChange={event => { setCustom(event.target.value); setInvalid(false); }}/>
         <Tappable Component="button" type="submit" disabled={!custom.trim() || disabled} aria-label={t('sendEmoji',{emoji:custom})}>↑</Tappable>
       </form>}
       {invalid && <span className="emoji-error" role="status">{t('errorReaction')}</span>}
-      {failures.length > 0 && <button type="button" className="emoji-retry" onClick={() => failures.forEach(payload => void transmit(payload))}>{t('reactionRetry',{n:failures.length})}</button>}
+      {targetFailures.length > 0 && <button type="button" className="emoji-retry" onClick={() => retryFailures(targetFailures)}>{t('reactionRetry',{n:targetFailures.length})}</button>}
     </Sheet>}
     {effectHost && createPortal(<div className="emoji-flight-layer" hidden={!visible}>
       {outgoing.map(event => <FlyingEmoji key={event.id} event={event} onFinish={finishOutgoing} visible={visible}/>)}
       <ReactionReception events={incoming} visible={visible} onSeen={markSeen} onFinish={finishIncoming}/>
     </div>,effectHost)}
-    {!target && failures.length > 0 && <button type="button" className="emoji-retry emoji-retry-capsule" onClick={() => failures.forEach(payload => void transmit(payload))}>{t('reactionRetry',{n:failures.length})}</button>}
+    {!target && scopedFailures.length > 0 && <button type="button" className="emoji-retry emoji-retry-capsule" onClick={() => retryFailures(scopedFailures)}>{t('reactionRetry',{n:scopedFailures.length})}</button>}
   </>;
 }

@@ -4,6 +4,7 @@ import { createPortal } from 'react-dom';
 import { Icon } from './icons.jsx';
 import weatherAtlas from '../public/assets/weather-accessories-v2.png';
 import confirmButtonAtlas from '../public/assets/confirm-button-atlas.png';
+import mainCloudAsset from '../public/assets/mascot-main.png';
 import MorphFacePath from './MorphFacePath.jsx';
 import { EYE_POSES, MOUTH_POSES, SLEEP_EYES } from './mascot-face.mjs';
 
@@ -62,15 +63,18 @@ function Cloud({ mood, cashAction, cashId, environment }) {
   // Keep the familiar soft face and communicate the mood with one small mark.
   const faceMood = cashAction === 'income' ? 1 : mood >= 5 ? 2 : mood;
   const resting = mood === 0 && !cashAction;
-  return <svg className="mascot" id="mascot" viewBox="0 0 130 126" aria-hidden="true">
-    <path className="mascot-body" d={BODY}/>
-    <g className="cloud-face-idle">
-      <g className="cloud-face">
-      {cashAction !== 'expense' && <><g className={resting && environment === 'night' ? 'cloud-sleep-eyes' : 'cloud-eyes'}><MorphFacePath pose={resting && environment === 'night' ? SLEEP_EYES : EYE_POSES[faceMood]} kind="eyes" className="face-eyes"/></g><MorphFacePath pose={MOUTH_POSES[faceMood]} kind="mouth" className={`face-mouth ${faceMood === 6 ? 'cloud-angry-mouth' : ''}`}/></>}
-      <ellipse className="cloud-blush" cx="35" cy="74" rx={mood === 2 ? 11 : 7} ry={mood === 2 ? 6 : 4}/>
-      <ellipse className="cloud-blush" cx="88" cy="72" rx={mood === 2 ? 11 : 7} ry={mood === 2 ? 6 : 4}/>
-      {mood === 2 && <g className="cloud-blush-lines"><path d="m30 72 2 4m3-5 2 4m45-5 2 4m3-5 2 4"/></g>}
-      {cashAction === 'expense' && <ExpenseFace key={cashId}/>}
+  return <svg className="mascot" id="mascot" viewBox="0 0 130 126" data-raster={resting ? 'true' : 'false'} aria-hidden="true">
+    <image className="mascot-main-art" href={mainCloudAsset} x="1" y="0" width="128" height="126" preserveAspectRatio="xMidYMid meet"/>
+    <g className="cloud-vector-art">
+      <path className="mascot-body" d={BODY}/>
+      <g className="cloud-face-idle">
+        <g className="cloud-face">
+        {cashAction !== 'expense' && <><g className={resting && environment === 'night' ? 'cloud-sleep-eyes' : 'cloud-eyes'}><MorphFacePath pose={resting && environment === 'night' ? SLEEP_EYES : EYE_POSES[faceMood]} kind="eyes" className="face-eyes"/></g><MorphFacePath pose={MOUTH_POSES[faceMood]} kind="mouth" className={`face-mouth ${faceMood === 6 ? 'cloud-angry-mouth' : ''}`}/></>}
+        <ellipse className="cloud-blush" cx="35" cy="74" rx={mood === 2 ? 11 : 7} ry={mood === 2 ? 6 : 4}/>
+        <ellipse className="cloud-blush" cx="88" cy="72" rx={mood === 2 ? 11 : 7} ry={mood === 2 ? 6 : 4}/>
+        {mood === 2 && <g className="cloud-blush-lines"><path d="m30 72 2 4m3-5 2 4m45-5 2 4m3-5 2 4"/></g>}
+        {cashAction === 'expense' && <ExpenseFace key={cashId}/>}
+        </g>
       </g>
     </g>
     {resting && <WeatherAccessory environment={environment}/>}

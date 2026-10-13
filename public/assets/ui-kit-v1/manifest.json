@@ -392,6 +392,60 @@
       "group": "personalization"
     }
   ],
+  "rasters": [
+    {
+      "id": "neumorphic-button-atlas-v2",
+      "title": "拟物主操作按钮图集",
+      "file": "rasters/neumorphic-button-atlas-v2.png",
+      "width": 2172,
+      "height": 724,
+      "format": "PNG RGBA",
+      "slots": ["保存记录", "重试同一笔", "新增一笔", "添加位置"],
+      "cropGuide": "四等分近似：x=0/543/1086/1629，y=0，w≈543，h=724；按 alpha bbox 微调边缘。",
+      "use": "64–96px 主操作图块或按钮旁的强调视觉；文字仍由 HTML 提供。",
+      "avoid": "不要把图集缩成 24px 行内图标；不要把保存图块单独解释为服务端已确认。",
+      "generator": "built-in image_gen"
+    },
+    {
+      "id": "neumorphic-avatar-badges-v2",
+      "title": "拟物个性化头像徽章图集",
+      "file": "rasters/neumorphic-avatar-badges-v2.png",
+      "width": 2172,
+      "height": 724,
+      "format": "PNG RGBA",
+      "slots": ["叶片", "太阳", "月亮", "星芒", "共享圆", "亮点", "书签", "双点"],
+      "cropGuide": "八等分近似：x=0/271.5/543/814.5/1086/1357.5/1629/1900.5，y=0，w≈271.5，h=724；头像内孔保持透明。",
+      "use": "头像旁的装饰选择器或 48–72px 个性化预览；不改变账号事实。",
+      "avoid": "不要作为已验证、管理员、成员权限或邀请已接受的徽章。",
+      "generator": "built-in image_gen"
+    },
+    {
+      "id": "neumorphic-state-card-frames-v2",
+      "title": "拟物状态卡框架图集",
+      "file": "rasters/neumorphic-state-card-frames-v2.png",
+      "width": 2172,
+      "height": 724,
+      "format": "PNG RGBA",
+      "slots": ["导入待核对", "仅本机草稿", "回顾暂无记录", "位置可选"],
+      "cropGuide": "四等分近似：x=0/543/1086/1629，y=0，w≈543，h=724；中心留白不要覆盖真实 HTML 文案。",
+      "use": "约 320×180px 的状态说明卡；中央留白由真实 HTML 标题、原因和动作填充。",
+      "avoid": "不要在图片里烘焙金额、地址、成员名、权限或同步承诺。",
+      "generator": "built-in image_gen"
+    },
+    {
+      "id": "neumorphic-empty-state-atlas-v2",
+      "title": "拟物空态与同步状态图集",
+      "file": "rasters/neumorphic-empty-state-atlas-v2.png",
+      "width": 1536,
+      "height": 1024,
+      "format": "PNG RGBA",
+      "slots": ["空账本", "筛选无结果", "导入无结果", "文件需更换", "连携过期或冲突", "暂无位置"],
+      "cropGuide": "3×2 网格：列中心约 x=256/768/1280，行中心约 y=256/768；单格约 512×512，按 alpha bbox 微调。",
+      "use": "空态选择器或 64–112px 状态图块；文字和动作由真实 HTML 提供。",
+      "avoid": "不要把过滤漏斗、断链或空 pin 当作错误原因之外的承诺；不替代真实错误详情。",
+      "generator": "built-in image_gen"
+    }
+  ],
   "sprite": "pocket-ui-icons.svg",
   "components": "ui-components.css",
   "frames": ["frames/state-card.svg", "frames/illustration-shell.svg", "frames/avatar-ring.svg"],
