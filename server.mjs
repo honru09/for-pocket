@@ -285,7 +285,12 @@ export function createApp({ token = process.env.BOT_TOKEN || '', dataDir = path.
             const uid = resolveAuth(db, req);
             const profile = handleDomain(db, uid, '/profile', 'GET', {}, { now: now(), limit });
             if (body.ledgerId && body.ledgerId !== profile.ledgerId) fail('errorLedgerChanged', 409);
-            return { uid, profile };
+            // The visible ledger intentionally mirrors records across the
+            // account's connected personal/circle files. Reports keep their
+            // explicit ledger scope so a recap cannot accidentally mix a
+            // different circle's private context into its prompt.
+            const scoped = { ...profile, expenses: profile.expenses.filter(entry => !entry.ledgerId || entry.ledgerId === profile.ledgerId) };
+            return { uid, profile: scoped };
           });
           limit(`ai-summary:${context.uid}`, 6);
           const result = await summarizeExpenses(body, context.profile, aiSummarizer, now());

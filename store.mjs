@@ -2,6 +2,7 @@ import { readFile, writeFile, mkdir, rename, readdir, unlink } from 'node:fs/pro
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { initialSettings, validateSettings } from './public/shared.mjs';
+import { syncAllLedgerGroups } from './ledger-sync.mjs';
 
 export const emptyState = () => ({ version: 2, revision: 0, users: {}, identities: {}, sessions: {}, links: {}, circles: {}, ledgers: {} });
 
@@ -21,9 +22,15 @@ export function createStore(dataDir, { debounceMs = 40, logger = console } = {})
     try {
       state = JSON.parse(await readFile(file, 'utf8'));
       if (state.version !== 2) throw new Error('Unsupported data version');
+      // Apply the account-wide ledger rule to existing v2 data as soon as it
+      // is loaded.  This is intentionally in-memory first; the normal
+      // debounced snapshot writes the migrated history without delaying the
+      // first response.
+      if (syncAllLedgerGroups(state)) { needsPersist = true; dirty = true; }
     } catch (error) {
       if (error.code !== 'ENOENT') throw error;
       state = await migrate();
+      syncAllLedgerGroups(state);
       needsPersist = true;
       dirty = true;
     }

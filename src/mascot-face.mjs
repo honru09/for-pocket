@@ -15,7 +15,9 @@ export const EYE_POSES = [
   openEyes,
   eyes(eye(40,61,line(40,61,52,61)),eye(70,59,line(70,59,82,59))),
   eyes(eye(45,62,line(45,62,45,67)),eye(74,60,line(74,60,74,65))),
-  eyes([41,58,...line(41,58,51,63),...line(51,63,42,66)],[81,56,...line(81,56,71,61),...line(71,61,80,64)]),
+  // A rounded squint reads as playful annoyance; the old sharp zig-zag made
+  // the final mood look startled and harsh at small sizes.
+  eyes(eye(41,61,quad(41,61,46,66,51,61)), eye(79,59,quad(79,59,74,64,69,59))),
 ];
 export const SLEEP_EYES = eyes(eye(40,62,quad(40,62,46,67,52,62)),eye(70,60,quad(70,60,76,65,82,60)));
 const smile = mouth(50,78,quad(50,78,60,88,70,75));
@@ -27,7 +29,9 @@ export const MOUTH_POSES = [
   [60,79,60,79-4*k,63-3*k,75,63,75,63+3*k,75,66,79-4*k,66,79,66,79+4*k,63+3*k,83,63,83,63-3*k,83,60,79+4*k,60,79],
   mouth(56,83,quad(56,83,63,80,69,82)),
   mouth(54,84,quad(54,84,63,75,71,82)),
-  [52,81,...quad(52,81,64,74,75,79),...line(75,79,73,89),...quad(73,89,61,94,53,88),...line(53,88,52,81)],
+  // Small soft pout. It keeps the angry state cute instead of becoming a
+  // large angular open mouth when the cloud is rendered at 108px.
+  [55,81,...quad(55,81,64,87,73,81),...quad(73,81,64,90,55,81),...hold(55,81),...hold(55,81)],
 ];
 
 export function facePath(points, kind) {

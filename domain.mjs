@@ -1,6 +1,7 @@
 import { randomUUID, randomBytes, randomInt, createHash } from 'node:crypto';
 import { initialSettings, resolveLanguage, validateSettings, validateExpense, validateExpenseUpdate, validateUserProfile, validateEntryTime, dateKey, MAX_CIRCLE_MEMBERS, MAX_CATEGORIES } from './public/shared.mjs';
 import { validTimezone } from './public/timezone.mjs';
+import { syncLedgerGroup, syncAllLedgerGroups } from './ledger-sync.mjs';
 
 export class RequestError extends Error { constructor(message, status = 400) { super(message); this.status = status; } }
 export const fail = (message, status) => { throw new RequestError(message, status); };
@@ -35,16 +36,28 @@ function context(db, uid) {
   }
   const circle = circleFor(db, uid), ledgerId = circle?.ledgerId || uid;
   db.ledgers[ledgerId] ||= { settings: initialSettings(), expenses: [] };
+  // A profile read is also the migration boundary for historical records in
+  // this connected account graph.  It keeps circle switching instantaneous
+  // while making old entries available in the newly selected ledger.
+  syncLedgerGroup(db, ledgerId);
   return { circle, ledgerId, ledger: db.ledgers[ledgerId], consumers: (circle?.members || [uid]).map(id => member(db, id)) };
+}
+function entryCircle(db, entry) {
+  return Object.values(db.circles || {}).find(circle => circle.ledgerId === entry?.ledgerId) || null;
+}
+function canManageEntry(db, uid, entry) {
+  const circle = entryCircle(db, entry);
+  return entry?.createdBy === uid || (!entry?.createdBy && entry?.ledgerId === uid) || Boolean(circle?.admins.includes(uid));
 }
 function viewCircle(db, c, uid) { return { id: c.id, name: c.name, isAdmin: c.admins.includes(uid), memberCount: c.members.length, members: c.members.map(id => ({ ...member(db, id), isAdmin: c.admins.includes(id) })) }; }
 function requireAdmin(c, uid) { if (!c.admins.includes(uid)) fail('errorAdminOnly', 403); }
 export function visible(db, uid) {
   const user = db.users[uid], { circle, ledgerId, ledger, consumers } = context(db, uid);
   const keys = Object.keys(db.identities).filter(k => db.identities[k] === uid);
+  const localFirst = (a, b) => Number(b.ledgerId === ledgerId) - Number(a.ledgerId === ledgerId);
   return { ledgerId, revision: db.revision,
     settings: { ...ledger.settings, currency: user.settings.currency, language: user.settings.language, languageManual: user.settings.languageManual, consumers },
-    expenses: ledger.expenses.filter(e => !e.deletedAt).map(e => ({ ...e, canDelete: !circle || circle.admins.includes(uid) || e.createdBy === uid })),
+    expenses: ledger.expenses.filter(e => !e.deletedAt).map(e => ({ ...e, canDelete: canManageEntry(db, uid, e) })).sort(localFirst),
     user: member(db, uid), account: { hasTelegram: keys.some(k => k.startsWith('telegram:')), hasGoogle: keys.some(k => k.startsWith('google:')), googleEmail: user.googleEmail || null },
     social: { circles: Object.values(db.circles).filter(c => c.members.includes(uid)).map(c => viewCircle(db, c, uid)), activeCircleId: circle?.id || null, activeCircle: circle ? viewCircle(db, circle, uid) : null, maxMembers: MAX_CIRCLE_MEMBERS },
   };
@@ -99,6 +112,10 @@ function mergeAccounts(db, source, target) {
   for (const [key, item] of Object.entries(db.links)) if ([source, target].includes(item.userId)) delete db.links[key];
   forgetPendingLocations(db, source, target);
   delete db.ledgers[source]; delete db.users[source];
+  // Account linking can connect previously separate personal/circle graphs.
+  // Rebuild those mirrors once so the merged account sees the complete old
+  // history from every ledger it can access.
+  syncAllLedgerGroups(db);
 }
 export function googleLogin(db, payload, { link, uid, now }) {
   const googleUid = ensureUser(db, `google:${payload.sub}`, payload);
@@ -147,9 +164,17 @@ export function handleDomain(db, uid, route, method, body, { now, limit, ledgerQ
     db.circles[id] = { id, name, ledgerId: id, members: [uid], admins: [uid], invite: null };
     db.ledgers[id] = { settings: structuredClone(previous.ledger.settings), expenses: [] };
     forgetPendingLocations(db, uid);
-    db.users[uid].activeCircleId = id; return visible(db, uid);
+    db.users[uid].activeCircleId = id;
+    syncLedgerGroup(db, id);
+    return visible(db, uid);
   }
-  if (route === '/circles/switch' && method === 'POST') { if (body.circleId) circleFor(db, uid, body.circleId); forgetPendingLocations(db, uid); db.users[uid].activeCircleId = body.circleId || null; return visible(db, uid); }
+  if (route === '/circles/switch' && method === 'POST') {
+    if (body.circleId) circleFor(db, uid, body.circleId);
+    forgetPendingLocations(db, uid);
+    db.users[uid].activeCircleId = body.circleId || null;
+    syncLedgerGroup(db, body.circleId ? db.circles[body.circleId].ledgerId : uid);
+    return visible(db, uid);
+  }
   if (route === '/circles/invite' && method === 'POST') {
     const c = circleFor(db, uid, body.circleId); if (!c) fail('errorMembership', 403);
     if (body.renew) requireAdmin(c, uid);
@@ -167,7 +192,9 @@ export function handleDomain(db, uid, route, method, body, { now, limit, ledgerQ
     if (body.confirm !== true) fail('errorConfirm');
     if (!c.members.includes(uid)) { if (c.members.length >= MAX_CIRCLE_MEMBERS) fail('errorCircleFull', 409); c.members.push(uid); }
     forgetPendingLocations(db, uid);
-    db.users[uid].activeCircleId = c.id; return visible(db, uid);
+    db.users[uid].activeCircleId = c.id;
+    syncLedgerGroup(db, c.ledgerId);
+    return visible(db, uid);
   }
   if (['/circles/rename', '/circles/admin', '/circles/remove', '/circles/leave'].includes(route) && method === 'POST') {
     const c = circleFor(db, uid, body.circleId); if (!c) fail('errorMembership', 403);
@@ -210,24 +237,29 @@ export function handleDomain(db, uid, route, method, body, { now, limit, ledgerQ
     const valid = validateExpense(body, { ...ledger.settings, consumers });
     const occurredAt = valid.occurredAt || new Date(now).toISOString();
     const entry = { ...valid, occurredAt, ledgerId, member: structuredClone(consumers.find(c => c.id === valid.consumer)), createdBy: uid, createdAt: new Date(now).toISOString(), dayKey: dateKey(new Date(occurredAt), valid.timezone) };
-    ledger.expenses.push(entry); return entry;
+    ledger.expenses.push(entry);
+    syncLedgerGroup(db, ledgerId);
+    return ledger.expenses.find(item => item.id === entry.id) || entry;
   }
   const recordRoute = /^\/expenses\/([a-zA-Z0-9_-]{8,64})(\/restore)?$/.exec(route);
   if (recordRoute && !recordRoute[2] && (method === 'PUT' || method === 'PATCH')) {
-    const { ledger, circle, consumers } = checkLedger(db, uid, body.ledgerId);
+    const { ledger, consumers, ledgerId: activeLedgerId } = checkLedger(db, uid, body.ledgerId);
     const entry = ledger.expenses.find(e => e.id === recordRoute[1] && !e.deletedAt); if (!entry) fail('errorMissing', 404);
-    if (circle && entry.createdBy !== uid && !circle.admins.includes(uid)) fail('errorEditPermission', 403);
+    if (!canManageEntry(db, uid, entry)) fail('errorEditPermission', 403);
     if (method === 'PATCH') {
       const valid = validateExpenseUpdate(entry, body, { ...ledger.settings, consumers });
       Object.assign(entry, valid, { member: structuredClone(consumers.find(c => c.id === valid.consumer) || entry.member), updatedAt: new Date(now).toISOString() });
     } else Object.assign(entry, validateEntryTime(body.occurredAt, body.timezone), { updatedAt: new Date(now).toISOString() });
-    return entry;
+    const sourceLedgerId = entry.ledgerId || activeLedgerId;
+    syncLedgerGroup(db, sourceLedgerId);
+    return (db.ledgers[sourceLedgerId]?.expenses || []).find(item => item.id === entry.id) || entry;
   }
   if (recordRoute && (method === 'DELETE' && !recordRoute[2] || method === 'POST' && recordRoute[2])) {
-    const { ledger, circle } = checkLedger(db, uid, body.ledgerId || ledgerQuery);
+    const { ledger, ledgerId: activeLedgerId } = checkLedger(db, uid, body.ledgerId || ledgerQuery);
     const entry = ledger.expenses.find(e => e.id === recordRoute[1]); if (!entry) fail('errorMissing', 404);
-    if (circle && entry.createdBy !== uid && !circle.admins.includes(uid)) fail('errorEntryPermission', 403);
-    if (method === 'DELETE') entry.deletedAt = new Date(now).toISOString(); else delete entry.deletedAt;
+    if (!canManageEntry(db, uid, entry)) fail('errorEntryPermission', 403);
+    if (method === 'DELETE') entry.deletedAt = new Date(now).toISOString(); else { delete entry.deletedAt; entry.updatedAt = new Date(now).toISOString(); }
+    syncLedgerGroup(db, entry.ledgerId || activeLedgerId);
     return entry;
   }
   fail('errorNotFound', 404);

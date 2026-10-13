@@ -64,7 +64,7 @@ function Cloud({ mood, cashAction, cashId, environment }) {
     <path className="mascot-body" d={BODY}/>
     <g className="cloud-face-idle">
       <g className="cloud-face">
-      {mood >= 5 && !cashAction && <path className="cloud-brows" d={mood === 6 ? 'M39 48l15 8m30-10-16 9' : 'M40 51l13 5m29-7-12 5'}/>}
+      {mood >= 5 && !cashAction && <path className="cloud-brows" d={mood === 6 ? 'M40 52q6 3 12 0m22 0q-6 3-12 0' : 'M40 52q6 2 12 0m22 0q-6 2-12 0'}/>}
       {cashAction !== 'expense' && <><g className={resting && environment === 'night' ? 'cloud-sleep-eyes' : 'cloud-eyes'}><MorphFacePath pose={resting && environment === 'night' ? SLEEP_EYES : EYE_POSES[faceMood]} kind="eyes" className="face-eyes"/></g><MorphFacePath pose={MOUTH_POSES[faceMood]} kind="mouth" className={`face-mouth ${faceMood === 6 ? 'cloud-angry-mouth' : ''}`}/></>}
       <ellipse className="cloud-blush" cx="35" cy="74" rx={mood === 2 ? 11 : 7} ry={mood === 2 ? 6 : 4}/>
       <ellipse className="cloud-blush" cx="88" cy="72" rx={mood === 2 ? 11 : 7} ry={mood === 2 ? 6 : 4}/>
@@ -75,9 +75,14 @@ function Cloud({ mood, cashAction, cashId, environment }) {
     {resting && <WeatherAccessory environment={environment}/>}
     {cashAction && <g key={cashId} className={`cloud-cash-hands is-${cashAction}`}><path className="cloud-cash-hand-left" d="M34 91q4 10 17 7"/><path className="cloud-cash-hand-right" d="M93 88q-1 11-14 10"/></g>}
     {mood === 3 && !cashAction && <text className="cloud-question" x="101" y="32">?</text>}
-    {mood === 4 && !cashAction && <><path className="cloud-sigh" d="M89 83q12-11 19-4q4 7-4 9q-8 1-9-3m11-12q8-2 9 5"/><path className="cloud-teardrop" d="M92 54q5 7 0 11q-5-4 0-11Z"/></>}
-    {mood >= 5 && !cashAction && <path className="cloud-vein" d="M94 34v5h-5m9-1v6h6"/>}
-    {mood === 6 && !cashAction && <g className="cloud-steam"><path d="M24 33q-9-6-4-12m79 3q10-6 6-13"/><path className="cloud-spark" d="m20 47 3 2m-1-5-1 4m91 5 3-2m-1 5-1-4"/></g>}
+    {mood === 4 && !cashAction && <>
+      <g className="cloud-sigh" aria-hidden="true">
+        <path d="M78 81q7 5 14 0q5-3 9 0"/>
+        <path d="M88 72q6-4 12 0"/>
+      </g>
+      <path className="cloud-teardrop" d="M92 54q5 7 0 11q-5-4 0-11Z"/>
+    </>}
+    {mood >= 5 && !cashAction && <path className="cloud-vein" d="M94 23v5h-5m9-1v6h5"/>}
   </svg>;
 }
 
