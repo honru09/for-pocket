@@ -70,6 +70,12 @@
 .for-root .settings-form .inline-form { flex-direction:row; flex-wrap:nowrap; margin-top:4px; gap:6px; align-items:center; }
 .for-root .inline-form>div:has(>label) { min-width:0; flex:1; width:auto; }
 .for-root .inline-form>button { padding:8px 12px; min-height:44px; flex:none; }
+/* Long translated actions must not squeeze invitation codes to one letter. */
+@media(max-width:480px) {
+  .for-root .circles-form .inline-form { flex-wrap:wrap; }
+  .for-root .circles-form .inline-form>div:has(>label) { flex:1 1 160px; }
+  .for-root .circles-form .inline-form>button { max-width:100%; margin-left:auto; }
+}
 .for-root .pocket-sheet { padding:16px; border-radius:20px; max-height:calc(var(--pocket-height,100dvh) - 24px); }
 .for-root .pocket-sheet>header { margin-bottom:6px; }
 .for-root .pocket-sheet h2 { font-size:18px; }

@@ -3,12 +3,14 @@ import { Button } from '@telegram-apps/telegram-ui';
 import { Sheet } from './AccountViews.jsx';
 import { Icon } from './icons.jsx';
 import { locationLabel } from '../public/location.mjs';
+import PocketIllustration from './PocketIllustration.jsx';
 import './location.css';
 
 export function LocationSheet({ t, location, enabled, loading, onCapture, onRemove, onDisable, onClose }) {
   const label = locationLabel(location);
-  return <Sheet title={t('locationTitle')} onClose={onClose}>
+  return <Sheet className="location-sheet" title={t('locationTitle')} onClose={onClose}>
     {label && <div className="location-preview"><Icon name="pin"/><div><strong>{label}</strong>{location.address && location.address !== label && <span>{location.address}</span>}</div></div>}
+    {!label && !enabled && <PocketIllustration name="location-privacy" compact/>}
     <p className="location-hint">{t('locationPrivacy')}</p>
     <div className="location-actions"><Button className="compact-save" disabled={loading} onClick={onCapture}>{t(loading ? 'locationLoading' : location ? 'locationRefresh' : 'locationUse')}</Button>
       {location && <Button mode="plain" onClick={onRemove}>{t('locationRemove')}</Button>}

@@ -10,7 +10,7 @@ const os = require('node:os');
 const ROOT = path.resolve(__dirname, '..');
 const ARTIFACTS = fs.mkdtempSync(path.join(os.tmpdir(), 'for-pocket-state-assets-'));
 const fixture = `
-import React from 'react';
+import React, { useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { AppRoot } from '@telegram-apps/telegram-ui';
 import '@telegram-apps/telegram-ui/dist/styles.css';
@@ -19,20 +19,35 @@ import '/src/account-styles.css';
 import '/src/pocket-layout.css';
 import '/src/refinements.css';
 import AiImportPage from '/src/AiImportPage.jsx';
+import { AccountPage, CirclesPage } from '/src/AccountViews.jsx';
+import { LocationSheet } from '/src/LocationViews.jsx';
 import { initialSettings } from '/public/shared.mjs';
 import { translate } from '/public/i18n.mjs';
 const search = new URLSearchParams(location.search);
 const lang = search.get('lang') || 'en', scenario = search.get('case');
 const settings = initialSettings(lang);
 settings.consumers = [{id:'fixture-user',name:'Test',color:'yellow',avatar:'cloud'}];
-const profile = {user:settings.consumers[0],ledgerId:'fixture',expenses:[]};
+const profile = {user:settings.consumers[0],ledgerId:'fixture',expenses:[],account:{hasTelegram:true},social:{activeCircleId:null,circles:[]}};
 window.__saved = 0;
 const service = { aiParseExpense:async () => {
   if (scenario === 'failed') throw new Error('errorAiUnavailable');
   if (scenario === 'none') return {items:[]};
   return {items:[{amount:850,currency:'JPY',categoryId:'stomach',consumer:'fixture-user',merchant:'Lunch',occurredAt:'2026-10-14T03:00:00Z',confidence:scenario === 'partial' ? .4 : .95,needsReview:scenario === 'partial'}]};
 }, importExpenses:async entries => {window.__saved += entries.length; return {entries};}};
-createRoot(document.getElementById('root')).render(<AppRoot className="for-root" appearance="light" platform="ios"><div className="app-shell"><AiImportPage t={(key,params) => translate(lang,key,params)} profile={profile} settings={settings} service={service} isRemote run={fn=>fn()} onImported={()=>{}}/></div></AppRoot>);
+function Surface() {
+  const [locationEnabled, setLocationEnabled] = useState(false);
+  const [location, setLocation] = useState(null);
+  const [closed, setClosed] = useState(false);
+  const [failedCount, setFailedCount] = useState(scenario === 'pending' ? 2 : 0);
+  const t = (key,params) => translate(lang,key,params);
+  const surface = search.get('surface');
+  if (surface === 'circles') return <CirclesPage t={t} profile={profile} isRemote busy={false} run={fn=>fn()} service={{createCircle:async()=>{window.__created = true;return null;}}}/>;
+  if (surface === 'location') return closed ? <span data-closed/> : <LocationSheet t={t} location={location} enabled={locationEnabled} loading={false} onCapture={()=>{setLocationEnabled(true);setLocation({name:'Shinjuku',countryCode:'JP'});}} onRemove={()=>setLocation(null)} onDisable={()=>{setLocationEnabled(false);setLocation(null);}} onClose={()=>setClosed(true)}/>;
+  if (surface === 'account') return <AccountPage t={t} profile={profile} isRemote config={{}} language={lang} busy={false} failedCount={failedCount} onRetryWrites={()=>{window.__retried=true;setFailedCount(0);}}/>;
+  if (surface === 'account-local') return <AccountPage t={t} profile={profile} isRemote={false} config={{telegramEnabled:false}} language={lang} busy={false}/>;
+  return <AiImportPage t={t} profile={profile} settings={settings} service={service} isRemote run={fn=>fn()} onImported={()=>{}}/>;
+}
+createRoot(document.getElementById('root')).render(<AppRoot className="for-root" appearance="light" platform="ios"><div className="app-shell"><Surface/></div></AppRoot>);
 `;
 
 (async () => {
@@ -137,7 +152,43 @@ createRoot(document.getElementById('root')).render(<AppRoot className="for-root"
       }
       await page.close();
     }
+    for (const lang of (process.env.UI_STATE_SCENARIO ? [] : ['zh','en','uk'])) for (const width of [320,1280]) for (const surface of ['circles','location','account','account-local']) {
+      const page = await browser.newPage({viewport:{width,height:width === 320 ? 568 : 900},hasTouch:true});
+      page.on('pageerror',e=>failures.push(e.message));
+      await page.route('**/__state-fixture?*',route=>route.fulfill({contentType:'text/html',body:'<!doctype html><meta name="viewport" content="width=device-width, initial-scale=1"><div id="root"></div><script type="module" src="/__state-fixture.jsx"></script>'}));
+      await page.goto(`${base}/__state-fixture?surface=${surface}&lang=${lang}&case=pending`);
+      const image = page.locator('.pocket-illustration');
+      await expect(image).toBeVisible();
+      await expect.poll(()=>image.evaluate(node=>node.complete && node.naturalWidth > 0)).toBe(true);
+      assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth <= innerWidth),`${surface}/${lang}/${width}: no overflow`);
+      if (lang === 'uk') await page.screenshot({path:path.join(ARTIFACTS,`${surface}-uk-${width}.png`),fullPage:true});
+      if (surface === 'location') {
+        await page.locator('.location-actions button').first().click();
+        await expect(page.locator('.location-preview')).toContainText('Shinjuku');
+        await expect(image).toHaveCount(0);
+        // Removing one entry's place must not show first-use artwork again.
+        await page.locator('.location-actions button').nth(1).click();
+        await expect(page.locator('.location-preview')).toHaveCount(0);
+        await expect(image).toHaveCount(0);
+        await page.locator('dialog header button').click();
+        await expect(page.locator('[data-closed]')).toHaveCount(1);
+      } else if (surface === 'account') {
+        assert.ok(await page.locator('.account-pending-state button').evaluate(node=>[...node.querySelectorAll('h6,span')].every(child=>child.scrollWidth <= child.clientWidth + 1)), 'Retry label must be readable without ellipsis');
+        await page.locator('.account-pending-state button').click();
+        assert.equal(await page.evaluate(()=>window.__retried),true,'Retry action must remain reachable');
+        await expect(image).toHaveCount(0);
+      } else if (surface === 'circles') {
+        await page.locator('.circle-tools input').first().fill('Our notebook');
+        await page.locator('.circle-tools button[type="submit"]').first().click();
+        assert.equal(await page.evaluate(()=>window.__created),true,'Circle illustration must not block the create form');
+        await page.locator('.circle-tools input').last().scrollIntoViewIfNeeded();
+        await page.locator('.circle-tools input').last().fill('ABC123');
+        assert.ok((await page.locator('.circle-tools input').last().boundingBox()).width >= 100, 'Invite code field must retain room for all six characters');
+        await expect(page.locator('.circle-tools button[type="submit"]').last()).toBeEnabled();
+      }
+      await page.close();
+    }
     assert.deepEqual(failures,[]);
-    console.log(`PASS: ${process.env.UI_STATE_SCENARIO || 'ledger loading/error/filter/empty/retry states (en); import review and partial states (zh/en/uk); lazy images and 320px overflow'}; ${ARTIFACTS}`);
+    console.log(`PASS: ${process.env.UI_STATE_SCENARIO || 'ledger loading/error/filter/empty/retry; import review/partial; circle/location/write-retry transitions; zh/en/uk; lazy images; 320px and desktop overflow'}; ${ARTIFACTS}`);
   } finally { await browser.close(); await server.close(); }
 })().catch(error=>{console.error(error);process.exitCode=1;});

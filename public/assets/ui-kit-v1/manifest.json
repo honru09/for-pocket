@@ -2,7 +2,7 @@
   "version": 1,
   "date": "2026-10-13",
   "product": "for. · 花给生活",
-  "status": "partially-integrated-locally-not-deployed",
+  "status": "seven-state-illustrations-integrated",
   "sourceBaseline": "27a8d73b559ef1a5e1519c3fba4987c8a2546532",
   "palette": {
     "paper": "#f8f7f1",
@@ -48,7 +48,7 @@
       "surface": "圈子 · 创建与邀请说明",
       "when": "尚未加入圈子，展示协作概念及共享范围。",
       "avoid": "不能替代真实成员列表；不暗示邀请已接受或数据完全隔离。",
-      "size": "空圈子 200–260px；邀请确认页不挤占权限说明",
+      "size": "空圈子桌面 220px、手机 184px；成员列表和邀请确认页不显示",
       "source": "src/AccountViews.jsx · CirclesPage",
       "file": "illustrations/shared-circle.png",
       "width": 1536,
@@ -63,8 +63,8 @@
       "surface": "失败恢复 · 尚未确认保存",
       "when": "服务器未确认写入；根据真实持久化结果显示重试说明。",
       "avoid": "只有确认本机持久化成功，才可说“已保留”；不用于每次保存弹窗。",
-      "size": "恢复说明页 180–220px；日常待同步只用小图标",
-      "source": "src/App.jsx · pendingWrites / failedWrites / persistOutbox",
+      "size": "账号页实际约 84px；首页保留原重试提示，不增加插画",
+      "source": "src/App.jsx · failedWrites → AccountPage failedCount → PocketIllustration",
       "file": "illustrations/pending-retry.png",
       "width": 1536,
       "height": 1024,
@@ -75,11 +75,11 @@
     {
       "id": "offline-draft",
       "title": "仅本机草稿",
-      "surface": "保存状态 · 本机已保留但未确认同步",
-      "when": "本机写入与读取已验证，但服务器尚未确认；保留重试入口。",
-      "avoid": "不能表达已同步、云端备份或跨设备可见。",
-      "size": "状态说明 180–240px；日常待同步优先使用图标",
-      "source": "src/App.jsx · pendingWrites / storageStatus",
+      "surface": "账号页 · 本机记录模式说明",
+      "when": "当前使用 localService；展示记录留在本浏览器的说明。不是某一笔写入成功提示。",
+      "avoid": "不能用于声明未确认写入已安全保留，也不能表达已同步、云端备份或跨设备可见。",
+      "size": "账号说明约 104px；首页不显示",
+      "source": "src/AccountViews.jsx · AccountPage !isRemote → PocketIllustration",
       "file": "illustrations/offline-draft.png",
       "width": 1536,
       "height": 1024,
@@ -106,9 +106,9 @@
       "id": "location-privacy",
       "title": "位置可选",
       "surface": "位置权限 · 首次说明与暂无地点",
-      "when": "用户尚未授予位置、主动关闭位置，或需要说明地点只在记账后附加。",
+      "when": "打开位置说明，未启用位置且没有地点标签时显示；已启用后临时无地点不重复显示。",
       "avoid": "不能烘焙地址、坐标、成员位置或“已授权”事实。",
-      "size": "权限说明 180–240px；录入页使用 button-location 图标",
+      "size": "位置说明约 190px；录入页保留原小图标",
       "source": "src/LocationViews.jsx · LocationSheet / src/App.jsx · captureLocation",
       "file": "illustrations/location-privacy.png",
       "width": 1536,
@@ -617,6 +617,6 @@
   "integration": {
     "vitePublicDir": false,
     "method": "Import file URLs from source so Vite emits hashed dist/assets files. Do not use /public/... or /assets/ui-kit-v1/... as production URLs.",
-    "loading": "Three illustrations used in local UI states, lazy with explicit width/height; no image requests on the record page. Original 1536x1024 PNGs retained without delivery derivatives (1.19–1.95 MB each). Other illustrations remain in the library."
+    "loading": "Seven illustrations used only in matching UI states, lazy with explicit width/height; no illustration requests on the record page. Original 1536x1024 PNGs retained without delivery derivatives. Keypad atlases and optional frames remain reference assets."
   }
 }

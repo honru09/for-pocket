@@ -4,7 +4,7 @@
 .for-root .ledger-empty-state>dl{margin:0;gap:4px}
 .for-root .ledger-empty-state dt{font-size:16px;line-height:22px}
 .for-root .ledger-empty-state dd{font-size:12px;line-height:18px;font-weight:400;margin:0}
-.for-root .ledger-empty-state>button{margin:4px 0 0;min-height:44px}
+.for-root .ledger-empty-state>button{margin:2px 0 0;min-height:44px}
 .ledger-empty-symbol{display:grid;place-items:center;inline-size:48px;block-size:48px;margin:8px auto;color:var(--muted);border-radius:16px;background:var(--control)}
 .ledger-empty-symbol .for-icon{inline-size:24px;block-size:24px}
 .for-root .ai-import-results-header{display:flex;flex-wrap:nowrap;gap:12px;align-items:center;justify-content:flex-start}
@@ -12,4 +12,15 @@
 .ai-import-results-heading{min-width:0;flex:1}
 .ai-import-results-heading h2{margin:0;overflow-wrap:anywhere}
 .ai-import-results-heading p{margin:5px 0 0;color:var(--muted);font-size:12px;line-height:1.5}
+.pocket-illustration.is-compact{inline-size:min(190px,100%);aspect-ratio:3/2;border-radius:16px}
+.circle-empty-state{display:grid;justify-items:center;gap:2px;padding:4px 0 12px}
+.circle-empty-state .pocket-illustration{inline-size:min(220px,100%)}
+.account-pending-state{display:flex;align-items:center;gap:12px;min-width:0}
+.account-pending-state .pocket-illustration{inline-size:84px;border-radius:12px}
+.for-root .account-pending-state>button{flex:1;min-width:0;min-height:48px;height:auto;white-space:normal;overflow-wrap:anywhere;font-size:13px;line-height:20px;text-align:start}
+.for-root .account-pending-state>button :is(h6,span){white-space:normal;overflow:visible;text-overflow:clip;font-size:inherit;line-height:inherit}
+.account-local-state{display:flex;align-items:center;gap:12px;min-width:0;margin:8px 0 14px}
+.account-local-state .pocket-illustration{inline-size:104px;border-radius:14px}
+.account-local-state .quiet-copy{margin:5px 0}
+@media(max-width:600px){.circle-empty-state .pocket-illustration{inline-size:184px}}
 @media(max-height:640px){.ledger-empty-state .pocket-illustration{inline-size:144px}.for-root .ledger-empty-state{padding-top:0}}
