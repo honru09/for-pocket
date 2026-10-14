@@ -171,6 +171,7 @@ function StopSign() {
 export default function PocketMascot({ mascotRef, t, onTap, canConfirm = false, busy = false, confirmLabel, onConfirm, celebrate = null, environment = null }) {
   const [step, setStep] = useState(0), [phase, setPhase] = useState('cloud');
   const [returning, setReturning] = useState(false);
+  const [stopSignReady, setStopSignReady] = useState(false);
   const [signTaps, setSignTaps] = useState(0), [flight, setFlight] = useState(null), [celebration, setCelebration] = useState(null), [confirmFrame, setConfirmFrame] = useState(0), [tapNonce, setTapNonce] = useState(0);
   const stepRef = useRef(0), tapsRef = useRef(0), buttonRef = useRef(null), flightRef = useRef(null), signRef = useRef(null);
   const motionRef = useRef(null), cashMotionRef = useRef(null), cashAnimationRef = useRef(null), signAnimationRef = useRef(null), deadlineRef = useRef(0), lastPhase = useRef('cloud'), phaseRef = useRef('cloud'), signExitRef = useRef(false);
@@ -179,10 +180,15 @@ export default function PocketMascot({ mascotRef, t, onTap, canConfirm = false, 
   useEffect(() => {
     // Decode before an interaction, so the first short sequence cannot finish
     // while its image is still downloading on a mobile connection.
-    for (const src of [mascotTapAtlas, mascotCashAtlas, mascotPopAtlas]) {
+    for (const src of [mascotTapAtlas, mascotCashAtlas, mascotPopAtlas, stopSignAsset]) {
       const image = new Image();
       image.src = src;
-      image.decode?.().catch(() => {});
+      if (src === stopSignAsset) {
+        const ready = () => setStopSignReady(true);
+        image.addEventListener('load', ready, { once:true });
+        image.addEventListener('error', ready, { once:true });
+        image.decode?.().then(ready).catch(() => {});
+      } else image.decode?.().catch(() => {});
     }
   }, []);
   const finishReset = useCallback(() => {
@@ -215,10 +221,19 @@ export default function PocketMascot({ mascotRef, t, onTap, canConfirm = false, 
   // One deadline from the sixth tap. Rerenders and the landing do not restart it.
   useEffect(() => {
     if (step !== 6) return;
-    const landing = setTimeout(() => setPhase('falling'), POP_DURATION);
+    // Do not hand the sign animation an undecoded image. The local asset is
+    // normally ready before this deadline; the short retry loop covers a cold
+    // WebView cache without dropping the falling phase altogether.
+    let landing;
+    const startedAt = Date.now();
+    const showSign = () => {
+      if (stopSignReady || Date.now() - startedAt >= 900) setPhase('falling');
+      else landing = setTimeout(showSign, 16);
+    };
+    landing = setTimeout(showSign, POP_DURATION);
     const restore = setTimeout(() => reset(true), Math.max(0, deadlineRef.current - Date.now()));
     return () => { clearTimeout(landing); clearTimeout(restore); };
-  }, [step, reset]);
+  }, [step, reset, stopSignReady]);
 
   useEffect(() => {
     if (celebrationId == null || celebrationId === celebrationRef.current || !Object.hasOwn(CASH_DURATION, celebrationType)) return;

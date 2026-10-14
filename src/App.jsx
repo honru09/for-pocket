@@ -43,12 +43,33 @@ function playKeySound(pack) {
     const AudioContext = window.AudioContext || window.webkitAudioContext;
     if (!AudioContext) return;
     const context = playKeySound.context || (playKeySound.context = new AudioContext());
-    const oscillator = context.createOscillator(), gain = context.createGain();
+    // Telegram's keypad feedback is a short, rounded tick rather than a
+    // sustained beep. Resume the context from the user's tap and shape both
+    // packs with a tiny attack/release envelope so repeated taps stay clear.
+    context.resume?.();
+    const now = context.currentTime;
+    const duration = pack === 'wood' ? 0.075 : 0.105;
+    const oscillator = context.createOscillator();
+    const gain = context.createGain();
     oscillator.type = pack === 'wood' ? 'triangle' : 'sine';
-    oscillator.frequency.value = pack === 'wood' ? 185 : 760;
-    gain.gain.setValueAtTime(pack === 'wood' ? 0.035 : 0.022, context.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + (pack === 'wood' ? 0.075 : 0.11));
-    oscillator.connect(gain).connect(context.destination); oscillator.start(); oscillator.stop(context.currentTime + 0.12);
+    oscillator.frequency.setValueAtTime(pack === 'wood' ? 156 : 690, now);
+    oscillator.frequency.exponentialRampToValueAtTime(pack === 'wood' ? 112 : 520, now + duration);
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(pack === 'wood' ? 0.028 : 0.018, now + 0.008);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+    oscillator.connect(gain).connect(context.destination);
+    oscillator.start(now); oscillator.stop(now + duration + 0.012);
+    if (pack === 'water') {
+      const overtone = context.createOscillator(), overtoneGain = context.createGain();
+      overtone.type = 'sine';
+      overtone.frequency.setValueAtTime(1380, now);
+      overtone.frequency.exponentialRampToValueAtTime(980, now + 0.07);
+      overtoneGain.gain.setValueAtTime(0.0001, now);
+      overtoneGain.gain.exponentialRampToValueAtTime(0.006, now + 0.006);
+      overtoneGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.07);
+      overtone.connect(overtoneGain).connect(context.destination);
+      overtone.start(now); overtone.stop(now + 0.08);
+    }
   } catch {}
 }
 function minorToRaw(minor, currency) {
@@ -802,7 +823,9 @@ export default function App() {
   return <AppRoot appearance="light" platform={['ios','macos'].includes(telegram?.platform) ? 'ios' : 'base'} className="for-root" data-ui-kit="telegram-ui" data-view={view}><div className="app-shell">
     <header className="app-header"><a className="brand" href="#record" aria-label={t('record')} onClick={e => { e.preventDefault(); navigate('record'); }}><Icon name="home"/></a>
       <Button id="circle-switcher" mode="plain" className="ledger-switcher" disabled={disabled} onClick={() => isRemote ? setPicker(true) : navigate('circles')}><span>{circle?.name || t('personal')}</span><Icon name="chevronDown"/></Button>
-      {view !== 'record' && view !== 'history' && !['settings','profile','account'].includes(view) && isRemote && circle && <div ref={setReactionHost} className="circle-presence-host app-header-reactions" aria-label={t('circlePeople')}/>}
+      {/* Reactions live on the record footer only. Keeping a member rail out of
+          the shared header prevents another circle member's portrait from
+          leaking into settings, profile, quick整理, and import screens. */}
       <Button className="profile-trigger" mode="plain" id="open-settings" aria-label={t('settingsTitle')} onClick={() => navigate('settings')} disabled={busy}><Avatar person={profile?.user}/></Button>
     </header>
 
@@ -826,7 +849,7 @@ export default function App() {
     {view === 'ai-import' && profile && <AiImportPage t={t} profile={profile} settings={settings} busy={busy} run={run} service={service.current} isRemote={isRemote} config={config} onAccount={() => navigate('account')} onImported={handleAiImported}/>}
     {view === 'manage' && <><CategorySuggestions categories={settings.categories} expenses={expenses} ledgerId={profile?.ledgerId} type="expense" language={settings.language} disabled={busy || editing.length >= MAX_CATEGORIES} onAdd={({ label, icon, color }) => { if (editing.some(item => item.label.trim() === label) || editing.length >= MAX_CATEGORIES) return; setEditing(items => [...items, { id:createId(), label, icon, color }]); haptic(); }} /><form id="category-form" onSubmit={saveCategories}><div className="category-editor">{editing.map(c => <div className="editor-row" key={c.id} data-expanded={editingCategoryId === c.id}><Tappable Component="button" type="button" className="category-icon editor-icon-trigger" style={{background:`var(--${c.color})`}} aria-label={t('categoryIcon',{name:categoryLabel(c,settings.language)})} aria-expanded={editingCategoryId === c.id} onClick={() => setEditingCategoryId(current => current === c.id ? null : c.id)}><Icon name={c.icon}/><Icon name="chevronDown"/></Tappable><Input className="editor-label" aria-label={t('categoryName',{name:categoryLabel(c,settings.language)})} value={c.label} maxLength={24} required onChange={e => setEditing(items => items.map(x => x.id === c.id ? {...x,label:e.target.value} : x))}/><Select className="editor-select" data-field="icon" aria-label={t('categoryIcon',{name:c.label})} value={c.icon} onChange={e => setEditing(items => items.map(x => x.id === c.id ? {...x,icon:e.target.value} : x))}>{ICONS.filter(icon => !['google','users'].includes(icon)).map(icon => <option key={icon} value={icon}>{t(icon)}</option>)}</Select><Select className="editor-select" data-field="color" aria-label={t('categoryColor',{name:c.label})} value={c.color} onChange={e => setEditing(items => items.map(x => x.id === c.id ? {...x,color:e.target.value} : x))}>{COLORS.map(color => <option key={color} value={color}>{t(color)}</option>)}</Select><Button type="button" className="editor-remove" mode="plain" aria-label={t('removeCategory',{name:c.label})} onClick={() => editing.length > 1 ? setEditing(items => items.filter(x => x.id !== c.id)) : notify('keepCategory')}>×</Button></div>)}</div><Button type="button" id="add-category" className="add-category" stretched mode="outline" disabled={editing.length >= MAX_CATEGORIES || busy} onClick={() => setEditing(items => [...items,{id:createId(),label:'',icon:'heart',color:'peach'}])}>{t('addCategory')}</Button><div className="editor-actions"><Button type="button" className="text-button" mode="plain" onClick={() => setEditing(structuredClone(editingType === 'income' ? DEFAULT_INCOME_CATEGORIES : DEFAULT_CATEGORIES))}>{t('resetCategories')}</Button><Button className="save-button" type="submit" disabled={busy}>{t('saveCategories')}</Button></div></form></>}
     </main>{view !== 'record' && <footer className="app-footer">{storageStatus}</footer>}<nav className="bottom-nav" aria-label={t('navigation')}><SegmentedControl className="view-tabs" aria-label={t('navigation')}>{['record','history'].map(v => <SegmentedControl.Item key={v} className="tab" data-view={v} selected={view === v} aria-selected={view === v} onClick={() => navigate(v)}>{t(v === 'record' ? 'record' : 'ledger')}</SegmentedControl.Item>)}</SegmentedControl></nav>
-    </div>{isRemote && circle && <CircleReactions key={`${circle.id}:${profile.user.id}`} circle={circle} ledgerId={profile.ledgerId} userId={profile.user.id} entryTarget={reactionHost} service={service.current} t={t} onSelf={() => navigate('profile')} onHaptic={haptic} disabled={disabled}/>}{picker && profile && <CirclePicker profile={profile} t={t} busy={busy} onSwitch={switchCircle} onManage={() => navigate('circles')} onClose={() => setPicker(false)}/>}
+    </div>{isRemote && circle && <CircleReactions key={`${circle.id}:${profile.user.id}`} circle={circle} ledgerId={profile.ledgerId} userId={profile.user.id} entryTarget={view === 'record' ? reactionHost : null} service={service.current} t={t} onSelf={() => navigate('profile')} onHaptic={haptic} disabled={disabled}/>}{picker && profile && <CirclePicker profile={profile} t={t} busy={busy} onSwitch={switchCircle} onManage={() => navigate('circles')} onClose={() => setPicker(false)}/>}
     {postcard && <Sheet title={t('postcardTitle')} onClose={() => setPostcard(null)}><img className="postcard-preview" src={postcard} alt={t('postcardTitle')}/><div className="postcard-download-row"><PocketIllustration name="export-envelope-tactile-v1" compact/><a className="postcard-download" href={postcard} download={`for-pocket-${monthPrefix}.png`}>{t('postcardExport')}</a></div></Sheet>}
     {locationSheet && <LocationSheet t={t} location={draft.location} enabled={locationEnabled} loading={locationBusy} onCapture={useLocation} onRemove={() => removeLocation()} onDisable={() => removeLocation(true)} onClose={() => setLocationSheet(false)}/>}
     {noteEditor && <Sheet title={t('note')} onClose={() => setNoteEditor(false)}><form className="note-form" onSubmit={e => { e.preventDefault(); setNoteEditor(false); }}><Input id="note" className="note-field" autoFocus aria-label={t('note')} placeholder={t('notePlaceholder')} value={draft.note} maxLength={160} disabled={disabled} onChange={e => editDraft({ note:e.target.value })}/><Button type="submit" className="compact-save" aria-label={t('confirm')}><Icon name="check"/></Button></form></Sheet>}

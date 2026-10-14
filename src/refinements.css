@@ -330,3 +330,64 @@
   html[data-pocket-tiny=true] .for-root[data-view=record] .app-shell { overflow-y:auto; overscroll-behavior-y:contain; }
   html[data-pocket-tiny=true] .for-root[data-view=record] #record-view { flex:0 0 auto; min-height:354px; }
 }
+
+/* Last-pass invariants: these are deliberately scoped after all legacy
+   compatibility rules so they remain true on every mobile viewport. */
+[data-theme="matcha"] .for-root { --control:#eef0e6; --soft-line:#5d6b4a22; --accent-soft:#e6edd9; --accent-strong:#607850; }
+[data-theme="cheese"] .for-root { --control:#f6edda; --soft-line:#9f774022; --accent-soft:#f5e6b9; --accent-strong:#a36c39; }
+[data-theme="peach"] .for-root { --control:#f7e9e8; --soft-line:#a86f7024; --accent-soft:#f7e1df; --accent-strong:#a7605b; }
+[data-theme="sea"] .for-root { --control:#e6f1f0; --soft-line:#4b7d8224; --accent-soft:#d9eff0; --accent-strong:#4d8589; }
+.for-root[data-view="record"] #record-view .finish .entry-actions { min-height:48px; height:48px; padding:2px 4px; gap:7px; border-top:1px solid var(--soft-line); border-bottom:1px solid color-mix(in srgb,var(--soft-line) 55%,transparent); }
+.for-root[data-view="record"] #record-view .finish .circle-presence-host { flex:1 1 auto; min-width:0; overflow:hidden; }
+.for-root[data-view="record"] #record-view .finish .circle-presence { gap:5px; padding:0; }
+.for-root[data-view="record"] #record-view .finish .presence-chip { flex:0 0 40px; width:40px; min-width:40px; height:40px; border-radius:13px; padding:2px; }
+.for-root[data-view="record"] #record-view .finish .presence-chip .person-avatar,
+.for-root[data-view="record"] #record-view .finish .presence-chip .person-avatar :is(svg,.cloud-avatar) { width:34px; height:34px; }
+.for-root[data-view="record"] #record-view .finish :is(.location-trigger,.note-trigger) { width:40px; min-width:40px; height:40px; min-height:40px; border:1px solid color-mix(in srgb,var(--ink) 7%,transparent); background:var(--control); border-radius:13px; padding:9px; }
+.for-root[data-view="record"] #record-view .finish .location-trigger.has-location,
+.for-root[data-view="record"] #record-view .finish .note-trigger.has-note { border-color:color-mix(in srgb,var(--accent-strong) 24%,transparent); background:var(--accent-soft); color:var(--accent-strong); }
+.for-root[data-view="record"] #record-view .keypad { gap:6px; }
+.for-root[data-view="record"] #record-view .key-cap { background:color-mix(in srgb,var(--paper) 76%,var(--accent-soft)); }
+.for-root[data-view="record"] #record-view .key-secondary .key-cap { background:color-mix(in srgb,var(--paper) 88%,var(--peach)); }
+@media(max-width:600px) {
+  .for-root { font-size:14px; }
+  .for-root .page-heading h1, .for-root #history-title { font-size:21px; line-height:1.2; }
+  .for-root[data-view="record"] #record-view .finish .entry-actions { padding-inline:2px; }
+  .for-root[data-view="record"] #record-view .finish .presence-chip { flex-basis:38px; width:38px; min-width:38px; }
+  .for-root[data-view="record"] #record-view .finish .presence-chip .person-avatar,
+  .for-root[data-view="record"] #record-view .finish .presence-chip .person-avatar :is(svg,.cloud-avatar) { width:32px; height:32px; }
+  .for-root[data-view="record"] #record-view .finish :is(.location-trigger,.note-trigger) { width:38px; min-width:38px; height:38px; min-height:38px; padding:8px; }
+}
+
+.theme-choice { position:relative; }
+.theme-choice .theme-dot { flex:0 0 20px; width:20px; height:20px; border-radius:50%; border:2px solid color-mix(in srgb,var(--paper) 75%,var(--ink)); box-shadow:0 1px 3px color-mix(in srgb,var(--ink) 14%,transparent); }
+.theme-dot-matcha { background:linear-gradient(135deg,#e6ebd7 0 52%,#9caf7f 53%); }
+.theme-dot-cheese { background:linear-gradient(135deg,#f5e6b9 0 52%,#d87942 53%); }
+.theme-dot-peach { background:linear-gradient(135deg,#f7e1df 0 52%,#d96f65 53%); }
+.theme-dot-sea { background:linear-gradient(135deg,#d9eff0 0 52%,#5b9da3 53%); }
+.for-root .theme-choice > .theme-dot { flex:0 0 20px; width:20px; min-width:20px; height:20px; }
+
+/* Shared type scale for secondary pages and compact controls. */
+.for-root {
+  --text-xs:11px;
+  --text-sm:13px;
+  --text-md:15px;
+  font-size:var(--text-md);
+  line-height:1.4;
+  font-variant-numeric:tabular-nums;
+}
+.for-root :is(.settings-row,.settings-choice,.picker-row,.circle-action) { font-size:var(--text-sm); line-height:20px; }
+.for-root .page-heading h1,
+.for-root #history-title { font-size:24px; line-height:1.2; letter-spacing:-.55px; }
+.for-root .page-heading { margin-bottom:16px; }
+.for-root .section-heading { margin-bottom:10px; }
+.for-root .section-heading h2 { font-size:14px; line-height:20px; letter-spacing:-.1px; }
+.for-root .text-button span { font-size:var(--text-xs); line-height:18px; }
+.for-root .settings-profile { background:var(--accent-soft); border:1px solid color-mix(in srgb,var(--accent-strong) 12%,transparent); }
+.for-root .settings-group { background:color-mix(in srgb,var(--control) 56%,var(--paper)); border-color:var(--soft-line); }
+.for-root .settings-choice select { color:var(--accent-strong); }
+.for-root .settings-choice-label .candidate-icon { color:var(--accent-strong); }
+@media(max-width:600px) {
+  .for-root { font-size:14px; }
+  .for-root .page-heading h1, .for-root #history-title { font-size:21px; }
+}
