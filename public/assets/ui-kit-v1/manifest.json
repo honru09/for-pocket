@@ -567,7 +567,7 @@
       "format": "PNG RGBA",
       "frameCount": 8,
       "frameGrid": { "columns": 4, "rows": 2 },
-      "use": "仅作点击后的短暂状态回显；真实脸部和可访问语义由 SVG/CSS 保持。"
+      "use": "点击后持续显示对应表情，使用连续回弹和 100ms 表情交接；按钮保留三语可访问名称。"
     },
     {
       "id": "mascot-tap-frames-v1",
@@ -578,7 +578,7 @@
       "format": "PNG RGBA",
       "frameCount": 8,
       "frameGrid": { "columns": 4, "rows": 2 },
-      "use": "每次点击以 220ms 轻触回显；不替代矢量变形。"
+      "use": "路牌还原时播放 220ms 回弹序列；新点击可立即打断。"
     },
     {
       "id": "mascot-cash-frames-v1",
@@ -589,7 +589,18 @@
       "format": "PNG RGBA",
       "frameCount": 8,
       "frameGrid": { "columns": 4, "rows": 2 },
-      "use": "随收支动作低透明度播放；现金飞行与哭脸仍由现有 CSS/Web Animations 驱动。"
+      "use": "保留完整收支分镜，运行时裁出钱束；连续飞行、哭脸和泪滴由 CSS/Web Animations 驱动。"
+    },
+    {
+      "id": "mascot-pop-frames-v1",
+      "title": "云朵棉花散开 4×2 图集",
+      "file": "../mascot/mascot-pop-frames-v1.png",
+      "width": 1774,
+      "height": 887,
+      "format": "PNG RGBA",
+      "frameCount": 8,
+      "frameGrid": { "columns": 4, "rows": 2 },
+      "use": "第七次点击的 280ms 散开序列，末帧透明，然后路牌落下。"
     }
   ],
   "sprite": "pocket-ui-icons.svg",

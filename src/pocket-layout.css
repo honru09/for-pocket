@@ -29,7 +29,8 @@
 .for-root .note-form { display:flex; align-items:center; gap:12px; }
 .note-form>div { flex:1; min-width:0; }
 .for-root .note-form .compact-save { width:44px; padding:0; }
-/* FormInput draws focus on its label, not on the input itself. */
+/* Text entry keeps its caret and quiet field styling, without a second box
+   from Telegram FormInput's focused label or the browser's input outline. */
 .for-root label,.for-root label:focus-within,.for-root div:has(>label):focus-within { outline:none!important; box-shadow:none!important; }
 .for-root :is(input,select,textarea):is(:focus,:focus-visible) { outline:none!important; box-shadow:none!important; }
 .for-root .editor-row:focus-within { transform:none; }

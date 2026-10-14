@@ -42,7 +42,7 @@
 .for-root .amount-stage[data-press] .mascot{transform:rotate(-6deg) scale(1.04,.97)!important;transition-duration:100ms!important}
 .for-root .amount-stage[data-press] .amount-line{transform:scale(1.002,.992)!important;transition-duration:100ms!important}
 .for-root .save-button:not(:disabled):active{transform:scale(.975)!important;transition:transform 100ms ease-out!important}
-.for-root .category:hover,.for-root .key:hover,.for-root .save-button:not(:disabled):hover{transform:none;box-shadow:none}
+.for-root .category:hover,.for-root .save-button:not(:disabled):hover{transform:none;box-shadow:none}
 @keyframes category-bounce{0%{transform:scale(.97)}60%{transform:scale(1.02)}100%{transform:scale(1)}}
 @media(max-width:600px){.for-root .app-header{height:56px;margin-bottom:10px}.for-root .view-tabs{margin-bottom:12px}.for-root .page-heading{margin-bottom:12px}.record-layout{gap:12px}.amount-stage{padding-top:14px;padding-bottom:11px}}
 .for-root input,.for-root input:is(:focus,:focus-visible){outline:none!important;border:0!important;box-shadow:none!important}
@@ -98,5 +98,6 @@
 .for-root .account-view .settings-detail{margin-top:18px}
 .for-root .account-view .danger-text{margin-top:16px}
 .for-root .account-view .settings-input{background:#f1f2e9}
-.for-root .mascot-toy:is(:focus,:focus-visible),.for-root .avatar-picker button:is(:focus,:focus-visible),.for-root .profile-trigger:is(:focus,:focus-visible){outline:none!important;box-shadow:none!important}
+.for-root .avatar-picker button:focus:not(:focus-visible),.for-root .profile-trigger:focus:not(:focus-visible){outline:none;box-shadow:none}
+.for-root .avatar-picker button:focus-visible,.for-root .profile-trigger:focus-visible{outline:2px solid color-mix(in srgb,var(--ink) 72%,var(--orange));outline-offset:3px;box-shadow:0 0 0 4px color-mix(in srgb,var(--paper) 88%,transparent)}
 .for-root .avatar-picker button[aria-pressed=true]{border-color:#e7a06f;background:#fffaf2}

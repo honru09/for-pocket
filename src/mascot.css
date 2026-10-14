@@ -9,7 +9,8 @@
 }
 /* The cloud is a playful control, so its focus treatment must not read as a
    persistent green selection frame around the illustration. */
-.for-root .mascot-toy:is(:focus,:focus-visible) { outline:none!important; outline-offset:0; box-shadow:none!important; }
+.for-root .mascot-toy:focus:not(:focus-visible) { outline:none; box-shadow:none; }
+.for-root .mascot-toy:focus-visible { outline:2px solid color-mix(in srgb,var(--ink) 72%,var(--orange)); outline-offset:4px; box-shadow:0 0 0 5px color-mix(in srgb,var(--paper) 88%,transparent); }
 .for-root .amount-meta { z-index:4; }
 .cloud-motion,.cloud-touch,.cloud-cash-motion,.cloud-shell,.stop-sign-rest { display:block; width:100%; height:100%; }
 .cloud-motion { transform:translate3d(0,0,0) rotate(-8deg); transform-origin:50% 80%; transition:transform 180ms var(--ease-out),opacity 180ms var(--ease-out); backface-visibility:hidden; }
@@ -18,22 +19,22 @@
 .cloud-cash-motion { transform-origin:50% 78%; }
 .for-root .mascot-toy .mascot { position:static; width:100%; height:100%; transform:none; pointer-events:none; overflow:visible; opacity:1; }
 .mascot-toy .mascot { shape-rendering:geometricPrecision; }
-.mascot-main-art { opacity:0; transform-origin:50% 52%; transform:scale(.98); transition:opacity 180ms var(--ease-out),transform 260ms var(--spring); }
-.cloud-vector-art { opacity:1; transition:opacity 180ms var(--ease-out); }
-.mascot[data-raster="true"] .mascot-main-art { opacity:1; transform:scale(1); }
-.mascot[data-raster="true"] .cloud-vector-art { opacity:0; }
-.mascot[data-raster="false"] .mascot-main-art { opacity:0; transform:scale(.96); }
-/* Generated transparent atlases are short tactile echoes. They never replace
-   the live vector face or cash choreography; each cell is clipped by its
-   nested SVG and fades before the next state settles. */
+.cloud-vector-art { opacity:1; }
+.cloud-pose { opacity:0; pointer-events:none; }
+.cloud-pose[data-active="true"] { opacity:1; }
+.mascot[data-pose-switch="true"] .cloud-pose { transition:opacity 100ms var(--ease-out); }
+.cloud-annoyed-mark { transform-origin:112px 13px; animation:cloud-anger-symbol 1.65s ease-in-out infinite; }
+.mascot-toy[data-mood="6"] .cloud-pose[data-expression="5"] { filter:sepia(.06) saturate(1.08); }
+/* A single full-opacity frame holds until the next. No repeated fade-to-zero
+   between cells; compositor transforms supply the in-between movement. */
 .cloud-atlas-sequence { pointer-events:none; }
-.cloud-atlas-frame { display:block; overflow:hidden; pointer-events:none; opacity:0; transform-origin:50% 60%; mix-blend-mode:multiply; animation:cloud-atlas-frame var(--atlas-frame-duration) var(--ease-out) var(--atlas-delay) both; }
+.cloud-atlas-frame { display:block; overflow:hidden; pointer-events:none; opacity:0; animation:cloud-atlas-frame var(--atlas-frame-duration) steps(1,end) var(--atlas-delay); }
 .cloud-atlas-frame image { width:1774px; height:887px; }
-.mascot-toy .mascot-body { fill:#f9c678; }
+.mascot-toy .mascot-body { fill:#f9c678; stroke:none; }
 .cloud-face-idle { transform-origin:65px 67px; }
 .cloud-face { transform-origin:65px 67px; transition:transform 180ms var(--ease-out); }
 .cloud-eyes { transform-box:fill-box; transform-origin:center; }
-.cloud-blush { fill:#ed885f; }
+.cloud-blush { fill:#ed885f; stroke:none; }
 .cloud-blush-lines { fill:none; stroke:#bc725b; stroke-width:1.5; stroke-linecap:round; }
 .cloud-brows { fill:none; stroke:#635b3c; stroke-width:3.5; stroke-linecap:round; }
 .cloud-anger-symbol { fill:#eb826d; stroke:#b96854; stroke-width:1.7; stroke-linecap:round; stroke-linejoin:round; transform-box:fill-box; transform-origin:center; animation:cloud-anger-symbol 1.65s ease-in-out infinite; }
@@ -98,7 +99,7 @@
 .mascot-toy:active .cloud-touch { animation:none; transform:translate3d(0,1px,0) scale(.965,.95); transition-duration:100ms; }
 .mascot-toy[data-phase="cloud"][data-mood="1"] .cloud-shell,.mascot-toy[data-phase="cloud"][data-mood="2"] .cloud-shell,.mascot-toy[data-phase="cloud"][data-mood="3"] .cloud-shell,.mascot-toy[data-phase="cloud"][data-mood="4"] .cloud-shell,.mascot-toy[data-phase="cloud"][data-mood="5"] .cloud-shell { animation:cloud-state-pop 220ms var(--ease-out); }
 .mascot-toy[data-phase="cloud"][data-mood="6"] .cloud-shell { animation:cloud-state-pop 260ms var(--ease-out) 1; }
-.mascot-toy[data-phase="burst"] .cloud-motion { animation:cloud-soft-pop 260ms var(--ease-out) forwards; }
+.mascot-toy[data-phase="burst"] .cloud-motion { animation:cloud-soft-pop 280ms var(--ease-out) forwards; }
 .cloud-pop { position:absolute; inset:0; pointer-events:none; }
 .cloud-pop-word { position:absolute; left:50%; top:48%; font-size:16px; font-weight:900; color:#887654; transform:translate(-50%,-50%) rotate(-8deg); animation:cloud-pop-word 280ms var(--ease-out) forwards; }
 .cloud-pop i { position:absolute; left:50%; top:50%; width:13px; height:11px; border-radius:50%; background:#fff8e8; border:2px solid #f6d392; animation:cloud-puff 280ms var(--ease-out) forwards; }
@@ -113,7 +114,7 @@
 .for-root .mascot-stack .mascot-toy,.for-root .mascot-stack .mascot-confirm { pointer-events:auto; }
 /* Keep the check affordance visually attached to the cloud while leaving a
    generous, fully contained touch target inside the clipped amount card. */
-.for-root .mascot-confirm { --confirm-size:42px; --confirm-target:56px; position:absolute; z-index:4; right:-26px; bottom:0; width:var(--confirm-target); height:var(--confirm-target); min-width:var(--confirm-target); min-height:var(--confirm-target); padding:0; display:grid; place-items:center; border:0; border-radius:50%; background:transparent; color:var(--sage); box-shadow:none; font-size:17px; font-weight:900; line-height:1; }
+.for-root .mascot-confirm { --confirm-size:42px; --confirm-target:56px; position:absolute; z-index:4; right:-26px; bottom:0; width:var(--confirm-target); height:var(--confirm-target); min-width:var(--confirm-target); min-height:var(--confirm-target); padding:0; display:grid; place-items:center; border:0; border-radius:50%; background:transparent; color:var(--ink); box-shadow:none; font-size:17px; font-weight:900; line-height:1; }
 .for-root .mascot-confirm>span { width:var(--confirm-size); height:var(--confirm-size); display:grid; place-items:center; border:2.5px solid var(--sage); border-radius:50%; background:var(--paper); box-shadow:0 2px 0 #d7c9a3,0 5px 12px #333a3030; pointer-events:none; opacity:1; animation:cloud-confirm-in 220ms var(--ease-out) both; transition:transform 320ms var(--spring),box-shadow 240ms ease; }
 .for-root .mascot-confirm>.confirm-art { position:absolute; z-index:0; display:block; width:var(--confirm-size); height:var(--confirm-size); border:0; border-radius:50%; background-size:400% 100%; background-repeat:no-repeat; background-position:0 0; opacity:.64; transition:background-position 110ms var(--ease-out),opacity 160ms ease; }
 .for-root .mascot-confirm[data-confirm-frame="1"]>.confirm-art { background-position:33.333% 0; }
@@ -131,9 +132,9 @@
 @keyframes cloud-idle-face { 0%,100% { transform:translate3d(0,0,0) rotate(0); } 42% { transform:translate3d(0,-.7px,0) rotate(-.7deg); } 70% { transform:translate3d(0,-.2px,0) rotate(.35deg); } }
 @keyframes cloud-blink { 0%,89%,100% { transform:scaleY(1); } 90.2% { transform:scaleY(.18); } 91.5% { transform:scaleY(1); } 92.8% { transform:scaleY(.22); } 94.1% { transform:scaleY(1); } }
 @keyframes cloud-state-pop { 0% { transform:scale(.96) rotate(-1deg); } 58% { transform:scale(1.025) rotate(1deg); } 100% { transform:scale(1) rotate(0); } }
-@keyframes cloud-atlas-frame { 0% { opacity:0; transform:scale(.94) rotate(-2deg); } 16% { opacity:var(--atlas-opacity,.1); transform:scale(.985) rotate(-.5deg); } 74% { opacity:var(--atlas-opacity,.1); transform:scale(1.01) rotate(.4deg); } 100% { opacity:0; transform:scale(1.02) rotate(0); } }
+@keyframes cloud-atlas-frame { from { opacity:1; } to { opacity:0; } }
 @keyframes cloud-anger-symbol { 0%,100% { opacity:.72; transform:translate3d(0,1px,0) rotate(-4deg) scale(.96); } 50% { opacity:1; transform:translate3d(0,-1px,0) rotate(4deg) scale(1.04); } }
-@keyframes cloud-soft-pop { 0% {opacity:1;transform:rotate(0) scale(1.1)} 35% {opacity:1;transform:rotate(-3deg) scale(1.2,.92)} 100% {opacity:0;transform:rotate(3deg) scale(1.15)} }
+@keyframes cloud-soft-pop { 0% {transform:rotate(0) scale(1.06)} 35% {transform:rotate(-3deg) scale(1.12,.94)} 100% {transform:rotate(3deg) scale(1.15)} }
 @keyframes cloud-pop-word { 0% {opacity:0;transform:translate(-50%,-50%) rotate(-8deg) scale(.94)} 35% {opacity:1;transform:translate(-50%,-65%) rotate(-8deg)} 100% {opacity:0;transform:translate(-50%,-90%) rotate(-8deg)} }
 @keyframes cloud-puff { 0% {opacity:.9;transform:translate(-50%,-50%) scale(.95)} 100% {opacity:0;transform:translate(-50%,-50%) translate(var(--puff-x),var(--puff-y)) scale(1.1)} }
 /* A saved entry has three small beats: draw / send / settle, or fall / catch /
@@ -141,6 +142,7 @@
 .money-celebration { position:absolute; inset:0; z-index:5; pointer-events:none; }
 .money-bundle-flight { position:absolute; left:26%; top:58%; width:43%; aspect-ratio:56 / 38; transform-origin:50% 65%; will-change:transform,opacity; }
 .money-bundle { display:block; width:100%; height:100%; overflow:visible; stroke:#899b69; stroke-width:1.5; stroke-linejoin:round; }
+.money-bundle-art { overflow:hidden; }
 .money-sheet-back { fill:#c7d6ae; }
 .money-sheet-middle { fill:#d5dfbf; }
 .money-sheet-front { fill:#e3e9cc; }
@@ -280,6 +282,7 @@
   74% { opacity:1; transform:translate3d(-1px,1px,0) rotate(-10deg); }
   95%,100% { opacity:0; transform:translate3d(0,0,0) rotate(0); }
 }
+
 @media(min-width:601px) {
  .for-root .amount-stage { container-type:inline-size; }
  .for-root #amount-display[data-length] { font-size:min(100px,calc((100cqw - 146px) / (var(--amount-chars,1) * .64))); }

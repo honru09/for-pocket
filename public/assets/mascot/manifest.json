@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "source": "built-in image_gen",
   "generatedAt": "2026-10-14",
   "style": "original warm yellow cloud mascot; transparent RGBA atlas",
@@ -17,31 +17,39 @@
       "id": "mascot-expressions-v1",
       "file": "mascot-expressions-atlas-v1.png",
       "frames": ["calm", "closed-eye-smile", "shy", "question", "sigh", "gentle-annoyed", "surprised", "sleepy"],
-      "frameDurationMs": 180,
-      "playback": "single-state echo after each tap",
-      "use": "Short expression echo after a tap; vector face remains the source of truth."
+      "transitionDurationMs": 100,
+      "playback": "one full-opacity expression held after each tap; frames 6 and 7 provide storm/night poses",
+      "use": "Primary visible artwork; the annoyed mark is clipped into a separately animated layer."
     },
     {
       "id": "mascot-tap-v1",
       "file": "mascot-tap-frames-v1.png",
       "frames": ["rest", "lift", "squash", "press", "stretch", "wobble-left", "wobble-right", "settle"],
       "frameDurationMs": 27.5,
-      "playback": "8 frames, 220ms total, once per tap",
-      "use": "Tap feedback atlas; rendered as a brief low-opacity paper echo over the live mascot."
+      "playback": "8 frames, 220ms total, when the stop sign restores the cloud",
+      "use": "Primary bounce sequence on restoration; subsequent taps interrupt it immediately."
     },
     {
       "id": "mascot-cash-v1",
       "file": "mascot-cash-frames-v1.png",
       "frames": ["rest", "draw", "hold", "expense-flight", "income-arrives", "catch", "tuck", "settle"],
-      "frameDurationMs": { "expense": 215, "income": 260 },
-      "playback": "4 frames for each direction; CSS tears and flight interpolate between them",
-      "use": "Cash action reference layer; existing CSS/Web Animations provide the high-frame movement and tears."
+      "actionDurationMs": { "expense": 860, "income": 1040 },
+      "playback": "continuous CSS/Web Animations using a cropped banknote from frame 3",
+      "use": "Full storyboard is retained in the sheet; runtime crops the money prop to avoid competing whole-body poses."
+    },
+    {
+      "id": "mascot-pop-v1",
+      "file": "mascot-pop-frames-v1.png",
+      "frames": ["gather", "squash", "lift", "open-mouth", "cotton-large", "cotton-small", "cotton-tiny", "clear"],
+      "frameDurationMs": 35,
+      "playback": "8 frames, 280ms total, once on the seventh tap",
+      "use": "Primary cotton puff sequence before the stop sign drops, with a fully transparent final frame."
     }
   ],
   "alpha": "true RGBA; neutral generator checkerboard removed before use",
   "constraints": [
     "No glow, highlight, scanline, text, logo or watermark.",
-    "Keep the existing vector face and state machine for accessibility and crisp small-size rendering.",
+    "Keep the original character, state machine and translated accessible button labels; preserve the continuous cash face and tears.",
     "Use transform, opacity and compositor-friendly animation; do not swap the whole page or block input."
   ]
 }

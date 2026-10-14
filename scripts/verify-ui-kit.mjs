@@ -258,7 +258,8 @@ for (const key of ['neumorphic-keypad-surface-atlas-v2', 'neumorphic-keypad-moti
 // Mascot atlases live beside the ui-kit pack because they are imported by the
 // React source. Keep their metadata here so a missing or flattened (RGB)
 // export cannot silently ship and break the animation layer.
-assert.equal(manifest.mascotAtlases?.length, 3, 'mascot atlas manifest');
+const mascotManifest = JSON.parse(await readFile(path.resolve(root, '../mascot/manifest.json'), 'utf8'));
+assert.equal(manifest.mascotAtlases?.length, mascotManifest.assets.length, 'mascot atlas manifest');
 const mascotAtlasFiles = new Set();
 for (const item of manifest.mascotAtlases) {
   assert.equal(item.width, 1774, `${item.id} width`);
@@ -268,13 +269,22 @@ for (const item of manifest.mascotAtlases) {
   assert.equal(item.format, 'PNG RGBA', `${item.id} format`);
   const absolute = path.resolve(root, item.file);
   const data = await readFile(absolute);
-  const decoded = decodeRgbaAlpha(data, item.id);
+  const decoded = decodeRgbaAlpha(data, item.id, item.id === 'mascot-pop-frames-v1');
   assert.equal(decoded.width, item.width, `${item.id} width`);
   assert.equal(decoded.height, item.height, `${item.id} height`);
   assert.equal(decoded.colorType, 6, `${item.id} must stay RGBA`);
+  if (decoded.alpha) {
+    for (let frame=0; frame<8; frame++) {
+      const x0=Math.ceil((frame%4)*decoded.width/4), x1=Math.floor((frame%4+1)*decoded.width/4);
+      const y0=Math.ceil(Math.floor(frame/4)*decoded.height/2), y1=Math.floor((Math.floor(frame/4)+1)*decoded.height/2);
+      let visible=0;
+      for (let y=y0; y<y1; y++) for (let x=x0; x<x1; x++) visible += decoded.alpha[y*decoded.width+x] > 0 ? 1 : 0;
+      assert.ok(frame === 7 ? visible === 0 : visible > 100, `${item.id} frame ${frame} content`);
+    }
+  }
   mascotAtlasFiles.add(path.basename(absolute));
 }
-assert.deepEqual(mascotAtlasFiles, new Set(['mascot-expressions-atlas-v1.png', 'mascot-tap-frames-v1.png', 'mascot-cash-frames-v1.png']), 'mascot atlas manifest files');
+assert.deepEqual(mascotAtlasFiles, new Set(mascotManifest.assets.map(item => item.file)), 'mascot atlas manifest files');
 const mascotDirectoryPngs = new Set((await readdir(path.resolve(root, '../mascot'))).filter(name => name.toLowerCase().endsWith('.png')));
 assert.deepEqual(mascotDirectoryPngs, mascotAtlasFiles, 'mascot directory must match manifest');
 const rasterDirectoryPngs = new Set((await readdir(path.join(root, 'rasters'))).filter(name => name.toLowerCase().endsWith('.png')).map(name => `rasters/${name}`));
