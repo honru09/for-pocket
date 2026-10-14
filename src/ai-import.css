@@ -13,3 +13,4 @@
 .for-root .ai-import-grid>div:has(>.settings-input){display:flex;flex-direction:column;gap:4px}
 .for-root .ai-import-grid>div:has(>.settings-input)>label+*{position:static;order:-1;max-width:none;margin:0 2px;padding:0;background:transparent;color:var(--muted);font-size:10px;line-height:1.4;font-weight:650}
 @keyframes ai-import-paper-arrive{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.ai-import-source .ai-import-receipt-art{inline-size:min(72px,100%);block-size:auto;margin:0 auto 2px}

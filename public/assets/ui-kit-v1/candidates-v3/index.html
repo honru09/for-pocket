@@ -1,0 +1,38 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>for.pocket candidate shelf v3</title>
+<style>
+  :root{color-scheme:light;--paper:#fffdf6;--ink:#343a30;--muted:#77806b;--line:#e6e1cf;--sage:#93a77c;--peach:#f3b47d}
+  *{box-sizing:border-box}body{margin:0;padding:28px;background:var(--paper);color:var(--ink);font:14px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif}
+  main{max-width:1100px;margin:auto}h1{margin:0 0 4px;font-size:28px;letter-spacing:-.03em}p{color:var(--muted)}section{margin-top:28px}h2{font-size:16px;margin:0 0 12px} .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
+  figure{margin:0;padding:12px;border:1px solid var(--line);border-radius:18px;background:#fff;box-shadow:0 3px 12px #53452a0d}figure img{display:block;width:100%;height:150px;object-fit:contain}figcaption{margin-top:8px;font-size:12px;font-weight:700}figcaption small{display:block;color:var(--muted);font-weight:500;margin-top:2px}
+  .icons{display:flex;flex-wrap:wrap;gap:10px}.icon{display:grid;place-items:center;gap:5px;width:92px;min-height:78px;padding:10px;border:1px solid var(--line);border-radius:14px;background:#fff}.icon img{width:28px;height:28px}.icon span{font-size:10px;text-align:center;color:var(--muted)}
+  .review{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}.review img{display:block;width:100%;height:150px;object-fit:contain;border:1px dashed #d7d1bb;border-radius:14px;background:#faf8ef}.review p{font-size:11px;margin:5px 0 0}
+</style>
+<main>
+  <h1>for.pocket · candidate shelf v3</h1>
+  <p>Runtime-safe state art is shown first. Keypad and mascot boards remain reference material so responsive DOM/CSS behavior is not replaced by a fixed raster.</p>
+  <section><h2>Runtime state candidates</h2><div class="grid">
+    <figure><img src="illustrations/category-suggestions-tactile-v1-web.png" alt=""><figcaption>Category suggestions<small>category-suggestions-tactile-v1</small></figcaption></figure>
+    <figure><img src="illustrations/recurring-reminder-tactile-v1-web.png" alt=""><figcaption>Recurring reminder<small>recurring-reminder-tactile-v1</small></figcaption></figure>
+    <figure><img src="illustrations/receipt-review-tactile-v1-web.png" alt=""><figcaption>Receipt review<small>receipt-review-tactile-v1</small></figcaption></figure>
+    <figure><img src="illustrations/summary-review-tactile-v1-web.png" alt=""><figcaption>Summary review<small>summary-review-tactile-v1</small></figcaption></figure>
+    <figure><img src="illustrations/export-envelope-tactile-v1-web.png" alt=""><figcaption>Export helper<small>export-envelope-tactile-v1</small></figcaption></figure>
+  </div></section>
+  <section><h2>Personalization / action icons</h2><div class="icons">
+    <div class="icon"><img src="icons/avatar-customize-v1.svg" alt=""><span>avatar customize</span></div>
+    <div class="icon"><img src="icons/circle-invite-tactile-v1.svg" alt=""><span>circle invite</span></div>
+    <div class="icon"><img src="icons/account-link-tactile-v1.svg" alt=""><span>account link</span></div>
+    <div class="icon"><img src="icons/privacy-location-tactile-v1.svg" alt=""><span>location privacy</span></div>
+    <div class="icon"><img src="icons/theme-swatch-tactile-v1.svg" alt=""><span>theme swatch</span></div>
+    <div class="icon"><img src="icons/export-envelope-tactile-v1.svg" alt=""><span>export envelope</span></div>
+  </div></section>
+  <section><h2>Review-only boards</h2><div class="review">
+    <div><img src="review/boards/keycap-lab-mobile.png" alt=""><p>Keycap lab — layout reference, not a background.</p></div>
+    <div><img src="review/boards/keypad-state-coverage-v1.png" alt=""><p>Keypad state coverage — labels stay in DOM.</p></div>
+    <div><img src="review/mascot-v2/mascot-tap-frames-v2.png" alt=""><p>Mascot tap frames — review atlas.</p></div>
+    <div><img src="review/mascot-v2/mascot-pop-frames-clean-candidate.png" alt=""><p>Pop frames — clean candidate contact sheet.</p></div>
+    <div><img src="review/motion/sample-contact-120hz.svg" alt=""><p>120Hz contact — timing / registration reference.</p></div>
+  </div></section>
+</main>

@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "status": "candidate-shelf",
+  "visualDirection": "tactile paper collage, soft clay edges, cream + sage + apricot + warm yellow",
+  "runtimeRule": "Images provide context only. Text, values, dates, names, status, and actions stay in the DOM.",
+  "productionCandidates": [
+    { "id": "category-suggestions-tactile-v1", "file": "illustrations/category-suggestions-tactile-v1-web.png", "master": "illustrations/masters/category-suggestions-tactile-v1.png", "consumer": "src/CategorySuggestions.jsx", "state": "suggestions available" },
+    { "id": "recurring-reminder-tactile-v1", "file": "illustrations/recurring-reminder-tactile-v1-web.png", "master": "illustrations/masters/recurring-reminder-tactile-v1.png", "consumer": "src/App.jsx / RecurringEditor", "state": "recurring list empty" },
+    { "id": "receipt-review-tactile-v1", "file": "illustrations/receipt-review-tactile-v1-web.png", "master": "illustrations/masters/receipt-review-tactile-v1.png", "consumer": "src/AiImportPage.jsx", "state": "receipt files selected before review" },
+    { "id": "summary-review-tactile-v1", "file": "illustrations/summary-review-tactile-v1-web.png", "master": "illustrations/masters/summary-review-tactile-v1.png", "consumer": "src/AiSummary.jsx", "state": "summary panel open before result" },
+    { "id": "export-envelope-tactile-v1", "file": "illustrations/export-envelope-tactile-v1-web.png", "master": "illustrations/masters/export-envelope-tactile-v1.png", "consumer": "src/App.jsx / postcard export sheet", "state": "export helper beside the generated preview; never status proof" }
+  ],
+  "icons": [
+    { "id": "avatar-customize-v1", "file": "icons/avatar-customize-v1.svg", "consumer": "src/SettingsPage.jsx" },
+    { "id": "circle-invite-tactile-v1", "file": "icons/circle-invite-tactile-v1.svg", "consumer": "src/AccountViews.jsx" },
+    { "id": "account-link-tactile-v1", "file": "icons/account-link-tactile-v1.svg", "consumer": "src/AccountViews.jsx" },
+    { "id": "privacy-location-tactile-v1", "file": "icons/privacy-location-tactile-v1.svg", "consumer": "src/SettingsPage.jsx" },
+    { "id": "theme-swatch-tactile-v1", "file": "icons/theme-swatch-tactile-v1.svg", "consumer": "src/SettingsPage.jsx" },
+    { "id": "export-envelope-tactile-v1", "file": "icons/export-envelope-tactile-v1.svg", "consumer": "src/App.jsx" }
+  ],
+  "reviewOnly": [
+    "review/boards/keycap-lab-desktop.png",
+    "review/boards/keycap-lab-mobile.png",
+    "review/boards/keypad-state-coverage-v1.png",
+    "review/boards/mascot-accessory-board-v1.png",
+    "review/mascot-v2/mascot-cash-frames-v2.png",
+    "review/mascot-v2/mascot-expressions-atlas-v2.png",
+    "review/mascot-v2/mascot-pop-frames-clean-candidate.png",
+    "review/mascot-v2/mascot-tap-frames-v2.png",
+    "review/motion/sample-contact-120hz.svg"
+  ],
+  "responsiveSafety": {
+    "keycaps": "DOM/CSS only; current layout determines key size",
+    "motionBoards": "storyboard/contact-sheet only; do not use as CSS background",
+    "transparentArt": "contain, width constrained by component, no baked copy"
+  }
+}

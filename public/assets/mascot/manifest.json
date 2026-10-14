@@ -30,8 +30,8 @@
       "file": "mascot-tap-frames-v1.png",
       "frames": ["rest", "lift", "squash", "press", "stretch", "wobble-left", "wobble-right", "settle"],
       "frameDurationMs": 27.5,
-      "playback": "8 frames, 220ms total, when the stop sign restores the cloud",
-      "use": "Primary bounce sequence on restoration; subsequent taps interrupt it immediately."
+      "playback": "retained as source art; restoration now uses a single opacity/translate settle",
+      "use": "Reference-only source; runtime avoids the old repeated shape jumps."
     },
     {
       "id": "mascot-cash-v1",
@@ -46,8 +46,15 @@
       "file": "mascot-pop-frames-v1.png",
       "frames": ["gather", "squash", "lift", "open-mouth", "cotton-large", "cotton-small", "cotton-tiny", "clear"],
       "frameDurationMs": 35,
-      "playback": "8 frames, 280ms total, once on the seventh tap",
-      "use": "Primary cotton puff sequence before the stop sign drops, with a fully transparent final frame."
+      "playback": "retained as source art; runtime uses the continuous annoyed-face handoff and three drifting puff paths",
+      "use": "Reference-only source; prevents the old smiling frame from appearing during the pop."
+    },
+    {
+      "id": "stop-sign-v1",
+      "file": "stop-sign-v1.png",
+      "frames": ["upright"],
+      "playback": "bitmap prop with interruptible WAAPI push-and-settle motion",
+      "use": "Japanese 止まれ sign that drops in after the sixth tap; first two taps sway it progressively, third tap fades it out."
     }
   ],
   "alpha": "true RGBA; neutral generator checkerboard removed before use",

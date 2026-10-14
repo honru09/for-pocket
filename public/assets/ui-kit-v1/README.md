@@ -114,3 +114,15 @@ node scripts/preview-ui-kit.mjs
 - `empty-filter` 与 `storage-read-failed` 的路径并入现有 `Icon`，保留 currentColor；没有第二套图标 API。
 - 三图通过源代码 import 生成带哈希 URL，按出现状态懒加载；首页不会下载这些插画。本轮沿用原始 PNG（每张约 1.19–1.95 MB），尚未制作压缩投放派生图。
 - 其余插画、装饰框与键帽 atlas 留在素材库。键帽 atlas 为视觉参考；实际可变宽高按钮使用 DOM 字面与连续 CSS 按压，不以固定图片拉伸。
+
+## 2026-10-14 candidates-v3 收拢与接入
+
+`candidates-v3/` 是本轮新增候选的统一货架，包含透明拟物状态插画的 web 派生图、6 枚个性化 SVG、原始 master 以及键帽／云朵／120Hz 动效 review board。运行时只从源代码 import 轻量派生图；master 和 review board 不进入业务界面。
+
+- `category-suggestions-tactile-v1` → 分类建议条有建议时显示；分类名和笔数仍为 DOM。
+- `recurring-reminder-tactile-v1` → 固定支出列表为空时显示；日期、金额和保存动作仍为 DOM。
+- `receipt-review-tactile-v1` → AI 导入已选择文件、尚未得到结果时显示；识别字段仍为 DOM。
+- `summary-review-tactile-v1` → AI 回顾展开且尚未生成结果时显示；统计、日期和错误仍为 DOM。
+- `export-envelope-tactile-v1` → 导出按钮和导出预览辅助图；不代表导出成功或同步完成。
+
+6 枚 SVG 通过 `src/CandidateIcon.jsx` 配对到头像定制、圈子邀请、账号连携、位置隐私、主题和导出入口。完整路径、候选状态和禁止场景见 `candidates-v3/manifest.json`；直接打开 `candidates-v3/index.html` 可离线查看货架。键帽和 mascot 帧仍是 review-only，键帽尺寸继续由当前 DOM/CSS 布局决定。

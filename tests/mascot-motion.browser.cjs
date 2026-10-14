@@ -62,10 +62,16 @@ createRoot(document.getElementById('root')).render(<Fixture/>);
       await clickToy();
       await expect(toy).toHaveAttribute('data-mood', String(mood));
       const active = page.locator('.cloud-pose[data-active="true"]');
-      await expect(active).toHaveCount(1);
-      await expect.poll(() => active.evaluate(node => Number(getComputedStyle(node).opacity))).toBe(1);
-      await expect(page.locator('.cloud-vector-art')).toHaveCount(0);
-      assert.equal(await active.getAttribute('data-expression'), String(Math.min(mood,5)));
+      if (mood === 4) {
+        await expect(active).toHaveCount(0);
+        await expect(page.locator('.cloud-vector-art')).toHaveCount(1);
+        await expect(page.locator('.cloud-sigh-fume-line')).toHaveCount(3);
+      } else {
+        await expect(active).toHaveCount(1);
+        await expect.poll(() => active.evaluate(node => Number(getComputedStyle(node).opacity))).toBe(1);
+        await expect(page.locator('.cloud-vector-art')).toHaveCount(0);
+        assert.equal(await active.getAttribute('data-expression'), String(Math.min(mood,5)));
+      }
       await page.locator('.amount-stage').screenshot({path:path.join(ARTIFACTS,`tap-${mood}.png`)});
     }
     await clickToy();
@@ -81,23 +87,23 @@ createRoot(document.getElementById('root')).render(<Fixture/>);
     assert.equal(burstLayers['.cloud-cash-motion'], 'none');
     assert.equal(burstLayers['.cloud-shell'], 'none');
     assert.equal(burstLayers['.cloud-pop-atlas'], 'cloud-pop-art');
-    const frames = page.locator('.cloud-pop-atlas .cloud-atlas-frame');
-    await expect(frames).toHaveCount(8);
-    // Sample every frame boundary, including the final clear frame. No opacity
-    // dip and no stale vector face may compete with this primary art layer.
-    const counts = await frames.evaluateAll(nodes => {
-      const animations = nodes.map(node => node.getAnimations()[0]);
-      animations.forEach(animation => animation.pause());
-      return Array.from({length:8},(_,frame) => {
-        animations.forEach(animation => { animation.currentTime = frame*35+17; });
-        return nodes.filter(node => Number(getComputedStyle(node).opacity) > .99).length;
-      });
-    });
-    assert.deepEqual(counts,Array(8).fill(1));
+    await expect(page.locator('.cloud-pop-anger-frame')).toHaveCount(1);
+    await expect(page.locator('.cloud-pop-puff')).toHaveCount(3);
+    await page.locator('.amount-stage').screenshot({path:path.join(ARTIFACTS,'pop.png')});
+    assert.equal(await page.locator('.cloud-pop-anger').evaluate(node => getComputedStyle(node).animationName), 'cloud-pop-anger');
+    assert.equal(await page.locator('.cloud-pop-puff.puff-one').evaluate(node => getComputedStyle(node).animationName), 'cloud-pop-puff-one');
     await expect(toy).toHaveAttribute('data-phase','sign');
-    await clickToy(); await clickToy();
+    await clickToy();
+    await expect(toy).toHaveAttribute('data-sign-taps','1');
+    const sign = page.locator('.stop-sign-rest');
+    await expect(sign).toHaveCount(1);
+    assert.ok((await sign.evaluate(node => node.getAnimations().length)) > 0);
+    await clickToy();
+    await expect(toy).toHaveAttribute('data-sign-taps','2');
+    assert.ok((await sign.evaluate(node => node.getAnimations().length)) > 0);
+    await clickToy();
     await expect(toy).toHaveAttribute('data-phase','cloud');
-    await expect(page.locator('.cloud-tap-atlas .cloud-atlas-frame')).toHaveCount(8);
+    await expect(page.locator('.cloud-return-art')).toHaveCount(1);
     await expect(page.locator('#mascot')).toHaveAttribute('data-returning','false');
     await expect(page.locator('.cloud-pose[data-active="true"]')).toHaveCount(1);
 

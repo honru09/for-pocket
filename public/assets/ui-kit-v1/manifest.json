@@ -618,5 +618,11 @@
     "vitePublicDir": false,
     "method": "Import file URLs from source so Vite emits hashed dist/assets files. Do not use /public/... or /assets/ui-kit-v1/... as production URLs.",
     "loading": "Seven illustrations used only in matching UI states, lazy with explicit width/height; no illustration requests on the record page. Original 1536x1024 PNGs retained without delivery derivatives. Keypad atlases and optional frames remain reference assets."
+  },
+  "candidateShelf": {
+    "directory": "candidates-v3",
+    "manifest": "candidates-v3/manifest.json",
+    "preview": "candidates-v3/index.html",
+    "runtimeImportRule": "Import selected web derivatives from src; keep masters, review boards, and keypad atlases out of CSS backgrounds."
   }
 }

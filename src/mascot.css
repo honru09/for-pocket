@@ -20,6 +20,8 @@
 .for-root .mascot-toy .mascot { position:static; width:100%; height:100%; transform:none; pointer-events:none; overflow:visible; opacity:1; }
 .mascot-toy .mascot { shape-rendering:geometricPrecision; }
 .cloud-vector-art { opacity:1; }
+.cloud-return-art { display:block; width:100%; height:100%; opacity:0; transform-origin:50% 80%; animation:cloud-return-in 220ms cubic-bezier(.23,1,.32,1) both; }
+.cloud-return-art image { display:block; width:100%; height:100%; }
 .cloud-pose { opacity:0; pointer-events:none; }
 .cloud-pose[data-active="true"] { opacity:1; }
 .mascot[data-pose-switch="true"] .cloud-pose { transition:opacity 100ms var(--ease-out); }
@@ -50,7 +52,11 @@
 .cloud-anger-symbol path:last-child { fill:none; stroke:#fff1df; stroke-width:1.8; }
 .cloud-question { font:900 28px 'Nunito',sans-serif; fill:#635b3c; paint-order:stroke; stroke:#f9c678; stroke-width:2px; }
 .cloud-sigh { fill:none; stroke:#a3a58a; stroke-width:2.1; stroke-linecap:round; stroke-linejoin:round; transform-box:fill-box; transform-origin:50% 50%; animation:cloud-sigh-drift 2.1s ease-in-out infinite; }
-.cloud-teardrop { fill:#9ec7da; stroke:#8eb5c4; stroke-width:1.5; stroke-linejoin:round; transform-box:fill-box; transform-origin:center; will-change:transform,opacity; animation:cloud-sweat 1.8s ease-in-out infinite; }
+.cloud-sigh-fume { pointer-events:none; transform-origin:64px 82px; }
+.cloud-sigh-fume-line { fill:none; stroke:#a9aa8e; stroke-width:2.1; stroke-linecap:round; stroke-linejoin:round; opacity:0; transform-box:fill-box; transform-origin:50% 100%; will-change:transform,opacity; }
+.cloud-sigh-fume-line.fume-one { animation:cloud-fume-drift-one 1.65s cubic-bezier(.23,1,.32,1) infinite; }
+.cloud-sigh-fume-line.fume-two { animation:cloud-fume-drift-two 1.65s cubic-bezier(.23,1,.32,1) .22s infinite; }
+.cloud-sigh-fume-line.fume-three { animation:cloud-fume-drift-three 1.65s cubic-bezier(.23,1,.32,1) .44s infinite; }
 .cloud-steam { fill:none; stroke:#d5d5b8; stroke-width:4; stroke-linecap:round; opacity:.62; }
 .cloud-weather { fill:none; stroke:none; transform-origin:65px 35px; pointer-events:none; will-change:transform,opacity; }
 .cloud-weather svg { overflow:hidden; }
@@ -70,7 +76,9 @@
 .cloud-sleep-z { animation:cloud-sleep-z 4.5s ease-in-out infinite; }
 @keyframes cloud-sleep-z { 0%,12% { opacity:0;transform:translate3d(0,2px,0) } 40% { opacity:.6 } 90%,100% { opacity:0;transform:translate3d(4px,-8px,0) } }
 @keyframes cloud-sigh-drift { 0%,100% { opacity:.3; transform:translate3d(1px,1px,0) scale(.92); } 38% { opacity:.78; transform:translate3d(0,0,0) scale(1); } 72% { opacity:.52; transform:translate3d(3px,-2px,0) scale(1.04); } }
-@keyframes cloud-sweat { 0%,18% { opacity:0; transform:translate3d(0,-2px,0) scale(.82); } 32% { opacity:.95; transform:translate3d(0,0,0) scale(1); } 58% { opacity:.86; transform:translate3d(1px,6px,0) scale(.98); } 82%,100% { opacity:0; transform:translate3d(2px,13px,0) scale(.84); } }
+@keyframes cloud-fume-drift-one { 0%,8% { opacity:0; transform:translate3d(-1px,2px,0) scale(.76) rotate(-5deg); } 24% { opacity:.72; } 72% { opacity:.38; transform:translate3d(-6px,-7px,0) scale(1.04) rotate(-12deg); } 100% { opacity:0; transform:translate3d(-10px,-12px,0) scale(1.2) rotate(-18deg); } }
+@keyframes cloud-fume-drift-two { 0%,10% { opacity:0; transform:translate3d(0,2px,0) scale(.74); } 27% { opacity:.68; } 70% { opacity:.35; transform:translate3d(1px,-9px,0) scale(1.06) rotate(5deg); } 100% { opacity:0; transform:translate3d(3px,-15px,0) scale(1.22) rotate(10deg); } }
+@keyframes cloud-fume-drift-three { 0%,12% { opacity:0; transform:translate3d(1px,2px,0) scale(.7) rotate(4deg); } 30% { opacity:.62; } 72% { opacity:.3; transform:translate3d(8px,-6px,0) scale(1.03) rotate(15deg); } 100% { opacity:0; transform:translate3d(13px,-11px,0) scale(1.18) rotate(20deg); } }
 @keyframes weather-umbrella { 0%,100% { transform:translateY(0) rotate(-2deg); } 50% { transform:translateY(-2px) rotate(2deg); } }
 @keyframes weather-shades { 0%,100% { transform:translateY(0); } 50% { transform:translateY(1px) rotate(-1deg); } }
 @keyframes weather-night { 0%,100% { transform:translateY(0); opacity:.78; } 50% { transform:translateY(-2px); opacity:1; } }
@@ -126,13 +134,19 @@
   animation:cloud-pop-art 280ms var(--ease-out) both;
 }
 .cloud-pop { position:absolute; inset:0; pointer-events:none; }
-.cloud-pop-word { position:absolute; left:50%; top:48%; font-size:16px; font-weight:900; color:#887654; transform:translate(-50%,-50%) rotate(-8deg); animation:cloud-pop-word 280ms var(--ease-out) forwards; }
-.cloud-pop i { position:absolute; left:50%; top:50%; width:13px; height:11px; border-radius:50%; background:#fff8e8; border:2px solid #f6d392; animation:cloud-puff 280ms var(--ease-out) forwards; }
+.cloud-pop-anger { transform-origin:50% 82%; animation:cloud-pop-anger 180ms cubic-bezier(.23,1,.32,1) both; }
+.cloud-pop-anger-frame { display:block; width:100%; height:100%; }
+.cloud-pop-puffs { opacity:0; transform-origin:64px 83px; animation:cloud-pop-puff-field 520ms cubic-bezier(.23,1,.32,1) 100ms both; }
+.cloud-pop-puff { fill:#fff8e8; stroke:#e8d4a7; stroke-width:1.15; transform-box:fill-box; transform-origin:center; opacity:0; }
+.cloud-pop-puff.puff-one { animation:cloud-pop-puff-one 500ms cubic-bezier(.23,1,.32,1) 100ms both; }
+.cloud-pop-puff.puff-two { animation:cloud-pop-puff-two 500ms cubic-bezier(.23,1,.32,1) 130ms both; }
+.cloud-pop-puff.puff-three { animation:cloud-pop-puff-three 500ms cubic-bezier(.23,1,.32,1) 160ms both; }
 .cloud-stop-sign { display:block; width:100%; height:100%; overflow:visible; }
-.stop-sign-rest { transition:transform 160ms var(--ease-out); transform-origin:50% 95%; }
+.stop-sign-rest { display:block; width:100%; height:100%; transform-origin:50% 95%; will-change:transform,opacity; }
+.stop-sign-rest .cloud-stop-sign { object-fit:contain; object-position:center; }
 .stop-sign-rest[data-hidden=true] { opacity:0; }
-.mascot-toy[data-sign-taps="1"] .stop-sign-rest { transform:rotate(7deg); }
 .cloud-sign-flight { position:fixed; display:block; z-index:12; pointer-events:none; transform-origin:50% 95%; }
+.cloud-sign-flight .cloud-stop-sign { display:block; width:100%; height:100%; object-fit:contain; }
 .cloud-announcement { position:absolute; width:1px; height:1px; padding:0; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
 .for-root .mascot-stack { --cloud-size:108px; position:absolute; z-index:3; right:34px; bottom:25px; width:var(--cloud-size); height:var(--cloud-size); display:block; pointer-events:none; }
 .for-root .mascot-stack .mascot-toy { position:relative; inset:auto; width:100%; height:100%; }
@@ -157,6 +171,7 @@
 @keyframes cloud-idle-face { 0%,100% { transform:translate3d(0,0,0) rotate(0); } 42% { transform:translate3d(0,-.7px,0) rotate(-.7deg); } 70% { transform:translate3d(0,-.2px,0) rotate(.35deg); } }
 @keyframes cloud-blink { 0%,89%,100% { transform:scaleY(1); } 90.2% { transform:scaleY(.18); } 91.5% { transform:scaleY(1); } 92.8% { transform:scaleY(.22); } 94.1% { transform:scaleY(1); } }
 @keyframes cloud-state-pop { 0% { transform:scale(.96) rotate(-1deg); } 58% { transform:scale(1.025) rotate(1deg); } 100% { transform:scale(1) rotate(0); } }
+@keyframes cloud-return-in { 0% { opacity:0; transform:translate3d(0,-7px,0) scale(.9); } 62% { opacity:1; transform:translate3d(0,1px,0) scale(1.015); } 100% { opacity:1; transform:translate3d(0,0,0) scale(1); } }
 @keyframes cloud-atlas-frame { from { opacity:1; } to { opacity:0; } }
 @keyframes cloud-anger-symbol { 0%,100% { opacity:.72; transform:translate3d(0,1px,0) rotate(-4deg) scale(.96); } 50% { opacity:1; transform:translate3d(0,-1px,0) rotate(4deg) scale(1.04); } }
 @keyframes cloud-pop-art {
@@ -165,8 +180,11 @@
   46% { opacity:1; transform:translate3d(0,0,0) rotate(0) scale(1); }
   100% { opacity:.98; transform:translate3d(0,0,0) rotate(0) scale(1); }
 }
-@keyframes cloud-pop-word { 0% {opacity:0;transform:translate(-50%,-50%) rotate(-8deg) scale(.94)} 35% {opacity:1;transform:translate(-50%,-65%) rotate(-8deg)} 100% {opacity:0;transform:translate(-50%,-90%) rotate(-8deg)} }
-@keyframes cloud-puff { 0% {opacity:.9;transform:translate(-50%,-50%) scale(.95)} 100% {opacity:0;transform:translate(-50%,-50%) translate(var(--puff-x),var(--puff-y)) scale(1.1)} }
+@keyframes cloud-pop-anger { 0% { opacity:1; transform:translate3d(0,1px,0) scale(.97,.98) rotate(-1deg); } 44% { opacity:1; transform:translate3d(0,-1px,0) scale(1.035,.965) rotate(1deg); } 100% { opacity:0; transform:translate3d(0,0,0) scale(.98) rotate(0); } }
+@keyframes cloud-pop-puff-field { 0% { opacity:0; } 30% { opacity:1; } 100% { opacity:1; } }
+@keyframes cloud-pop-puff-one { 0% { opacity:0; transform:translate3d(0,1px,0) scale(.6); } 24% { opacity:.9; } 100% { opacity:0; transform:translate3d(-17px,-17px,0) scale(1.5); } }
+@keyframes cloud-pop-puff-two { 0% { opacity:0; transform:translate3d(0,1px,0) scale(.55); } 24% { opacity:.86; } 100% { opacity:0; transform:translate3d(1px,-23px,0) scale(1.7); } }
+@keyframes cloud-pop-puff-three { 0% { opacity:0; transform:translate3d(0,1px,0) scale(.55); } 24% { opacity:.8; } 100% { opacity:0; transform:translate3d(18px,-16px,0) scale(1.45); } }
 /* A saved entry has three small beats: draw / send / settle, or fall / catch /
    tuck. Only the decorative layers move; the amount and controls stay still. */
 .money-celebration { position:absolute; inset:0; z-index:5; pointer-events:none; }

@@ -1,4 +1,5 @@
 .pocket-illustration{display:block;inline-size:min(220px,100%);block-size:auto;aspect-ratio:3/2;object-fit:contain;border-radius:18px;flex:none;user-select:none;pointer-events:none}
+.candidate-icon{display:block;inline-size:22px;block-size:22px;object-fit:contain;flex:none;user-select:none;pointer-events:none}
 .for-root .ledger-empty-state{padding:12px 0 20px;gap:8px;max-width:100%}
 .ledger-empty-state .pocket-illustration{margin:0 auto 2px}
 .for-root .ledger-empty-state>dl{margin:0;gap:4px}
@@ -13,6 +14,7 @@
 .ai-import-results-heading h2{margin:0;overflow-wrap:anywhere}
 .ai-import-results-heading p{margin:5px 0 0;color:var(--muted);font-size:12px;line-height:1.5}
 .pocket-illustration.is-compact{inline-size:min(190px,100%);aspect-ratio:3/2;border-radius:16px}
+.pocket-illustration.is-tactile{border-radius:0;aspect-ratio:auto;filter:none;object-fit:contain}
 .circle-empty-state{display:grid;justify-items:center;gap:2px;padding:4px 0 12px}
 .circle-empty-state .pocket-illustration{inline-size:min(220px,100%)}
 .account-pending-state{display:flex;align-items:center;gap:12px;min-width:0}

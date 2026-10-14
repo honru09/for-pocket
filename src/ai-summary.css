@@ -5,6 +5,9 @@
 .ai-recap-toggle>svg{width:16px;height:16px;margin-left:auto;color:var(--muted);transition:transform 200ms cubic-bezier(.16,1,.3,1)}
 .ai-recap.is-open .ai-recap-toggle>svg{transform:rotate(180deg)}
 .ai-recap-body{padding:0 15px 15px;animation:ai-recap-reveal 220ms cubic-bezier(.16,1,.3,1) both}
+.ai-recap-intro{display:flex;align-items:center;gap:10px;margin:0 0 10px;color:var(--muted);font-size:11px;line-height:1.55}
+.ai-recap-intro .pocket-illustration{inline-size:92px;block-size:62px;margin:0}
+.ai-recap-intro p{margin:0;max-width:34ch}
 .ai-recap-form{display:flex;flex-direction:column;gap:11px}
 .ai-recap-period{display:flex;align-self:flex-start;gap:3px;max-width:100%;padding:3px;border-radius:12px;background:#eaeae0}
 .ai-recap-period button{min-height:32px;padding:5px 12px;border:0;border-radius:10px;background:transparent;color:var(--muted);font-size:12px;font-weight:650}

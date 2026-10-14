@@ -9,6 +9,7 @@ import mascotExpressionsAtlas from '../public/assets/mascot/mascot-expressions-a
 import mascotTapAtlas from '../public/assets/mascot/mascot-tap-frames-v1.png';
 import mascotCashAtlas from '../public/assets/mascot/mascot-cash-frames-v1.png';
 import mascotPopAtlas from '../public/assets/mascot/mascot-pop-frames-v1.png';
+import stopSignAsset from '../public/assets/mascot/stop-sign-v1.png';
 import MorphFacePath from './MorphFacePath.jsx';
 import { EYE_POSES, MOUTH_POSES, SLEEP_EYES } from './mascot-face.mjs';
 
@@ -84,6 +85,27 @@ function AtlasSequence({ asset, frames, keyId, className, frameMs }) {
   </g>;
 }
 
+function CloudPop() {
+  // Keep the last grumpy face visible through the anticipation. The old pop
+  // sheet began with a smile, which made the cloud look happy while exploding.
+  return <g className="cloud-pop-sequence cloud-pop-atlas" aria-hidden="true">
+    <g className="cloud-pop-anger"><AtlasCell asset={mascotExpressionsAtlas} frame={5} className="cloud-pop-anger-frame"/></g>
+    <g className="cloud-pop-puffs">
+      <path className="cloud-pop-puff puff-one" d="M59 83c-4-3-7-1-7 3s4 6 8 4c3-2 3-5-1-7Z"/>
+      <path className="cloud-pop-puff puff-two" d="M66 82c-4-2-7 1-6 5s5 5 8 2c2-3 1-5-2-7Z"/>
+      <path className="cloud-pop-puff puff-three" d="M72 84c-3-1-6 2-5 5s5 4 7 1c2-2 1-5-2-6Z"/>
+    </g>
+  </g>;
+}
+
+function SighFume() {
+  return <g className="cloud-sigh-fume" aria-hidden="true">
+    <path className="cloud-sigh-fume-line fume-one" d="M60 80c-3-5-2-9 2-12s5-6 3-11"/>
+    <path className="cloud-sigh-fume-line fume-two" d="M66 81c1-5 5-7 5-12s-1-7 2-10"/>
+    <path className="cloud-sigh-fume-line fume-three" d="M72 82c4-3 7-5 7-9s-2-5 1-8"/>
+  </g>;
+}
+
 function Cloud({ mood, cashAction, cashId, environment, tapNonce, bursting = false, returning = false }) {
   // The final resting pose is playful annoyance, not a threatening angry face.
   // Keep the familiar soft face and communicate the mood with one small mark.
@@ -94,7 +116,8 @@ function Cloud({ mood, cashAction, cashId, environment, tapNonce, bursting = fal
     : resting && environment === 'storm'
       ? 6 // a tiny surprised look at the thunder
     : EXPRESSION_FRAME[Math.max(0, Math.min(5, mood))];
-  const showPose = !cashAction && !bursting && !returning;
+  const sighing = mood === 4 && !cashAction && !bursting && !returning;
+  const showPose = !cashAction && !sighing && !bursting && !returning;
   const showOriginal = showPose && expressionFrame === 0;
   return <svg className="mascot" id="mascot" viewBox="0 0 130 126" data-raster={!cashAction ? 'true' : 'false'} data-bursting={bursting} data-returning={returning} data-pose-switch={tapNonce > 0 && showPose} aria-hidden="true">
     <defs>
@@ -111,9 +134,9 @@ function Cloud({ mood, cashAction, cashId, environment, tapNonce, bursting = fal
         {frame === 5 && <g className="cloud-annoyed-mark"><g clipPath="url(#cloud-annoyed-mark-clip)"><AtlasCell asset={mascotExpressionsAtlas} frame={frame}/></g></g>}
       </g>)}
     </g>
-    {bursting && <AtlasSequence asset={mascotPopAtlas} frames={[0,1,2,3,4,5,6,7]} keyId={`pop-${tapNonce}`} className="cloud-pop-atlas" frameMs={POP_DURATION / 8}/>}
-    {returning && !cashAction && !bursting && <AtlasSequence asset={mascotTapAtlas} frames={[0,1,2,3,4,5,6,7]} keyId="return" className="cloud-tap-atlas" frameMs={RETURN_DURATION / 8}/>}
-    {cashAction && !bursting && <g className="cloud-vector-art">
+    {bursting && <CloudPop/>}
+    {returning && !cashAction && !bursting && <g className="cloud-return-art"><image href={mainCloudAsset} x="1" y="0" width="128" height="126" preserveAspectRatio="xMidYMid meet"/></g>}
+    {(cashAction || sighing) && !bursting && <g className="cloud-vector-art">
       <path className="mascot-body" d={BODY}/>
       <g className="cloud-face-idle">
         <g className="cloud-face">
@@ -122,14 +145,12 @@ function Cloud({ mood, cashAction, cashId, environment, tapNonce, bursting = fal
         <ellipse className="cloud-blush" cx="88" cy="72" rx={mood === 2 ? 11 : 7} ry={mood === 2 ? 6 : 4}/>
         {mood === 2 && <g className="cloud-blush-lines"><path d="m30 72 2 4m3-5 2 4m45-5 2 4m3-5 2 4"/></g>}
         {cashAction === 'expense' && <ExpenseFace key={cashId}/>}
+        {sighing && <SighFume/>}
         </g>
       </g>
     </g>}
     {resting && !returning && (environment === 'night' ? <g className="cloud-night"><text className="cloud-sleep-z" x="100" y="24">z</text></g> : <WeatherAccessory environment={environment}/>)}
     {cashAction && <g key={cashId} className={`cloud-cash-hands is-${cashAction}`}><path className="cloud-cash-hand-left" d="M34 91q4 10 17 7"/><path className="cloud-cash-hand-right" d="M93 88q-1 11-14 10"/></g>}
-    {mood === 4 && !cashAction && !bursting && <>
-      <path className="cloud-teardrop" d="M92 54q5 7 0 11q-5-4 0-11Z"/>
-    </>}
   </svg>;
 }
 
@@ -144,22 +165,15 @@ function CashCelebration({ event, cloudVisible }) {
 }
 
 function StopSign() {
-  return <svg className="cloud-stop-sign" viewBox="0 0 130 126" aria-hidden="true">
-    <ellipse cx="65" cy="120" rx="22" ry="3" fill="#b9c4a2" opacity=".5"/>
-    <path d="M65 55v64" stroke="#938f79" strokeWidth="7" strokeLinecap="round"/>
-    <path d="M65 59v59" stroke="#c5c3b2" strokeWidth="3" strokeLinecap="round"/>
-    <path d="M15 15h100L65 94Z" fill="#cf6657" stroke="#fff9ed" strokeWidth="6" strokeLinejoin="round"/>
-    <path d="M22 20h86L65 87Z" fill="none" stroke="#b45043" strokeWidth="1.5" strokeLinejoin="round"/>
-    <text x="65" y="47" textAnchor="middle" fill="#fff9ed" fontSize="20" fontWeight="800" fontFamily="'Yu Gothic','Hiragino Kaku Gothic ProN','Microsoft YaHei',sans-serif">止まれ</text>
-  </svg>;
+  return <img className="cloud-stop-sign" src={stopSignAsset} alt="" aria-hidden="true"/>;
 }
 
 export default function PocketMascot({ mascotRef, t, onTap, canConfirm = false, busy = false, confirmLabel, onConfirm, celebrate = null, environment = null }) {
   const [step, setStep] = useState(0), [phase, setPhase] = useState('cloud');
   const [returning, setReturning] = useState(false);
   const [signTaps, setSignTaps] = useState(0), [flight, setFlight] = useState(null), [celebration, setCelebration] = useState(null), [confirmFrame, setConfirmFrame] = useState(0), [tapNonce, setTapNonce] = useState(0);
-  const stepRef = useRef(0), tapsRef = useRef(0), buttonRef = useRef(null), flightRef = useRef(null);
-  const motionRef = useRef(null), cashMotionRef = useRef(null), cashAnimationRef = useRef(null), deadlineRef = useRef(0), lastPhase = useRef('cloud');
+  const stepRef = useRef(0), tapsRef = useRef(0), buttonRef = useRef(null), flightRef = useRef(null), signRef = useRef(null);
+  const motionRef = useRef(null), cashMotionRef = useRef(null), cashAnimationRef = useRef(null), signAnimationRef = useRef(null), deadlineRef = useRef(0), lastPhase = useRef('cloud'), phaseRef = useRef('cloud'), signExitRef = useRef(false);
   const celebrationRef = useRef(celebrate?.id), celebrationTimer = useRef(null), returnTimer = useRef(null);
   const celebrationId = celebrate?.id, celebrationType = celebrate?.type;
   useEffect(() => {
@@ -171,7 +185,7 @@ export default function PocketMascot({ mascotRef, t, onTap, canConfirm = false, 
       image.decode?.().catch(() => {});
     }
   }, []);
-  const reset = useCallback(() => {
+  const finishReset = useCallback(() => {
     stepRef.current = 0; tapsRef.current = 0;
     setStep(0); setSignTaps(0); setFlight(null); setPhase('cloud'); setTapNonce(0);
     clearTimeout(returnTimer.current);
@@ -179,11 +193,30 @@ export default function PocketMascot({ mascotRef, t, onTap, canConfirm = false, 
     returnTimer.current = setTimeout(() => setReturning(false), RETURN_DURATION);
   }, []);
 
+  const reset = useCallback((animateSign = false) => {
+    clearTimeout(returnTimer.current);
+    const signNode = signRef.current;
+    if (animateSign && phaseRef.current === 'sign' && signNode && !signExitRef.current) {
+      signExitRef.current = true;
+      signAnimationRef.current?.cancel();
+      const current = getComputedStyle(signNode).transform;
+      const animation = signNode.animate([
+        { opacity:1, transform:current },
+        { opacity:.86, transform:'translate3d(3px,-5px,0) rotate(-4deg) scale(.92)', offset:.42 },
+        { opacity:0, transform:'translate3d(0,-12px,0) rotate(2deg) scale(.8)' },
+      ], { duration:240, easing:'cubic-bezier(.22,.85,.32,1)', fill:'both' });
+      signAnimationRef.current = animation;
+      animation.finished.then(() => { signExitRef.current = false; finishReset(); }).catch(() => { signExitRef.current = false; });
+      return;
+    }
+    finishReset();
+  }, [finishReset]);
+
   // One deadline from the sixth tap. Rerenders and the landing do not restart it.
   useEffect(() => {
     if (step !== 6) return;
     const landing = setTimeout(() => setPhase('falling'), POP_DURATION);
-    const restore = setTimeout(reset, Math.max(0, deadlineRef.current - Date.now()));
+    const restore = setTimeout(() => reset(true), Math.max(0, deadlineRef.current - Date.now()));
     return () => { clearTimeout(landing); clearTimeout(restore); };
   }, [step, reset]);
 
@@ -210,7 +243,27 @@ export default function PocketMascot({ mascotRef, t, onTap, canConfirm = false, 
     clearTimeout(celebrationTimer.current);
     clearTimeout(returnTimer.current);
     cashAnimationRef.current?.cancel();
+    signAnimationRef.current?.cancel();
   }, []);
+
+  useEffect(() => { phaseRef.current = phase; }, [phase]);
+
+  useLayoutEffect(() => {
+    if (phase !== 'sign' || !signTaps || signExitRef.current || !signRef.current) return;
+    signAnimationRef.current?.cancel();
+    const amount = signTaps === 1 ? 3 : 6;
+    const angle = signTaps === 1 ? 3 : 6;
+    const current = getComputedStyle(signRef.current).transform;
+    const animation = signRef.current.animate([
+      { transform:current },
+      { transform:`translate3d(${-amount}px,0,0) rotate(${-angle}deg)`, offset:.18 },
+      { transform:`translate3d(${amount * .72}px,0,0) rotate(${angle * .72}deg)`, offset:.42 },
+      { transform:`translate3d(${-amount * .32}px,0,0) rotate(${-angle * .32}deg)`, offset:.7 },
+      { transform:'translate3d(0,0,0) rotate(0deg)' },
+    ], { duration:signTaps === 1 ? 360 : 480, easing:'cubic-bezier(.22,.75,.28,1)', fill:'both' });
+    signAnimationRef.current = animation;
+    return () => animation.cancel();
+  }, [phase, signTaps]);
 
   // This layer adds a cash gesture without changing the toy's mood or deadline.
   // A new save picks up the current pose; a poke immediately returns to the toy.
@@ -261,7 +314,9 @@ export default function PocketMascot({ mascotRef, t, onTap, canConfirm = false, 
     const returning = phase === 'cloud' && lastPhase.current !== 'cloud';
     lastPhase.current = phase;
     if (!returning) return;
-    const animation = motionRef.current?.animate([{ opacity:0, transform:'rotate(-8deg) scale(.94)' }, { opacity:1, transform:'rotate(-8deg) scale(1)' }], { duration:240, easing:getComputedStyle(buttonRef.current).getPropertyValue('--ease-out').trim() });
+    // The tap atlas already carries the physical return. Fade the wrapper
+    // only; a second scale/rotation here made the cloud shiver on landing.
+    const animation = motionRef.current?.animate([{ opacity:0 }, { opacity:1 }], { duration:RETURN_DURATION, easing:getComputedStyle(buttonRef.current).getPropertyValue('--ease-out').trim() });
     return () => animation?.cancel();
   }, [phase]);
 
@@ -275,7 +330,7 @@ export default function PocketMascot({ mascotRef, t, onTap, canConfirm = false, 
     onTap?.();
     if (phase === 'sign') {
       const next = ++tapsRef.current;
-      if (next === 2) reset(); else setSignTaps(next);
+      if (next === 3) reset(true); else setSignTaps(next);
       return;
     }
     const next = Math.min(6, ++stepRef.current);
@@ -287,10 +342,9 @@ export default function PocketMascot({ mascotRef, t, onTap, canConfirm = false, 
   const label = sign ? t(signTaps ? 'cloudRestoreAgain' : 'cloudRestore') : t('cloudTap', { mood:t(moodKey) });
   return <>
     <span className="mascot-stack" data-cash={celebration?.type} data-mood={Math.min(step,6)}>
-      <Tappable Component="button" type="button" interactiveAnimation="opacity" ref={buttonRef} className="mascot-toy" data-phase={phase} data-mood={Math.min(step,6)} data-sign-taps={signTaps} aria-label={label} aria-disabled={phase === 'burst' || phase === 'falling'} onClick={tap}>
+      <Tappable Component="button" type="button" interactiveAnimation="opacity" ref={buttonRef} className="mascot-toy" data-phase={phase} data-mood={Math.min(step,6)} data-sign-taps={signTaps} data-returning={returning} aria-label={label} aria-disabled={phase === 'burst' || phase === 'falling'} onClick={tap}>
         {!sign && <span ref={node => { motionRef.current = node; }} className="cloud-motion"><span ref={node => { if (mascotRef) mascotRef.current = node; }} className="cloud-touch"><span ref={cashMotionRef} className="cloud-cash-motion"><span className="cloud-shell"><Cloud mood={Math.min(step,6)} tapNonce={tapNonce} cashAction={phase === 'cloud' ? celebration?.type : null} cashId={celebration?.id} environment={environment} bursting={phase === 'burst'} returning={returning}/></span></span></span></span>}
-        {phase === 'burst' && <span className="cloud-pop" aria-hidden="true"><span className="cloud-pop-word">{t('cloudPopSound')}</span></span>}
-        {sign && <span className="stop-sign-rest" data-hidden={phase === 'falling'}><StopSign/></span>}
+        {sign && <span ref={signRef} className="stop-sign-rest" data-hidden={phase === 'falling'}><StopSign/></span>}
       </Tappable>
       {canConfirm && <Tappable Component="button" type="button" interactiveAnimation="opacity" className="mascot-confirm" aria-label={confirmLabel || t('save')} title={confirmLabel || t('save')} aria-busy={busy} data-confirm-frame={confirmFrame} disabled={busy} onPointerDown={() => setConfirmFrame(1)} onPointerUp={() => { if (!busy) setConfirmFrame(0); }} onPointerCancel={() => { if (!busy) setConfirmFrame(0); }} onClick={event => { event.stopPropagation(); onConfirm?.(); }}><i className="confirm-art" style={{ backgroundImage:`url(${confirmButtonAtlas})` }} aria-hidden="true"/><span aria-hidden="true"><Icon name="check"/></span></Tappable>}
       {celebration && <CashCelebration event={celebration} cloudVisible={phase === 'cloud'}/>}

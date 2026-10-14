@@ -432,6 +432,7 @@ export default function AiImportPage({ t, profile, settings, busy = false, run, 
         </div>}
         {files.length > 0 && <Button type="button" mode="plain" className="ai-import-add-file" disabled={working || busy} onClick={() => inputRef.current?.click()}>{t('aiImportReplaceImage')}</Button>}
       </div>
+      {isRemote && aiEnabled && files.length > 0 && !currentItems.length && !working && !busy && !status && !error && <PocketIllustration name="receipt-review-tactile-v1" compact className="ai-import-receipt-art"/>}
       <small className="quiet-copy">{t('aiImportFileLimits')}</small>
       <div className="ai-import-actions">
         <Button type="submit" className="panel-primary" disabled={!canParse}>{operation === 'parse' ? t('aiImportParsing') : t('aiImportParse')}</Button>

@@ -4,6 +4,7 @@ import { CURRENCIES } from '../public/shared.mjs';
 import { LOCALES, categoryLabel, translateError } from '../public/i18n.mjs';
 import { Icon } from './icons.jsx';
 import { aiSummaryUiEnabled } from './ai-availability.mjs';
+import PocketIllustration from './PocketIllustration.jsx';
 import './ai-summary.css';
 
 export default function AiSummary({ t, profile, settings, currency = settings?.currency || 'JPY', busy = false, run, service, isRemote = false, config = {}, onAccount }) {
@@ -90,10 +91,11 @@ export default function AiSummary({ t, profile, settings, currency = settings?.c
       {!isRemote ? <div className="ai-recap-gate"><p>{t('aiSummaryNeedLogin')}</p>{onAccount && <Button type="button" mode="plain" onClick={onAccount}>{t('signIn')}</Button>}</div>
         : !enabled ? <p className="ai-recap-hint">{t('aiSummaryUnavailable')}</p>
           : <>
+            {!currentResult && !working && !busy && !error && <div className="ai-recap-intro"><PocketIllustration name="summary-review-tactile-v1" compact/><p>{t('aiSummaryHint')}</p></div>}
             <form className="ai-recap-form" onSubmit={generate}>
               <div className="ai-recap-period" role="group" aria-label={t('aiSummaryPeriod')}>{['week', 'month'].map(value => <Tappable Component="button" type="button" key={value} aria-pressed={period === value} disabled={working || busy} onClick={() => choosePeriod(value)}>{t(value === 'week' ? 'aiSummaryWeek' : 'aiSummaryMonth')}</Tappable>)}</div>
               <Textarea className="ai-recap-question" aria-label={t('aiSummaryQuestion')} placeholder={t('aiSummaryQuestionPlaceholder')} rows={2} maxLength={300} value={question} onChange={event => setQuestion(event.target.value)} disabled={working || busy}/>
-              <div className="ai-recap-actions"><Button type="submit" className="ai-recap-generate" disabled={working || busy}>{working ? t('aiSummaryGenerating') : t(currentResult ? 'aiSummaryRegenerate' : 'aiSummaryGenerate')}</Button>{!currentResult && <span>{t('aiSummaryHint')}</span>}</div>
+              <div className="ai-recap-actions"><Button type="submit" className="ai-recap-generate" disabled={working || busy}>{working ? t('aiSummaryGenerating') : t(currentResult ? 'aiSummaryRegenerate' : 'aiSummaryGenerate')}</Button></div>
             </form>
             {error && <p className="ai-recap-error" role="status">{error}</p>}
             {currentResult && <div className="ai-recap-result" aria-live="polite">
