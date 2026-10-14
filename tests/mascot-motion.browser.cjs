@@ -56,7 +56,9 @@ createRoot(document.getElementById('root')).render(<Fixture/>);
       await Promise.all(sources.map(src => { const img = new Image(); img.src=src; return img.decode(); }));
     });
     const clickToy = () => toy.evaluate(node => node.click());
-    for (let mood=1; mood<=6; mood++) {
+    // Five resting poses lead into a sixth tap that pops the cloud. There is
+    // no extra seventh pose (the old sixth/seventh pair was a duplicate).
+    for (let mood=1; mood<=5; mood++) {
       await clickToy();
       await expect(toy).toHaveAttribute('data-mood', String(mood));
       const active = page.locator('.cloud-pose[data-active="true"]');
@@ -67,7 +69,18 @@ createRoot(document.getElementById('root')).render(<Fixture/>);
       await page.locator('.amount-stage').screenshot({path:path.join(ARTIFACTS,`tap-${mood}.png`)});
     }
     await clickToy();
+    await expect(toy).toHaveAttribute('data-mood','6');
     await expect(toy).toHaveAttribute('data-phase','burst');
+    await expect(page.locator('.cloud-pose[data-active="true"]')).toHaveCount(0);
+    const burstLayers = await toy.evaluate(node => Object.fromEntries(
+      ['.cloud-motion','.cloud-touch','.cloud-cash-motion','.cloud-shell','.cloud-pop-atlas']
+        .map(selector => [selector, getComputedStyle(node.querySelector(selector)).animationName])
+    ));
+    assert.equal(burstLayers['.cloud-motion'], 'none');
+    assert.equal(burstLayers['.cloud-touch'], 'none');
+    assert.equal(burstLayers['.cloud-cash-motion'], 'none');
+    assert.equal(burstLayers['.cloud-shell'], 'none');
+    assert.equal(burstLayers['.cloud-pop-atlas'], 'cloud-pop-art');
     const frames = page.locator('.cloud-pop-atlas .cloud-atlas-frame');
     await expect(frames).toHaveCount(8);
     // Sample every frame boundary, including the final clear frame. No opacity
@@ -111,14 +124,14 @@ createRoot(document.getElementById('root')).render(<Fixture/>);
     await page.locator('#weather').click();
     await expect(page.locator('.cloud-pose[data-active="true"]')).toHaveAttribute('data-expression','6');
 
-    await toy.evaluate(node => { for(let i=0;i<15;i++) node.click(); });
+    await toy.evaluate(node => { for(let i=0;i<6;i++) node.click(); });
     await expect(toy).toHaveAttribute('data-phase','burst');
     await expect(page.locator('.cloud-sign-flight')).toHaveCount(1);
     await page.locator('#mount').click();
     await expect(page.locator('.cloud-sign-flight')).toHaveCount(0);
     await page.locator('#mount').click();
     await expect(toy).toHaveAttribute('data-mood','0');
-    await toy.evaluate(node => { for(let i=0;i<7;i++) node.click(); });
+    await toy.evaluate(node => { for(let i=0;i<6;i++) node.click(); });
     await expect(toy).toHaveAttribute('data-phase','sign');
     await expect(toy).toHaveAttribute('data-phase','cloud',{timeout:7500});
     await expect(toy).toHaveAttribute('data-mood','0');

@@ -27,7 +27,16 @@
 .mascot-toy[data-mood="6"] .cloud-pose[data-expression="5"] { filter:sepia(.06) saturate(1.08); }
 /* A single full-opacity frame holds until the next. No repeated fade-to-zero
    between cells; compositor transforms supply the in-between movement. */
-.cloud-atlas-sequence { pointer-events:none; }
+.cloud-atlas-sequence {
+  pointer-events:none;
+  /* Keep the atlas on its own compositor layer. The pop sequence must not
+     inherit the idle cloud's transform or participate in layout while the
+     surrounding button changes phase. */
+  isolation:isolate;
+  transform-box:fill-box;
+  transform-origin:50% 82%;
+  will-change:transform,opacity;
+}
 .cloud-atlas-frame { display:block; overflow:hidden; pointer-events:none; opacity:0; animation:cloud-atlas-frame var(--atlas-frame-duration) steps(1,end) var(--atlas-delay); }
 .cloud-atlas-frame image { width:1774px; height:887px; }
 .mascot-toy .mascot-body { fill:#f9c678; stroke:none; }
@@ -99,7 +108,23 @@
 .mascot-toy:active .cloud-touch { animation:none; transform:translate3d(0,1px,0) scale(.965,.95); transition-duration:100ms; }
 .mascot-toy[data-phase="cloud"][data-mood="1"] .cloud-shell,.mascot-toy[data-phase="cloud"][data-mood="2"] .cloud-shell,.mascot-toy[data-phase="cloud"][data-mood="3"] .cloud-shell,.mascot-toy[data-phase="cloud"][data-mood="4"] .cloud-shell,.mascot-toy[data-phase="cloud"][data-mood="5"] .cloud-shell { animation:cloud-state-pop 220ms var(--ease-out); }
 .mascot-toy[data-phase="cloud"][data-mood="6"] .cloud-shell { animation:cloud-state-pop 260ms var(--ease-out) 1; }
-.mascot-toy[data-phase="burst"] .cloud-motion { animation:cloud-soft-pop 280ms var(--ease-out) forwards; }
+.mascot-toy[data-phase="burst"] .cloud-motion {
+  /* One transform owner during the hand-off. This prevents the tap press,
+     idle breathing and mood pose from fighting the pop sequence. */
+  animation:none!important;
+  transition:none!important;
+  transform:none!important;
+}
+.mascot-toy[data-phase="burst"] .cloud-touch,
+.mascot-toy[data-phase="burst"] .cloud-cash-motion,
+.mascot-toy[data-phase="burst"] .cloud-shell {
+  animation:none!important;
+  transition:none!important;
+  transform:none!important;
+}
+.mascot-toy[data-phase="burst"] .cloud-pop-atlas {
+  animation:cloud-pop-art 280ms var(--ease-out) both;
+}
 .cloud-pop { position:absolute; inset:0; pointer-events:none; }
 .cloud-pop-word { position:absolute; left:50%; top:48%; font-size:16px; font-weight:900; color:#887654; transform:translate(-50%,-50%) rotate(-8deg); animation:cloud-pop-word 280ms var(--ease-out) forwards; }
 .cloud-pop i { position:absolute; left:50%; top:50%; width:13px; height:11px; border-radius:50%; background:#fff8e8; border:2px solid #f6d392; animation:cloud-puff 280ms var(--ease-out) forwards; }
@@ -134,7 +159,12 @@
 @keyframes cloud-state-pop { 0% { transform:scale(.96) rotate(-1deg); } 58% { transform:scale(1.025) rotate(1deg); } 100% { transform:scale(1) rotate(0); } }
 @keyframes cloud-atlas-frame { from { opacity:1; } to { opacity:0; } }
 @keyframes cloud-anger-symbol { 0%,100% { opacity:.72; transform:translate3d(0,1px,0) rotate(-4deg) scale(.96); } 50% { opacity:1; transform:translate3d(0,-1px,0) rotate(4deg) scale(1.04); } }
-@keyframes cloud-soft-pop { 0% {transform:rotate(0) scale(1.06)} 35% {transform:rotate(-3deg) scale(1.12,.94)} 100% {transform:rotate(3deg) scale(1.15)} }
+@keyframes cloud-pop-art {
+  0% { opacity:1; transform:translate3d(0,1px,0) rotate(-1deg) scale(.985); }
+  24% { opacity:1; transform:translate3d(0,-1px,0) rotate(1deg) scale(1.015); }
+  46% { opacity:1; transform:translate3d(0,0,0) rotate(0) scale(1); }
+  100% { opacity:.98; transform:translate3d(0,0,0) rotate(0) scale(1); }
+}
 @keyframes cloud-pop-word { 0% {opacity:0;transform:translate(-50%,-50%) rotate(-8deg) scale(.94)} 35% {opacity:1;transform:translate(-50%,-65%) rotate(-8deg)} 100% {opacity:0;transform:translate(-50%,-90%) rotate(-8deg)} }
 @keyframes cloud-puff { 0% {opacity:.9;transform:translate(-50%,-50%) scale(.95)} 100% {opacity:0;transform:translate(-50%,-50%) translate(var(--puff-x),var(--puff-y)) scale(1.1)} }
 /* A saved entry has three small beats: draw / send / settle, or fall / catch /

@@ -13,7 +13,9 @@ import MorphFacePath from './MorphFacePath.jsx';
 import { EYE_POSES, MOUTH_POSES, SLEEP_EYES } from './mascot-face.mjs';
 
 const BODY = 'M24 53C16 18 48 7 68 18C86-1 121 23 107 52C130 74 113 107 87 101C70 128 38 116 35 98C4 105-5 68 24 53Z';
-const MOODS = ['cloudHappy', 'cloudSmile', 'cloudShy', 'cloudQuestion', 'cloudSigh', 'cloudGrumpy', 'cloudFurious'];
+// Six taps are enough to tell the whole story. The sixth tap is the soft
+// little pop; there is no duplicate "furious" pose between taps six and seven.
+const MOODS = ['cloudHappy', 'cloudSmile', 'cloudShy', 'cloudQuestion', 'cloudSigh', 'cloudGrumpy'];
 const CASH_DURATION = { expense: 860, income: 1040 };
 const TEAR = 'M0-5C-2-2-4 0-4 3A4 4 0 0 0 4 3C4 0 2-2 0-5Z';
 
@@ -67,8 +69,8 @@ function WeatherAccessory({ environment }) {
 const MASCOT_ATLAS = { width:1774, height:887, cellWidth:443.5, cellHeight:443.5 };
 const POP_DURATION = 280;
 const RETURN_DURATION = 220;
-// Both final moods remain a small pout, with no escalating furious face.
-const EXPRESSION_FRAME = [0, 1, 2, 3, 4, 5, 5];
+// Keep the last resting pose as a small pout with one tiny anger mark.
+const EXPRESSION_FRAME = [0, 1, 2, 3, 4, 5];
 function AtlasCell({ asset, frame, className, style }) {
   const column = frame % 4;
   const row = Math.floor(frame / 4);
@@ -83,7 +85,7 @@ function AtlasSequence({ asset, frames, keyId, className, frameMs }) {
 }
 
 function Cloud({ mood, cashAction, cashId, environment, tapNonce, bursting = false, returning = false }) {
-  // The final two taps are playful annoyance, not a threatening angry face.
+  // The final resting pose is playful annoyance, not a threatening angry face.
   // Keep the familiar soft face and communicate the mood with one small mark.
   const faceMood = cashAction === 'income' ? 1 : mood >= 5 ? 2 : mood;
   const resting = mood === 0 && !cashAction && !bursting;
@@ -91,7 +93,7 @@ function Cloud({ mood, cashAction, cashId, environment, tapNonce, bursting = fal
     ? 7 // sleepy
     : resting && environment === 'storm'
       ? 6 // a tiny surprised look at the thunder
-      : EXPRESSION_FRAME[Math.max(0, Math.min(6, mood))];
+    : EXPRESSION_FRAME[Math.max(0, Math.min(5, mood))];
   const showPose = !cashAction && !bursting && !returning;
   const showOriginal = showPose && expressionFrame === 0;
   return <svg className="mascot" id="mascot" viewBox="0 0 130 126" data-raster={!cashAction ? 'true' : 'false'} data-bursting={bursting} data-returning={returning} data-pose-switch={tapNonce > 0 && showPose} aria-hidden="true">
@@ -177,9 +179,9 @@ export default function PocketMascot({ mascotRef, t, onTap, canConfirm = false, 
     returnTimer.current = setTimeout(() => setReturning(false), RETURN_DURATION);
   }, []);
 
-  // One deadline from the seventh tap. Rerenders and the landing do not restart it.
+  // One deadline from the sixth tap. Rerenders and the landing do not restart it.
   useEffect(() => {
-    if (step !== 7) return;
+    if (step !== 6) return;
     const landing = setTimeout(() => setPhase('falling'), POP_DURATION);
     const restore = setTimeout(reset, Math.max(0, deadlineRef.current - Date.now()));
     return () => { clearTimeout(landing); clearTimeout(restore); };
@@ -264,7 +266,7 @@ export default function PocketMascot({ mascotRef, t, onTap, canConfirm = false, 
   }, [phase]);
 
   const tap = () => {
-    if (phase === 'burst' || phase === 'falling' || (stepRef.current === 7 && phase !== 'sign')) return;
+    if (phase === 'burst' || phase === 'falling' || (stepRef.current === 6 && phase !== 'sign')) return;
     clearTimeout(celebrationTimer.current);
     clearTimeout(returnTimer.current);
     setReturning(false);
@@ -276,12 +278,12 @@ export default function PocketMascot({ mascotRef, t, onTap, canConfirm = false, 
       if (next === 2) reset(); else setSignTaps(next);
       return;
     }
-    const next = Math.min(7, ++stepRef.current);
+    const next = Math.min(6, ++stepRef.current);
     setStep(next);
-    if (next === 7) { deadlineRef.current = Date.now() + 7000; setPhase('burst'); }
+    if (next === 6) { deadlineRef.current = Date.now() + 7000; setPhase('burst'); }
   };
   const sign = phase === 'sign' || phase === 'falling';
-  const moodKey = step === 7 ? 'cloudPopped' : MOODS[step];
+  const moodKey = step === 6 ? 'cloudPopped' : MOODS[step];
   const label = sign ? t(signTaps ? 'cloudRestoreAgain' : 'cloudRestore') : t('cloudTap', { mood:t(moodKey) });
   return <>
     <span className="mascot-stack" data-cash={celebration?.type} data-mood={Math.min(step,6)}>
