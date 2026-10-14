@@ -1,0 +1,15 @@
+.pocket-illustration{display:block;inline-size:min(220px,100%);block-size:auto;aspect-ratio:3/2;object-fit:contain;border-radius:18px;flex:none;user-select:none;pointer-events:none}
+.for-root .ledger-empty-state{padding:12px 0 20px;gap:8px;max-width:100%}
+.ledger-empty-state .pocket-illustration{margin:0 auto 2px}
+.for-root .ledger-empty-state>dl{margin:0;gap:4px}
+.for-root .ledger-empty-state dt{font-size:16px;line-height:22px}
+.for-root .ledger-empty-state dd{font-size:12px;line-height:18px;font-weight:400;margin:0}
+.for-root .ledger-empty-state>button{margin:4px 0 0;min-height:44px}
+.ledger-empty-symbol{display:grid;place-items:center;inline-size:48px;block-size:48px;margin:8px auto;color:var(--muted);border-radius:16px;background:var(--control)}
+.ledger-empty-symbol .for-icon{inline-size:24px;block-size:24px}
+.for-root .ai-import-results-header{display:flex;flex-wrap:nowrap;gap:12px;align-items:center;justify-content:flex-start}
+.ai-import-results-header .pocket-illustration{inline-size:84px;border-radius:12px}
+.ai-import-results-heading{min-width:0;flex:1}
+.ai-import-results-heading h2{margin:0;overflow-wrap:anywhere}
+.ai-import-results-heading p{margin:5px 0 0;color:var(--muted);font-size:12px;line-height:1.5}
+@media(max-height:640px){.ledger-empty-state .pocket-illustration{inline-size:144px}.for-root .ledger-empty-state{padding-top:0}}

@@ -64,11 +64,12 @@ test('hourly tick follows each ledger timezone and does not trigger the wrong co
   assert.equal(f.calls.length, 2);
 });
 
-test('empty digest uses the cheeky zero-spend fallback and deduplicates same local day', async t => {
+test('empty digest describes missing records and deduplicates same local day', async t => {
   const f = await serviceFixture(t, state(), at);
   const first = await f.service.processSlot('evening', { at });
   assert.equal(first.results[0].count, 0);
-  assert.match(first.results[0].text, /一笔账|修仙/);
+  assert.match(first.results[0].text, /没记新账/);
+  assert.doesNotMatch(first.results[0].text, /修仙|没花|毫发无损/);
   assert.equal(f.calls.length, 1);
   const second = await f.service.processSlot('evening', { at });
   assert.equal(second.results[0].skipped, true);

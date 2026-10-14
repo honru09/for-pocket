@@ -11,6 +11,8 @@ export default function usePocketViewport(telegram) {
       const style = shell && getComputedStyle(shell);
       const insets = style ? (parseFloat(style.paddingTop) || 0) + Math.max(0, (parseFloat(style.paddingBottom) || 62) - 62) : 0;
       document.documentElement.dataset.pocketCompact = String(appHeight - insets < 568);
+      document.documentElement.dataset.pocketShort = String(appHeight - insets <= 500);
+      document.documentElement.dataset.pocketTiny = String(appHeight - insets < 460);
     };
     update();
     window.addEventListener('resize', update);
@@ -23,6 +25,8 @@ export default function usePocketViewport(telegram) {
       telegram?.offEvent?.('viewportChanged', update);
       document.documentElement.style.removeProperty('--pocket-height');
       delete document.documentElement.dataset.pocketCompact;
+      delete document.documentElement.dataset.pocketShort;
+      delete document.documentElement.dataset.pocketTiny;
     };
   }, [telegram]);
 }

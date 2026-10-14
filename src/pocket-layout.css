@@ -265,14 +265,14 @@
 @media(max-width:600px) {
   /* Very short WebViews use a full-width drawer too. Put its edit action
      beside the row and reclaim the heading, instead of shrinking pills. */
-  html[data-pocket-compact=true] .for-root #record-view .record-layout { grid-template-columns:minmax(0,1fr); grid-template-rows:minmax(76px,1fr) 46px minmax(166px,1.6fr) 44px; gap:2px; }
+  html[data-pocket-compact=true] .for-root #record-view .record-layout { grid-template-columns:minmax(0,1fr); grid-template-rows:minmax(76px,1fr) 46px minmax(182px,1.6fr) 44px; gap:2px; }
   html[data-pocket-compact=true] .for-root #record-view .amount-stage { grid-column:1; grid-row:1; }
   html[data-pocket-compact=true] .for-root #record-view .purposes { grid-column:1; grid-row:2; min-height:46px; flex-direction:row; align-items:center; gap:4px; }
   html[data-pocket-compact=true] .for-root #record-view .purposes .section-heading { flex:0 0 auto; order:2; }
   html[data-pocket-compact=true] .for-root #record-view .purposes h2 { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; }
   html[data-pocket-compact=true] .for-root #record-view .purposes .text-button { min-height:44px; padding:0 4px; }
   html[data-pocket-compact=true] .for-root #record-view .categories.category-drawer { flex:1 1 0; height:46px; min-height:46px; }
-  html[data-pocket-compact=true] .for-root #record-view .keypad { grid-column:1; grid-row:3; grid-template-rows:repeat(4,minmax(40px,1fr)); gap:2px; }
-  html[data-pocket-compact=true] .for-root #record-view .key { min-height:40px; }
+  html[data-pocket-compact=true] .for-root #record-view .keypad { grid-column:1; grid-row:3; grid-template-rows:repeat(4,minmax(44px,1fr)); gap:2px; }
+  html[data-pocket-compact=true] .for-root #record-view .key { min-height:44px; }
   html[data-pocket-compact=true] .for-root #record-view .finish { grid-column:1; grid-row:4; }
 }

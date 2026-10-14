@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import PocketIllustration from './PocketIllustration.jsx';
 import { Button, Input, Select, Tappable, Textarea } from '@telegram-apps/telegram-ui';
 import { CURRENCIES, validateExpense } from '../public/shared.mjs';
 import { categoryLabel, translateError } from '../public/i18n.mjs';
@@ -397,6 +398,8 @@ export default function AiImportPage({ t, profile, settings, busy = false, run, 
   };
 
   const currentItems = itemsScope === scope ? items : [];
+  const needsItemReview = item => item.needsReview || !item.occurredAt || !item.amount || !item.categoryId || !item.consumer || item.confidence !== null && item.confidence < 0.75;
+  const hasReviewDetails = warnings.length > 0 || currentItems.some(needsItemReview);
 
   return <section className="ai-import" aria-label={t('aiImportTitle')}>
     <div className="ai-import-intro">
@@ -441,13 +444,16 @@ export default function AiImportPage({ t, profile, settings, busy = false, run, 
     {warnings.length > 0 && <ul className="ai-import-warnings" aria-label={t('aiImportHint')}>{warnings.map((warning, index) => <li key={index}>{typeof warning === 'object' ? `${warning.name || ''} · ${t(warning.code)}` : t(warning)}</li>)}</ul>}
 
     {currentItems.length > 0 && <form className="ai-import-results" onSubmit={saveAll}>
-      <header className="ai-import-results-header"><h2>{t('aiImportResults', { n: currentItems.length })}</h2></header>
+      <header className="ai-import-results-header">
+        <PocketIllustration name={hasReviewDetails ? 'partial-import' : 'import-review'} compact/>
+        <div className="ai-import-results-heading"><h2>{t('aiImportResults', { n: currentItems.length })}</h2><p>{t(hasReviewDetails ? 'importReviewPartial' : 'importReviewReady')}</p></div>
+      </header>
       {currentItems.some(item => ['transfer', 'reimbursement'].includes(item.recordKind)) && <p className="quiet-copy">{t('recordKindBudgetHint')}</p>}
       <div className="ai-import-list">{currentItems.map((item, index) => {
         const category = categoriesFor(item).find(candidate => candidate.id === item.categoryId);
         const categoryName = category ? categoryLabel(category, settings.language) : t('aiImportCategory');
         const expandedItem = expanded.has(item.id);
-        const needsReview = item.needsReview || !item.occurredAt || !item.amount || !item.categoryId || !item.consumer || item.confidence !== null && item.confidence < 0.75;
+        const needsReview = needsItemReview(item);
         const splitEnabled = item.type === 'expense' && consumers.length > 1;
         const summary = [item.merchant || categoryName, item.amount ? `${item.amount} ${item.currency}` : '', item.occurredAt ? item.occurredAt.replace('T', ' ') : t('aiImportTime')].filter(Boolean).join(' · ');
         return <article className={`ai-import-item ${expandedItem ? 'is-expanded' : ''}`} key={item.id}>

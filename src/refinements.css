@@ -69,7 +69,7 @@
   }
   .for-root[data-view="history"] .empty-state > button {
     position:relative;
-    z-index:11;
+    z-index:auto;
     transform:none;
     margin-top:0;
   }
@@ -284,12 +284,12 @@
   box-shadow:0 0 0 4px color-mix(in srgb,var(--paper) 88%,transparent);
 }
 .for-root .category-pill:focus-visible { transform:translateY(-1px) scale(1.02); }
-.for-root .key:focus-visible { background:#e5e8d8; }
+.for-root #keypad .key:focus-visible .key-cap { background:color-mix(in srgb,var(--milk) 55%,var(--sage)); }
 
 /* Telegram-like tactile settling: only controls that are actively moving get
    a compositor hint; static controls keep the browser's normal paint path. */
-.for-root :is(.type-pill-btn,.category-pill,.consumer-chip,.mascot-confirm,.key) { backface-visibility:hidden; }
-.for-root :is(.type-pill-btn.active,.consumer-chip[aria-pressed="true"],.mascot-confirm:not(:disabled),.key[data-pressed="true"]) {
+.for-root :is(.type-pill-btn,.category-pill,.consumer-chip,.mascot-confirm) { backface-visibility:hidden; }
+.for-root :is(.type-pill-btn.active,.consumer-chip[aria-pressed="true"],.mascot-confirm:not(:disabled)) {
   will-change:transform,opacity,background-color,box-shadow;
 }
 .for-root .type-pill-btn.active,
@@ -300,4 +300,31 @@
   0% { transform:translate3d(0,1px,0) scale(.96); }
   58% { transform:translate3d(0,-.5px,0) scale(1.025); }
   100% { transform:translate3d(0,0,0) scale(1); }
+}
+
+/* At the smallest usable heights, keep four 44px keypad rows intact. The
+   duplicate today total yields its row; date and import remain 44px controls
+   at the left of the existing footer tools, with their accessible labels. */
+@media (max-width:600px) {
+  html[data-pocket-short=true] .for-root[data-view=record] .app-header { margin-bottom:0; }
+  html[data-pocket-short=true] .for-root[data-view=record] #record-view { position:relative; }
+  html[data-pocket-short=true] .for-root[data-view=record] #record-view .record-layout { gap:2px; }
+  html[data-pocket-short=true] .for-root[data-view=record] #record-view .today-strip {
+    position:absolute; z-index:2; left:0; bottom:0; width:88px;
+    height:44px; min-height:44px; margin:0; padding:0; gap:0;
+    border:0; background:transparent;
+  }
+  html[data-pocket-short=true] .for-root #record-view .today-strip > :is(.today-icon,div) { display:none; }
+  html[data-pocket-short=true] .for-root #record-view .today-strip > :is(.date-button,.ai-quick-trigger) {
+    display:grid; place-items:center; flex:0 0 44px;
+    width:44px; min-width:44px; height:44px; min-height:44px; padding:0;
+  }
+  html[data-pocket-short=true] .for-root #record-view .today-strip .date-button :is(h6,span) { font-size:0; }
+  html[data-pocket-short=true] .for-root #record-view .today-strip .date-button .for-icon { width:18px; height:18px; }
+  html[data-pocket-short=true] .for-root[data-view=record] #record-view .finish { padding-top:0; }
+  html[data-pocket-short=true] .for-root #record-view .entry-actions { padding-left:88px; gap:4px; }
+  /* Below the physical one-screen minimum, scroll the usable app pane rather
+     than letting its 44px controls overflow underneath the fixed tab bar. */
+  html[data-pocket-tiny=true] .for-root[data-view=record] .app-shell { overflow-y:auto; overscroll-behavior-y:contain; }
+  html[data-pocket-tiny=true] .for-root[data-view=record] #record-view { flex:0 0 auto; min-height:354px; }
 }

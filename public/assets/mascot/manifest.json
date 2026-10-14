@@ -3,6 +3,10 @@
   "source": "built-in image_gen",
   "generatedAt": "2026-10-14",
   "style": "original warm yellow cloud mascot; transparent RGBA atlas",
+  "provenance": {
+    "originalPrompt": "unavailable: the original mascot v1/v2/pop generation prompt was not found in the retained project history; no prompt text is being reconstructed.",
+    "productionStatus": "four mascot atlases are present in the repository and documented; source prompt provenance remains unavailable."
+  },
   "atlas": {
     "columns": 4,
     "rows": 2,

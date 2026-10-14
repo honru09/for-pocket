@@ -1,5 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { CURRENCIES, isBudgetEntry, resolveLanguage } from './public/shared.mjs';
+import { composeDigest, digestPrompt } from './digest-copy.mjs';
+export { digestPrompt, emptyDigestText } from './digest-copy.mjs';
 
 /**
  * The three small life updates sent by the scheduler.  All boundaries are
@@ -14,7 +16,6 @@ export const DIGEST_SLOTS = Object.freeze({
 export const DEFAULT_DIGEST_TIMEZONE = 'Asia/Tokyo';
 
 const SLOT_NAMES = new Set(Object.keys(DIGEST_SLOTS));
-const LANGUAGE_NAMES = { zh: 'Simplified Chinese', en: 'English', uk: 'Ukrainian' };
 
 function asDate(value) {
   const timestamp = value instanceof Date ? value.getTime() : Number(value);
@@ -190,41 +191,6 @@ function compactAggregate(records) {
   };
 }
 
-function focusForSlot(slot, language) {
-  const copy = {
-    zh: { morning: '重点看看昨晚的大餐、夜宵和今早谁先出手', noon: '重点看看午饭吃了什么、谁吃得太好', evening: '盘点全天总账，抓最高频或最大的一笔' },
-    en: { morning: 'check last night\'s feasts and who made the first move this morning', noon: 'peek at lunch and who ate suspiciously well', evening: 'wrap up the day and catch the biggest or most frequent spend' },
-    uk: { morning: 'перевірити вчорашню вечерю та хто першим витратився зранку', noon: 'підглянути за обідом і тим, хто їв занадто добре', evening: 'підбити день і спіймати найбільшу або найчастішу витрату' },
-  };
-  return copy[language]?.[slot] || copy.zh[slot];
-}
-
-export function digestPrompt({ slot, window, records, language = 'zh', names = [] } = {}) {
-  const lang = resolveLanguage(language, 'zh');
-  const aggregate = compactAggregate(records || []);
-  const languageName = LANGUAGE_NAMES[lang];
-  return `Write one short plain-text life-ledger message in ${languageName}. You are the two people’s cheeky, curious friend who sits on their shoulder and watches ordinary spending. Sound like a real friend: playful, nosy, lightly teasing, never cruel. Naturally use one or two of 哇哦, 咳咳, 竟然, 让我来看看..., 哼哼, 额..., 等一下..., 抓到了！ when writing Chinese; use natural equivalents in English or Ukrainian rather than translating Chinese filler. Never use a heading, bullet list, markdown, greeting formula, financial jargon, budget advice, moral lesson, fake warmth, self-introduction, or the words AI/model/assistant. Call members by their exact nicknames when useful. Keep one compact paragraph around 60–110 characters/words appropriate for the language. Use only the verified records below; do not invent a shop, meal, emotion, weather, relationship, or amount. If count is zero, make a funny zero-spend ‘修仙 mode’ observation. Focus: ${focusForSlot(slot, lang)}. Window: ${window.start} to ${window.end} (${window.timezone}). Members: ${JSON.stringify(names)}. Verified aggregate: ${JSON.stringify(aggregate)}. Records: ${JSON.stringify(records || [])}`;
-}
-
-export function emptyDigestText(language = 'zh') {
-  const lang = resolveLanguage(language, 'zh');
-  if (lang === 'en') return 'Um... rubbing my eyes. Not a single expense in this window?! Wow, are you two photosynthesizing at home? The wallet is untouched, so I caught nothing today, hmph.';
-  if (lang === 'uk') return 'Ем... протираю очі. У цьому вікні жодного запису?! Вау, ви там фотосинтезуєте? Гаманець цілий, тож сьогодні мені нічого ловити, хм.';
-  return '额……揉了揉眼睛。这个时段竟然一笔账都没记？！哇哦，两位是在家光合作用修仙吗？钱包君毫发无损，今天居然抓不到把柄，哼。';
-}
-
-function fallbackDigestText(slot, records, language, names = []) {
-  if (!records.length) return emptyDigestText(language);
-  const lang = resolveLanguage(language, 'zh');
-  const aggregate = compactAggregate(records);
-  const top = aggregate.categories[0];
-  const total = aggregate.totals[0];
-  const payer = aggregate.payers[0];
-  if (lang === 'en') return `Wow, ${aggregate.count} spend${aggregate.count === 1 ? '' : 's'} showed up: ${total?.amount || ''}. ${top?.name || 'Something'} is leading the parade${top?.count > 1 ? ` with ${top.count} visits` : ''}, and ${payer?.name || names[0] || 'someone'} got caught first, hmph.`.trim();
-  if (lang === 'uk') return `Вау, у вікні ${aggregate.count} витрат на ${total?.amount || ''}. Попереду — ${top?.name || 'щось цікаве'}${top?.count > 1 ? ` (${top.count} разів)` : ''}, а ${payer?.name || names[0] || 'хтось'} уже попався, хм.`.trim();
-  return `哇哦，这个时段抓到 ${aggregate.count} 笔，共 ${total?.amount || ''}。${top?.name || '某项消费'}${top?.count > 1 ? `竟然来了 ${top.count} 次` : ''}领跑，${payer?.name || names[0] || '某位'}先被抓到了，哼哼。`;
-}
-
 function telegramIds(db, memberIds) {
   const result = new Map();
   const add = (chatId, uid, language, { preferLanguage = false } = {}) => {
@@ -335,16 +301,16 @@ export function createDigestService({ store, summarizer, callTelegram, token = '
     let deliveryFailed = false;
     try {
       for (const [language, recipients] of languageByRecipient) {
-        let text = '';
+        let comment = '';
         if (records.length && typeof summarizer?.summarize === 'function' && summarizer.enabled !== false) {
           try {
             const value = await summarizer.summarize({ prompt: digestPrompt({ slot, window, records, language, names: context.ids.map(uid => context.names.get(uid) || uid) }), slot, language, window, records });
-            text = String(typeof value === 'object' && value ? value.text || '' : value || '').trim();
-            if (text) modelGenerated = true;
+            comment = value;
           } catch {}
         }
-        if (!text) text = fallbackDigestText(slot, records, language, context.ids.map(uid => context.names.get(uid) || uid));
-        generated[language] = text.slice(0, 3900);
+        const message = composeDigest({ slot, records, language, comment });
+        if (message.generated) modelGenerated = true;
+        generated[language] = message.text;
         if (telegram) {
           for (const recipient of recipients) {
             const recipientKey = recipient.chatId;

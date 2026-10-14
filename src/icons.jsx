@@ -1,6 +1,9 @@
 import React, { memo } from 'react';
 
 const paths = {
+  // Shared ui-kit-v1 icons, kept in the existing currentColor Icon API.
+  'empty-filter': 'M3 4h18l-7 8v7l-4 2v-9L3 4Zm13 12 5 5m0-5-5 5',
+  'storage-read-failed': 'M6 3h9l4 4v14H6V3Zm9 0v5h4M9 12h5M9 16h3M18 16l4 4m0-4-4 4',
   clip: 'M8 13 15 6a3 3 0 0 1 4 4L9 20a5 5 0 0 1-7-7L12 3m-7 12 9-9',
   pin: 'M19 10c0 5-7 11-7 11S5 15 5 10a7 7 0 1 1 14 0ZM15 10a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z',
   home: 'm3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1V10Z',
