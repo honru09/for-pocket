@@ -1,0 +1,102 @@
+{
+  "schemaVersion": 1,
+  "status": "candidate",
+  "generatedWith": "built-in image_gen",
+  "generatedAt": "2026-10-14",
+  "visualDirection": {
+    "style": "tactile handmade-paper collage with soft clay edges and a curious cloud mascot",
+    "palette": ["cream", "sage green", "apricot orange", "warm honey gold", "charcoal"],
+    "semanticRule": "Images provide surface, object, and mood only; all copy, amounts, dates, state claims, and AI conclusions stay in live DOM/UI."
+  },
+  "interactionScope": {
+    "feature": "free-money setup and configured-home badge",
+    "states": ["unconfigured-entry", "wizard-input", "diagnosis-pre-result", "configured-home-badge"],
+    "motionOwner": "CSS/React owns spring, breathing, coin bounce, number interpolation, sheet entrance, and confetti particles.",
+    "contentOwner": "DOM owns labels, step text, form values, daily allowance, AI copy, validation, and accessibility semantics."
+  },
+  "assets": [
+    {
+      "id": "free-money-orb-tactile-v1",
+      "file": "illustrations/masters/free-money-orb-tactile-v1.png",
+      "webFile": "illustrations/free-money-orb-tactile-v1-web.png",
+      "intendedState": "unconfigured-entry",
+      "recommendedConsumer": "future FreeMoneyOrb component",
+      "meaning": "A warm floating orb with a small cloud mascot peeking over a blank speech bubble; it invites setup without asserting a result.",
+      "integration": "Render as an <img> inside a 44px+ hit-area button; keep the bubble copy as live DOM text positioned over the blank bubble. Hide the whole entry when fixedCapital.enabled is true.",
+      "recommendedDisplay": "orb 72–96px; bubble copy 11–13px; bottom-right above navigation safe area",
+      "doNotUseFor": ["configured-state proof", "amount or currency display", "tooltip text baked into image", "button hit area", "CSS background", "loading or success state"],
+      "generationPromptSummary": "Transparent tactile cloud-orb, blank speech bubble, no text, no numbers, no currency symbols.",
+      "master": {"width": 1199, "height": 1312, "alpha": "transparent", "sha256": "CEA76C77A394AC886EAD7DA2041DFE1C4CA05073293895699F95A36DAD9A7D44"},
+      "web": {"width": 512, "height": 560, "alpha": "transparent", "sha256": "659EEA2881566CACB6085F7B018FDD310C00225FFCFCB48D5989FB027E8C9ADA"}
+    },
+    {
+      "id": "free-money-wizard-tactile-v1",
+      "file": "illustrations/masters/free-money-wizard-tactile-v1.png",
+      "webFile": "illustrations/free-money-wizard-tactile-v1-web.png",
+      "intendedState": "wizard-input",
+      "recommendedConsumer": "future FreeMoneyWizardSheet component",
+      "meaning": "A cream stitched paper sheet with three blank inset wells for income, fixed expenses, and savings target.",
+      "integration": "Use as a decorative plate behind real inputs. Overlay the two-step header, labels, values, validation, primary action, and close control in DOM; crop/scale with object-fit: contain rather than using as a full-screen background.",
+      "recommendedDisplay": "sheet width min(100%, 520px); keep 16–24px padding from the live input wells",
+      "doNotUseFor": ["step numbers", "field labels", "amounts", "CTA text", "validation state", "modal accessibility semantics", "CSS background", "fixed-size keypad key"],
+      "generationPromptSummary": "Transparent tactile bottom-sheet plate with three blank input wells, no labels or copy.",
+      "master": {"width": 1024, "height": 1536, "alpha": "transparent", "sha256": "EA905800F80B4295427B3B90B842B1A07D8F179A6DEC3BAAFD892EB91C6FE09E"},
+      "web": {"width": 512, "height": 768, "alpha": "transparent", "sha256": "5464912B9578D464386D67C8E4257345F8A558F8560F33DE972346552DB6C463"}
+    },
+    {
+      "id": "free-money-coin-badge-tactile-v1",
+      "file": "illustrations/masters/free-money-coin-badge-tactile-v1.png",
+      "webFile": "illustrations/free-money-coin-badge-tactile-v1-web.png",
+      "intendedState": "configured-home-badge",
+      "recommendedConsumer": "future FreeMoneyCoinBadge component",
+      "meaning": "A 45-degree isometric gold coin with a blank cream face and a blank ticket plaque reserved for a live daily allowance.",
+      "integration": "Place inside a semantic button or badge wrapper. Render the live daily amount beside/over the blank plaque. Use transform/scale for tap bounce and avoid raster frame swapping for continuous motion.",
+      "recommendedDisplay": "coin 48–96px on compact home header; preserve transparent padding for the 45-degree silhouette",
+      "doNotUseFor": ["currency glyph", "daily amount baked in image", "configured-state proof before confirmation", "click target", "CSS background", "animation sprite atlas"],
+      "generationPromptSummary": "Transparent 45-degree tactile gold coin with blank face and blank ticket plaque, no symbols or copy.",
+      "master": {"width": 1312, "height": 1199, "alpha": "transparent", "sha256": "9CDC2F83772C544C7BC0973A4E055DE7FF4D37DD6484628FF76110D7131A555A"},
+      "web": {"width": 512, "height": 468, "alpha": "transparent", "sha256": "C5DFC3CA32991306D741F430A786DDAF3454A6D4DB8219C7844013F8E1CFE5D3"}
+    },
+    {
+      "id": "free-money-diagnosis-tactile-v1",
+      "file": "illustrations/masters/free-money-diagnosis-tactile-v1.png",
+      "webFile": "illustrations/free-money-diagnosis-tactile-v1-web.png",
+      "intendedState": "diagnosis-pre-result",
+      "recommendedConsumer": "future FreeMoneyDiagnosisCard component",
+      "meaning": "A blank ruled-paper card with a cloud mascot peeking over it, suitable for an AI analysis pre-result or neutral loading shell.",
+      "integration": "Use as a quiet visual layer while the real AI response, error, retry, and allowance values render in DOM. A breathing cloud can be animated with CSS; do not imply that analysis has completed until the actual response state says so.",
+      "recommendedDisplay": "card max-width 420px; keep ruled area clear for readable live copy",
+      "doNotUseFor": ["AI conclusion", "reasonableness guarantee", "success confirmation", "loading promise", "amounts or totals", "checkmark or status icon", "CSS background"],
+      "generationPromptSummary": "Transparent tactile blank ledger card with cloud peeking over top edge, no conclusion, no text.",
+      "master": {"width": 1536, "height": 1024, "alpha": "transparent", "sha256": "F89BE2DDA81A3562FA6E8B799A5AC8AB954736A19A6AA3D0C8BE944FC06138FC"},
+      "web": {"width": 768, "height": 512, "alpha": "transparent", "sha256": "86726BCD8022332AE3985459B0BF4A7F0B3618144ADF33BCC74EB52D495281B6"}
+    }
+  ],
+  "vectorAssets": [
+    {
+      "id": "free-money-confetti-sparkle-v1",
+      "file": "interaction/free-money-confetti-sparkle-v1.svg",
+      "intendedState": "activation-celebration",
+      "recommendedConsumer": "CSS/React particle layer",
+      "meaning": "Neutral decorative sparkle/confetti pieces with no semantic state claim.",
+      "integration": "Clone or use as a masked decorative particle; keep particle count, timing, and reduced-motion behavior in CSS/React.",
+      "doNotUseFor": ["success proof", "button label", "amount", "status icon", "permanent background"]
+    },
+    {
+      "id": "free-money-sheet-handle-v1",
+      "file": "interaction/free-money-sheet-handle-v1.svg",
+      "intendedState": "wizard-input / diagnosis / details",
+      "recommendedConsumer": "sheet drag handle decoration",
+      "meaning": "Small tactile cream-gold handle that makes the sheet affordance discoverable.",
+      "integration": "Place inside a real 44px+ drag handle button; the SVG is decoration only and must not own the close action.",
+      "doNotUseFor": ["close icon", "focus indicator", "modal semantics", "fixed-position page chrome"]
+    }
+  ],
+  "validation": {
+    "alphaChecked": true,
+    "sourceFilesInspected": true,
+    "webDerivatives": "mechanical RGBA downscales; no visual reinterpretation",
+    "productionWiring": false,
+    "nextGate": "Mount each candidate in a real 390px and 320px flow, check safe-area overlap, contrast of DOM text over the blank wells, and verify the orb is hidden after fixedCapital activation before promoting to candidates-v4/public."
+  }
+}
