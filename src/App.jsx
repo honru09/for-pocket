@@ -48,27 +48,28 @@ function playKeySound(pack) {
     // packs with a tiny attack/release envelope so repeated taps stay clear.
     context.resume?.();
     const now = context.currentTime;
-    const duration = pack === 'wood' ? 0.075 : 0.105;
-    const oscillator = context.createOscillator();
-    const gain = context.createGain();
-    oscillator.type = pack === 'wood' ? 'triangle' : 'sine';
-    oscillator.frequency.setValueAtTime(pack === 'wood' ? 156 : 690, now);
-    oscillator.frequency.exponentialRampToValueAtTime(pack === 'wood' ? 112 : 520, now + duration);
-    gain.gain.setValueAtTime(0.0001, now);
-    gain.gain.exponentialRampToValueAtTime(pack === 'wood' ? 0.028 : 0.018, now + 0.008);
-    gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
-    oscillator.connect(gain).connect(context.destination);
-    oscillator.start(now); oscillator.stop(now + duration + 0.012);
-    if (pack === 'water') {
-      const overtone = context.createOscillator(), overtoneGain = context.createGain();
-      overtone.type = 'sine';
-      overtone.frequency.setValueAtTime(1380, now);
-      overtone.frequency.exponentialRampToValueAtTime(980, now + 0.07);
-      overtoneGain.gain.setValueAtTime(0.0001, now);
-      overtoneGain.gain.exponentialRampToValueAtTime(0.006, now + 0.006);
-      overtoneGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.07);
-      overtone.connect(overtoneGain).connect(context.destination);
-      overtone.start(now); overtone.stop(now + 0.08);
+    const water = pack === 'water';
+    const duration = water ? 0.12 : 0.085;
+    // Water is a falling-pitch drop; wood is a muted, low rounded knock.
+    // Keeping each voice under a small gain envelope prevents a rapid series
+    // of taps from turning into a harsh continuous tone.
+    const tone = (type, start, end, peak, length = duration) => {
+      const oscillator = context.createOscillator(), gain = context.createGain();
+      oscillator.type = type;
+      oscillator.frequency.setValueAtTime(start, now);
+      oscillator.frequency.exponentialRampToValueAtTime(Math.max(1, end), now + length);
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.exponentialRampToValueAtTime(peak, now + (water ? 0.008 : 0.004));
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + length);
+      oscillator.connect(gain).connect(context.destination);
+      oscillator.start(now); oscillator.stop(now + length + 0.014);
+    };
+    if (water) {
+      tone('sine', 1320, 460, 0.014, 0.12);
+      tone('sine', 2180, 1220, 0.004, 0.075);
+    } else {
+      tone('triangle', 205, 118, 0.022, 0.085);
+      tone('sine', 92, 68, 0.006, 0.065);
     }
   } catch {}
 }
@@ -329,6 +330,9 @@ export default function App() {
     if (busyRef.current) return;
     setPicker(false); setView(next); window.scrollTo({ top: 0, behavior: 'instant' }); haptic();
   }, []);
+  // The member rail is a record-footer portal. Drop a detached target before
+  // any secondary page paints so it can never leak into a header or settings.
+  useEffect(() => { if (view !== 'record') setReactionHost(null); }, [view]);
   useEffect(() => {
     let cancelled = false;
     async function boot() {
@@ -841,7 +845,7 @@ export default function App() {
       <select id="history-currency" aria-label={t('ledgerCurrency')} value={historyCurrency} onChange={e => setHistoryCurrency(e.target.value)}>{Object.keys(CURRENCIES).map(c => <option key={c}>{c}</option>)}</select>
       <button type="button" id="history-quick-entry" className="postcard-button" onClick={() => navigate('ai-import')} aria-label={t('aiImportTitle')} title={t('aiImportTitle')}><Icon name="receipt"/></button>
     </div></div><section className="history-summary"><div className="history-summary-amount"><span>{t('netBalance')}</span><strong id="history-total">{money(historyIncome - historyExpense, historyCurrency)}</strong><div className="history-summary-tools"><small id="history-total-count">{countText(history.length, settings.language, historyCurrency)}</small><button type="button" className="postcard-export" onClick={exportPostcard} aria-label={t('postcardExport')} title={t('postcardExport')}><CandidateIcon name="export-envelope-tactile-v1"/></button></div></div><div className="balance-details"><div><span>{t('expense')}</span><strong>{money(historyExpense,historyCurrency)}</strong></div><div><span>{t('income')}</span><strong className="income-value">+{money(historyIncome,historyCurrency)}</strong></div></div></section><AiSummary t={t} profile={profile} settings={settings} currency={historyCurrency} busy={busy} run={run} service={service.current} isRemote={isRemote} config={config} onAccount={() => navigate('account')}/><div className="history-list">{!history.length && <LedgerEmptyState ready={ready} failed={failed || syncFailed} filtered={expenses.length > 0 || historyCategory !== 'all' || historyCurrency !== settings.currency} t={t} onRetry={() => setRetryCount(n => n + 1)} onRecord={() => navigate('record')}/>} {days.map(day => <section key={day}><div className="history-day">{day === today ? t('today') : new Intl.DateTimeFormat(locale,{ timeZone:'UTC',month:'short',day:'numeric' }).format(new Date(`${day}T12:00:00Z`))}</div>{history.filter(e => e.dayKey === day).map(e => <SwipeExpenseRow key={e.id} entry={e} t={t} onDelete={removeEntry} onCopy={fillFromEntry} onEdit={entry => { if (entry.canDelete !== false) setEditingEntry(entry); }}><Cell Component="article" readOnly multiline key={e.id} className={`expense-row ${e.type === 'income' ? 'is-income' : ''}`} before={<span className="category-icon" style={{ background:`var(--${e.category.color})` }}><Icon name={e.category.icon}/></span>} subtitle={<span className="expense-meta"><span className={`consumer-badge consumer-color-${e.member?.color || 'blue'}`}><i/>{e.member?.name || settings.consumers.find(c => c.id === e.consumer)?.name || t('unknownConsumer')}</span><button type="button" className="entry-time" aria-label={t('editEntryTime')} disabled={busy || e.canDelete === false} onClick={() => setTimeEditor({ entry:e, ledgerId:profile.ledgerId })}><time dateTime={e.occurredAt || e.createdAt}>{new Intl.DateTimeFormat(locale,{timeZone:e.timezone || timezone,hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(new Date(e.occurredAt || e.createdAt))}</time></button></span>} description={e.note ? <span className="expense-description"><span className="expense-note">{e.note}</span></span> : undefined} after={<div className="expense-actions"><span className="expense-money">{e.type === 'income' ? '+' : '−'}{money(e.amountMinor,e.currency)}</span><Button className="entry-more" mode="plain" size="s" aria-label={t('entryActions')} onClick={() => document.dispatchEvent(new CustomEvent('pocket:entry-actions', { detail:e.id }))}><Icon name="more"/></Button></div>}><strong>{categoryDisplayLabel(e.category,settings.language)}</strong>{!isBudgetEntry(e) && <small className="entry-kind">{t(e.recordKind === 'transfer' ? 'recordKindTransfer' : 'recordKindReimbursement')}</small>}</Cell></SwipeExpenseRow>)}</section>)}</div><div className="today-balance"><span>{t('todayBalance')}</span><strong>{money(todayIncome - todayExpense)}</strong></div></>}
-    {view === 'settings' && <SettingsPage profile={profile} settings={settings} t={t} ready={ready} disabled={disabled} navigate={navigate} updateSettings={updateSettings} onLocation={() => setLocationSheet(true)} locationEnabled={locationEnabled}/>}
+    {view === 'settings' && <SettingsPage profile={profile} settings={settings} t={t} ready={ready} disabled={disabled} navigate={navigate} updateSettings={updateSettings} onLocation={() => setLocationSheet(true)} locationEnabled={locationEnabled} onSoundPreview={playKeySound}/>}
     {view === 'recurring' && <RecurringEditor settings={settings} categories={settings.categories} t={t} updateSettings={updateSettings} disabled={disabled}/>}
     {view === 'profile' && profile && <ProfileEditor key={profile.user.id} user={profile.user} t={t} busy={busy} run={run} service={service.current}/>}
     {view === 'account' && profile && <AccountPage t={t} profile={profile} isRemote={isRemote} config={config} language={settings.language} busy={busy} run={run} service={service.current} onGoogle={login} onLogout={logout} copy={copy} failedCount={failedCount} onRetryWrites={retryWrites}/>}

@@ -391,3 +391,98 @@
   .for-root { font-size:14px; }
   .for-root .page-heading h1, .for-root #history-title { font-size:21px; }
 }
+
+/* Header quarantine: member reactions have one home, the record footer. A
+   stale portal or an older cached bundle must never paint a second avatar in
+   the top-right controls of settings, profile, import or the ledger. */
+.for-root .app-header :is(.app-header-reactions,.circle-presence-host,.circle-presence) { display:none!important; }
+.for-root .app-header > .person-avatar { display:none!important; }
+.for-root .app-header .profile-trigger .person-avatar { display:inline-grid!important; }
+.for-root .app-header { isolation:isolate; }
+.for-root .app-header > .ledger-switcher { margin-left:auto; }
+
+/* One type rhythm across Telegram UI's generated heading wrappers. */
+.for-root {
+  -webkit-font-smoothing:antialiased;
+  text-rendering:optimizeLegibility;
+  --type-label:11px;
+  --type-body:13px;
+  --type-title:21px;
+}
+.for-root :is(.settings-choice,.settings-row,.picker-row,.circle-action) { font-size:var(--type-body); line-height:20px; }
+.for-root :is(.settings-choice,.settings-row,.picker-row,.circle-action) :is(h6,span,small,select) { line-height:20px; }
+.for-root .page-heading h1,.for-root #history-title { font-size:var(--type-title); line-height:26px; }
+.for-root :is(.settings-group,.settings-profile,.history-summary,.amount-stage,.category-pill,.key-cap) { transition:background-color 220ms ease,border-color 220ms ease,color 180ms ease,box-shadow 220ms ease; }
+
+/* The whole row opens one theme picker; every palette previews its own paper
+   and accent, independently of the currently selected application theme. */
+.for-root .settings-choice { min-height:50px; font-weight:700; }
+.for-root .settings-choice select { font-family:inherit; font-size:13px!important; font-weight:700; line-height:20px; }
+.for-root .theme-choice { width:100%; display:flex; align-items:center; justify-content:space-between; gap:12px; min-height:50px; margin:0; padding:0; border:0; border-bottom:1px solid var(--soft-line); border-radius:0; background:transparent; color:var(--ink); font-family:inherit; text-align:left; cursor:pointer; }
+.for-root .theme-choice .settings-theme-value { display:flex; align-items:center; justify-content:flex-end; gap:7px; min-width:0; max-width:68%; color:var(--accent-strong); }
+.for-root .settings-theme-value > span { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.for-root .settings-theme-value .for-icon { flex:none; width:14px; height:14px; margin-right:3px; }
+.for-root .theme-open { display:grid; place-items:center; width:36px; height:36px; min-width:36px; padding:9px; border:0; border-radius:12px; background:var(--control); color:var(--accent-strong); cursor:pointer; }
+.for-root .theme-open .for-icon { width:16px; height:16px; }
+.for-root .theme-native-select { position:absolute; width:1px; height:1px; opacity:0; pointer-events:none; inset:auto 0 0 auto; }
+.for-root .theme-choice .theme-dot { display:block; flex:0 0 20px; width:20px; min-width:20px; height:20px; }
+.for-root .theme-sheet { max-width:430px; }
+.for-root .theme-palette { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+.for-root .theme-card { min-width:0; padding:8px; border:1px solid transparent; border-radius:16px; background:var(--control); text-align:left; color:var(--ink); transition:transform 160ms var(--ease-out),background-color 180ms ease,border-color 180ms ease; }
+.for-root .theme-card[aria-pressed=true] { border-color:var(--accent-strong); background:var(--accent-soft); box-shadow:0 4px 14px color-mix(in srgb,var(--accent-strong) 14%,transparent); }
+.for-root .theme-card:active { transform:scale(.97); transition-duration:100ms; }
+.for-root .theme-card-label { display:flex; align-items:center; justify-content:space-between; gap:6px; margin-top:7px; font-size:12px; line-height:18px; font-weight:700; }
+.for-root .theme-card-label .for-icon { width:14px; height:14px; opacity:0; color:var(--accent-strong); }
+.for-root .theme-card[aria-pressed=true] .theme-card-label .for-icon { opacity:1; }
+.theme-preview { display:grid; grid-template-columns:1fr 1fr; grid-template-rows:22px 18px 22px; gap:4px; min-height:70px; padding:7px; border-radius:11px; background:var(--paper); box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--ink) 8%,transparent); }
+.theme-preview .preview-amount { grid-column:1/-1; display:flex; align-items:flex-end; gap:3px; padding:4px 6px; border-radius:7px; background:var(--sage); }
+.theme-preview .preview-amount i { display:block; width:var(--w,18px); height:4px; border-radius:99px; background:var(--accent-strong); opacity:.65; }
+.theme-preview .preview-amount i:nth-child(2) { --w:12px; opacity:.35; }.theme-preview .preview-amount i:nth-child(3) { --w:8px; opacity:.25; }
+.theme-preview .preview-pills { display:flex; gap:3px; align-items:center; }
+.theme-preview .preview-pills i { display:block; width:18px; height:8px; border-radius:99px; background:var(--accent-soft); border:1px solid color-mix(in srgb,var(--accent-strong) 26%,transparent); }
+.theme-preview .preview-keys { grid-column:1/-1; display:grid; grid-template-columns:repeat(3,1fr); gap:3px; }
+.theme-preview .preview-keys i { display:block; border-radius:5px; background:color-mix(in srgb,var(--paper) 60%,var(--accent-soft)); box-shadow:0 1px 2px color-mix(in srgb,var(--ink) 10%,transparent); }
+.preview-matcha { --paper:#f8f7f1; --ink:#333a30; --sage:#e6ebd7; --accent-soft:#e6edd9; --accent-strong:#607850; }
+.preview-cheese { --paper:#fff9ed; --ink:#493b2c; --sage:#f5e6b9; --accent-soft:#f5e6b9; --accent-strong:#a36c39; }
+.preview-peach { --paper:#fff8f7; --ink:#493737; --sage:#f7e1df; --accent-soft:#f7e1df; --accent-strong:#a7605b; }
+.preview-sea { --paper:#f4fbfa; --ink:#2e474a; --sage:#d9eff0; --accent-soft:#d9eff0; --accent-strong:#4d8589; }
+
+/* Keep the footer row predictable below the number pad: avatars occupy the
+   flexible lane; pin and note always stay in two independent touch targets. */
+.for-root[data-view="record"] #record-view .finish .entry-actions { display:flex; align-items:center; justify-content:flex-start; min-width:0; }
+.for-root[data-view="record"] #record-view .finish .circle-presence-host { min-width:0; flex:1 1 auto; }
+.for-root[data-view="record"] #record-view .finish :is(.location-trigger,.note-trigger) { flex:0 0 40px; border-radius:10px; }
+.for-root[data-view="record"] #record-view .finish .circle-presence { min-width:0; overflow-x:auto; overscroll-behavior-x:contain; }
+.for-root[data-view="record"] #record-view .circle-presence .presence-chip { flex:0 0 38px; width:38px; min-width:38px; height:38px; }
+
+@media(max-width:600px) {
+  /* On very short Telegram WebViews the date/import pair is docked over the
+     footer. Reserve its lane so pin/note never sit underneath it. */
+  html[data-pocket-short="true"] .for-root[data-view="record"] #record-view .finish .entry-actions { padding-left:88px!important; }
+  .for-root .theme-palette { gap:8px; }
+  .for-root .theme-card { padding:7px; }
+  .for-root[data-view="record"] #record-view .finish :is(.location-trigger,.note-trigger) { flex-basis:38px; width:38px; min-width:38px; border-radius:10px; }
+}
+
+/* Keep the physical four-row keypad inside its grid track on compact phones.
+   The older 6px gutter rule made the final clear/backspace row overflow by
+   six pixels when the available row height was exactly 44px. */
+@media(max-width:600px) {
+  .for-root[data-view="record"] #record-view .keypad { gap:4px; }
+}
+
+/* Ukrainian labels are wider than the Latin and Chinese titles. Give the
+   narrow ledger toolbar a stable minimum category target instead of letting
+   the native select collapse to an unreadable sliver. */
+@media(max-width:360px) {
+  .for-root .history-title-bar h1 {
+    max-width:75px;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+    font-size:18px!important;
+  }
+  .for-root .history-toolbar {
+    grid-template-columns:56px minmax(0,1fr) 50px 36px;
+  }
+}

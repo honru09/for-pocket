@@ -9,7 +9,9 @@ import mascotExpressionsAtlas from '../public/assets/mascot/mascot-expressions-a
 import mascotTapAtlas from '../public/assets/mascot/mascot-tap-frames-v1.png';
 import mascotCashAtlas from '../public/assets/mascot/mascot-cash-frames-v1.png';
 import mascotPopAtlas from '../public/assets/mascot/mascot-pop-frames-v1.png';
-import stopSignAsset from '../public/assets/mascot/stop-sign-v1.png';
+// The 256px raster is bundled inline: a cold cache or late network response
+// cannot consume the short falling animation before the sign becomes visible.
+import stopSignAsset from './stop-sign-compact.png?inline';
 import MorphFacePath from './MorphFacePath.jsx';
 import { EYE_POSES, MOUTH_POSES, SLEEP_EYES } from './mascot-face.mjs';
 
@@ -70,6 +72,15 @@ function WeatherAccessory({ environment }) {
 const MASCOT_ATLAS = { width:1774, height:887, cellWidth:443.5, cellHeight:443.5 };
 const POP_DURATION = 280;
 const RETURN_DURATION = 220;
+let stopSignDecoded;
+function prepareStopSign() {
+  return stopSignDecoded ||= new Promise(resolve => {
+    const image = new Image();
+    image.onload = () => image.decode?.().then(resolve, resolve) || resolve();
+    image.onerror = resolve;
+    image.src = stopSignAsset;
+  });
+}
 // Keep the last resting pose as a small pout with one tiny anger mark.
 const EXPRESSION_FRAME = [0, 1, 2, 3, 4, 5];
 function AtlasCell({ asset, frame, className, style }) {
@@ -165,13 +176,13 @@ function CashCelebration({ event, cloudVisible }) {
 }
 
 function StopSign() {
-  return <img className="cloud-stop-sign" src={stopSignAsset} alt="" aria-hidden="true"/>;
+  const [ready, setReady] = useState(false);
+  return <span className="cloud-stop-sign-wrap" data-ready={ready} aria-hidden="true"><span className="cloud-stop-sign-fallback"><i>止まれ</i></span><img className="cloud-stop-sign" src={stopSignAsset} alt="" onLoad={() => setReady(true)} onError={() => setReady(false)}/></span>;
 }
 
 export default function PocketMascot({ mascotRef, t, onTap, canConfirm = false, busy = false, confirmLabel, onConfirm, celebrate = null, environment = null }) {
   const [step, setStep] = useState(0), [phase, setPhase] = useState('cloud');
   const [returning, setReturning] = useState(false);
-  const [stopSignReady, setStopSignReady] = useState(false);
   const [signTaps, setSignTaps] = useState(0), [flight, setFlight] = useState(null), [celebration, setCelebration] = useState(null), [confirmFrame, setConfirmFrame] = useState(0), [tapNonce, setTapNonce] = useState(0);
   const stepRef = useRef(0), tapsRef = useRef(0), buttonRef = useRef(null), flightRef = useRef(null), signRef = useRef(null);
   const motionRef = useRef(null), cashMotionRef = useRef(null), cashAnimationRef = useRef(null), signAnimationRef = useRef(null), deadlineRef = useRef(0), lastPhase = useRef('cloud'), phaseRef = useRef('cloud'), signExitRef = useRef(false);
@@ -180,15 +191,11 @@ export default function PocketMascot({ mascotRef, t, onTap, canConfirm = false, 
   useEffect(() => {
     // Decode before an interaction, so the first short sequence cannot finish
     // while its image is still downloading on a mobile connection.
-    for (const src of [mascotTapAtlas, mascotCashAtlas, mascotPopAtlas, stopSignAsset]) {
+    void prepareStopSign();
+    for (const src of [mascotTapAtlas, mascotCashAtlas, mascotPopAtlas]) {
       const image = new Image();
       image.src = src;
-      if (src === stopSignAsset) {
-        const ready = () => setStopSignReady(true);
-        image.addEventListener('load', ready, { once:true });
-        image.addEventListener('error', ready, { once:true });
-        image.decode?.().then(ready).catch(() => {});
-      } else image.decode?.().catch(() => {});
+      image.decode?.().catch(() => {});
     }
   }, []);
   const finishReset = useCallback(() => {
@@ -221,19 +228,14 @@ export default function PocketMascot({ mascotRef, t, onTap, canConfirm = false, 
   // One deadline from the sixth tap. Rerenders and the landing do not restart it.
   useEffect(() => {
     if (step !== 6) return;
-    // Do not hand the sign animation an undecoded image. The local asset is
-    // normally ready before this deadline; the short retry loop covers a cold
-    // WebView cache without dropping the falling phase altogether.
-    let landing;
-    const startedAt = Date.now();
-    const showSign = () => {
-      if (stopSignReady || Date.now() - startedAt >= 900) setPhase('falling');
-      else landing = setTimeout(showSign, 16);
-    };
-    landing = setTimeout(showSign, POP_DURATION);
+    // Decode and pop run together, but this cycle owns exactly one hand-off.
+    // Image readiness must not rerun the effect after the sign has landed.
+    // The inline asset is predecoded, but decoding must never own the clock:
+    // even a broken decoder gets a visible fallback for the entire flight.
+    const landing = setTimeout(() => setPhase('falling'), POP_DURATION);
     const restore = setTimeout(() => reset(true), Math.max(0, deadlineRef.current - Date.now()));
     return () => { clearTimeout(landing); clearTimeout(restore); };
-  }, [step, reset, stopSignReady]);
+  }, [step, reset]);
 
   useEffect(() => {
     if (celebrationId == null || celebrationId === celebrationRef.current || !Object.hasOwn(CASH_DURATION, celebrationType)) return;
@@ -312,14 +314,14 @@ export default function PocketMascot({ mascotRef, t, onTap, canConfirm = false, 
     setFlight({ left:rect.left, top:rect.top, width:rect.width, height:rect.height });
   }, [phase]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!flight || phase !== 'falling') return;
     const animation = flightRef.current.animate([
-      { transform:`translateY(${-flight.top - flight.height - 24}px) rotate(-5deg)` },
-      { transform:'translateY(3px) rotate(2deg)', offset:.8 },
-      { transform:'translateY(-2px) rotate(-1deg)', offset:.94 },
+      { transform:`translateY(${-flight.top - flight.height - 24}px) rotate(-5deg)`, easing:'cubic-bezier(.42,0,.8,.6)' },
+      { transform:'translateY(2px) rotate(2deg)', offset:.72, easing:'cubic-bezier(.2,.75,.3,1)' },
+      { transform:'translateY(-1px) rotate(-1deg)', offset:.88, easing:'ease-out' },
       { transform:'translateY(0) rotate(0)' },
-    ], { duration:500, easing:getComputedStyle(buttonRef.current).getPropertyValue('--ease-out').trim(), fill:'both' });
+    ], { duration:540, fill:'both' });
     let cancelled = false;
     animation.finished.then(() => { if (!cancelled) { setPhase('sign'); setFlight(null); } }).catch(() => {});
     return () => { cancelled = true; animation.cancel(); };
