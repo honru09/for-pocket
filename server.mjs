@@ -20,6 +20,7 @@ import { createDigestService } from './digest.mjs';
 import { createTelegramExpenseSync } from './telegram-expense-sync.mjs';
 import { createMissingEntryReminderService } from './missing-entry-reminder.mjs';
 import { createReactionNotificationService, createCloudTasksReactionQueue } from './reaction-notifications.mjs';
+import { createPushCleanupService } from './push-cleanup.mjs';
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 const { version } = JSON.parse(await readFile(path.join(root, 'package.json'), 'utf8'));
@@ -55,6 +56,7 @@ export function createApp({ token = process.env.BOT_TOKEN || '', dataDir = path.
   const reactionNotifications = createReactionNotificationService({ store, token, callTelegram, now,
     enqueueTask:enqueueReactionTask === undefined ? createCloudTasksReactionQueue({ publicUrl, cronSecret }) : enqueueReactionTask,
     ...reactionOptions });
+  const pushCleanup = createPushCleanupService({ store, token, callTelegram, now });
   function limit(key, max = 12) {
     const at = now(), item = attempts.get(key);
     if (item && item.until > at) { if (item.count >= max) fail('errorRateLimit', 429); item.count++; }
@@ -228,7 +230,8 @@ export function createApp({ token = process.env.BOT_TOKEN || '', dataDir = path.
           const result = await digestService.tick({ at });
           result.reminders = await missingEntryReminders.tick({ at });
           result.reactions = await reactionNotifications.tick({ at });
-          const status = result.reminders.failed || result.reactions.failed || result.results?.some(batch => batch?.results?.some(item => item?.deliveryFailed)) ? 503 : 200;
+          result.cleanup = await pushCleanup.tick({ at });
+          const status = result.reminders.failed || result.reactions.failed || result.cleanup.failed || result.results?.some(batch => batch?.results?.some(item => item?.deliveryFailed)) ? 503 : 200;
           if (status >= 500) await store.flush();
           await send(res, status, result); return;
         }
@@ -356,6 +359,8 @@ export function createApp({ token = process.env.BOT_TOKEN || '', dataDir = path.
         // later edits/deletes can update or remove the original message.
         if (route === '/circles/reactions' && req.method === 'POST') {
           await reactionNotifications.afterReaction(result);
+        } else if (route === '/circles/reactions/ack' && req.method === 'POST') {
+          try { await reactionNotifications.afterAcknowledgement(result); } catch {}
         } else if (['/expenses', '/expenses/import'].includes(route) && req.method === 'POST') {
           const entries = Array.isArray(result?.entries) ? result.entries : [result];
           for (const entry of entries) { try { await expenseSync.notify(entry, { excludeUid: actorUid }); } catch {} }

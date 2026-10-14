@@ -86,7 +86,7 @@ test('one scheduled task follows a growing burst and requeues its final deadline
   assert.equal(calls[0].text, 'Kojun sent you ❤️ ×6');
 });
 
-test('a gap greater than three seconds creates two quiet messages, and viewing an emoji does not cancel notification', async t => {
+test('a gap greater than three seconds creates two quiet messages, and viewing one burst cancels only that burst', async t => {
   const f = await fixture(t), calls = [];
   const first = await f.send();
   f.advance(3001);
@@ -94,11 +94,11 @@ test('a gap greater than three seconds creates two quiet messages, and viewing a
   await f.store.run(db => { db.circles.circle.reactions[0].seenAt = f.now(); });
   const service = createReactionNotificationService({ store: f.store, now: f.now, localTimers: false, callTelegram: async (_, params) => { calls.push(params); return { message_id: calls.length }; } });
   f.advance(9999);
-  assert.equal((await service.tick()).sent, 1);
+  assert.equal((await service.tick()).sent, 0, 'the already displayed burst is not sent later');
   assert.equal((await service.deliver(first)).sent, 0);
   f.advance(3001);
   assert.equal((await service.deliver(second)).sent, 1);
-  assert.deepEqual(calls.map(item => item.text), ['Kojun sent you ❤️', 'Kojun sent you ❤️']);
+  assert.deepEqual(calls.map(item => item.text), ['Kojun sent you ❤️']);
 });
 
 test('an early cloud task returns a retryable failure if the replacement task cannot be enqueued', async t => {

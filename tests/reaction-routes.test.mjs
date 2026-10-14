@@ -7,6 +7,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { createApp } from '../server.mjs';
 import { missingEntryReminderText } from '../missing-entry-reminder.mjs';
+import { REACTION_NOTIFICATION_DELAY_MS } from '../reaction-notifications.mjs';
 
 const token = '123456789:http-reactions-fixture', cronSecret = 'http-reactions-test-secret';
 const start = Date.parse('2026-10-13T00:00:00.000Z');
@@ -27,7 +28,7 @@ async function fixture(t) {
       aiParser: { enabled: false }, aiSummarizer: { enabled: false }, aiChat: { enabled: false },
       reactionOptions: { localTimers: false },
       enqueueReactionTask: async task => { if (failTask) throw new Error('queue temporarily unavailable'); tasks.push(structuredClone(task)); return { name: `fixture-task-${tasks.length}` }; },
-      callTelegram: async (method, parameters) => { calls.push({ method, parameters: structuredClone(parameters) }); if (failSend) throw new Error('mock Telegram unavailable'); return { message_id: 100 + calls.length }; },
+      callTelegram: async (method, parameters) => { calls.push({ method, parameters: structuredClone(parameters) }); if (failSend) throw new Error('mock Telegram unavailable'); return method === 'deleteMessage' ? true : { message_id: 100 + calls.length }; },
     });
     app.listen(0, '127.0.0.1'); await once(app, 'listening');
     base = `http://127.0.0.1:${app.address().port}`;
@@ -46,6 +47,7 @@ async function fixture(t) {
   return { request, circleId, ledgerId, calls, tasks,
     advance: ms => { at += ms; }, failTelegram: value => { failSend = value; }, failEnqueue: value => { failTask = value; },
     send: (id = `route-reaction-${String(++serial).padStart(6, '0')}`, emoji = '❤️', user = 101) => request('/api/circles/reactions', { user, body: { id, emoji, recipientId: 'u_202', circleId, ledgerId } }),
+    ack: ids => request('/api/circles/reactions/ack', { user: 202, body: { circleId, ledgerId, ids } }),
     worker: (body, secret = cronSecret) => request('/api/cron/reactions', { secret, body }),
     restart: async () => { await close(); await startApp(); },
     persisted: async () => { await app.flushStore(); return JSON.parse(await readFile(path.join(dataDir, '_pocket-v2.json'), 'utf8')); },
@@ -62,6 +64,18 @@ test('reaction HTTP routes require user authentication and the worker requires i
   assert.equal((await f.worker({ circleId: f.circleId })).status, 400);
   assert.equal((await f.request('/api/cron/tick', { body: {} })).status, 401);
   assert.equal(f.calls.length, 0);
+});
+
+test('acknowledging the displayed burst deletes its already-sent silent Telegram reminder', async t => {
+  const f = await fixture(t);
+  const first = await f.send();
+  f.advance(REACTION_NOTIFICATION_DELAY_MS);
+  const delivered = await f.worker(first.body);
+  assert.equal(delivered.body.sent, 1);
+  const inbox = await f.request('/api/circles/reactions', { user: 202 });
+  assert.equal(inbox.body.items.length, 1);
+  assert.equal((await f.ack([inbox.body.items[0].id])).status, 200);
+  assert.deepEqual(f.calls.map(item => item.method), ['sendMessage', 'deleteMessage']);
 });
 
 test('HTTP ten-tap burst schedules once and the worker sends one silent notification at the last tap plus thirteen seconds', async t => {
@@ -133,4 +147,16 @@ test('cron HTTP tick dispatches local 22:00 missing-entry reminders only once an
   await f.restart();
   assert.equal((await f.request('/api/cron/tick', { secret: cronSecret, body: {} })).body.reminders.sent, 0);
   assert.equal(f.calls.length, 2);
+});
+
+test('authenticated cron tick removes yesterday scheduled pushes after the recipient local midnight', async t => {
+  const f = await fixture(t);
+  f.advance(13 * 3600000);
+  const sent = await f.request('/api/cron/tick', { secret: cronSecret, body: {} });
+  assert.equal(sent.body.reminders.sent, 2);
+  f.advance(2 * 3600000);
+  const cleaned = await f.request('/api/cron/tick', { secret: cronSecret, body: {} });
+  assert.equal(cleaned.status, 200);
+  assert.equal(cleaned.body.cleanup.deleted, 2);
+  assert.deepEqual(f.calls.slice(2).map(item => item.method), ['deleteMessage', 'deleteMessage']);
 });

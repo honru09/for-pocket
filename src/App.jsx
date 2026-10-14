@@ -800,7 +800,7 @@ export default function App() {
   return <AppRoot appearance="light" platform={['ios','macos'].includes(telegram?.platform) ? 'ios' : 'base'} className="for-root" data-ui-kit="telegram-ui" data-view={view}><div className="app-shell">
     <header className="app-header"><a className="brand" href="#record" aria-label={t('record')} onClick={e => { e.preventDefault(); navigate('record'); }}><Icon name="home"/></a>
       <Button id="circle-switcher" mode="plain" className="ledger-switcher" disabled={disabled} onClick={() => isRemote ? setPicker(true) : navigate('circles')}><span>{circle?.name || t('personal')}</span><Icon name="chevronDown"/></Button>
-      {view !== 'record' && view !== 'history' && isRemote && circle && <div ref={setReactionHost} className="circle-presence-host app-header-reactions" aria-label={t('circlePeople')}/>}
+      {view !== 'record' && view !== 'history' && !['settings','profile','account'].includes(view) && isRemote && circle && <div ref={setReactionHost} className="circle-presence-host app-header-reactions" aria-label={t('circlePeople')}/>}
       <Button className="profile-trigger" mode="plain" id="open-settings" aria-label={t('settingsTitle')} onClick={() => navigate('settings')} disabled={busy}><Avatar person={profile?.user}/></Button>
     </header>
 

@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createDigestService } from '../digest.mjs';
+import { composeDigest } from '../digest-copy.mjs';
 
 // All data and Telegram deliveries are in-memory fixtures. No account, file,
 // provider, scheduler or network state is used by these copy contract tests.
@@ -166,4 +167,27 @@ test('Ukrainian three-currency fallback uses the natural count form and identifi
   assert.doesNotMatch(text, /3 записів/iu);
   assert.match(text, /різн\S* валют|кільк\S* валют/iu);
   assertCompact(text, 'uk');
+});
+
+test('every circle member is named with an explicit recorded or not-recorded fact', async () => {
+  const entries = [expense('zh', { consumer: 'u_101', member: { id: 'u_101', name: 'Jay' } })];
+  const result = await deliver({ entries });
+  // The fixture service has one profile member; composeDigest itself is the
+  // contract seam for a circle roster with a second member.
+  const message = composeDigest({
+    slot: 'noon', language: 'zh', records: entries.map(item => ({
+      ...item, payerId: item.consumer, category: CATEGORY.zh,
+    })), members: [{ id: '101', name: 'Jay' }, { id: '202', name: 'Cheese' }], comment: '这页挺有戏。',
+  });
+  assert.match(message.text, /Jay/u);
+  assert.match(message.text, /Cheese/u);
+  assert.match(message.text, /没记新账/u);
+  assert.match(message.text, /1,?000/u);
+  assert.equal(result.result.results[0].generated, true);
+});
+
+test('a grounded original aside remains free-form instead of selecting a fixed phrase', async () => {
+  const { text, result } = await deliver({ reply: '这页账本像刚翻开的手账。' });
+  assert.match(text, /这页账本像刚翻开的手账/u);
+  assert.equal(result.results[0].generated, true);
 });

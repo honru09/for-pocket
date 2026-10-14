@@ -288,6 +288,7 @@ export function createDigestService({ store, summarizer, callTelegram, token = '
     if (claimResult.duplicate) return { ledgerId: context.ledgerId, slot, timezone: context.timezone, localDate: window.localDate, skipped: true, reason: claimResult.busy ? 'processing' : 'already-sent' };
     const records = filterDigestEntries(context.ledger.expenses, window, { settings: context.settings, names: context.names });
     const aggregate = compactAggregate(records);
+    const members = context.ids.map(id => ({ id, name: context.names.get(id) || id }));
     const languageByRecipient = new Map();
     for (const recipient of context.recipients) {
       const language = resolveLanguage(recipient.language || context.settings.language, 'zh');
@@ -304,11 +305,11 @@ export function createDigestService({ store, summarizer, callTelegram, token = '
         let comment = '';
         if (records.length && typeof summarizer?.summarize === 'function' && summarizer.enabled !== false) {
           try {
-            const value = await summarizer.summarize({ prompt: digestPrompt({ slot, window, records, language, names: context.ids.map(uid => context.names.get(uid) || uid) }), slot, language, window, records });
+            const value = await summarizer.summarize({ prompt: digestPrompt({ slot, window, records, language, members }), slot, language, window, records, members });
             comment = value;
           } catch {}
         }
-        const message = composeDigest({ slot, records, language, comment });
+        const message = composeDigest({ slot, records, language, comment, members });
         if (message.generated) modelGenerated = true;
         generated[language] = message.text;
         if (telegram) {
@@ -319,7 +320,8 @@ export function createDigestService({ store, summarizer, callTelegram, token = '
               const key = `${claimResult.key}:${recipientKey}`;
               const item = db.cron.digestDeliveries[key];
               if (item?.status === 'sent') return { key, sent: true };
-              db.cron.digestDeliveries[key] = { status: 'sending', digestKey: claimResult.key, chatId: recipientKey, startedAt: at };
+              const recipientTimezone = safeDigestTimezone(db.users?.[recipient.uid]?.settings?.timezone, context.timezone);
+              db.cron.digestDeliveries[key] = { status: 'sending', digestKey: claimResult.key, chatId: recipientKey, uid: recipient.uid, ledgerId: context.ledgerId, timezone: recipientTimezone, startedAt: at };
               return { key, sent: false };
             });
             if (!checkpoint.sent) {

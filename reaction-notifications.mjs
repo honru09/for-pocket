@@ -4,10 +4,28 @@ import { resolveLanguage } from './public/shared.mjs';
 
 export const REACTION_BURST_GAP_MS = 3000;
 export const REACTION_NOTIFICATION_DELAY_MS = REACTION_BURST_GAP_MS + 10000;
-const TTL = 7 * 86400000, LEASE_MS = 60000, RETRY_MS = 10000;
-const terminal = value => ['sent', 'skipped'].includes(value?.status);
+const TTL = 7 * 86400000, LEASE_MS = 60000, RETRY_MS = 10000, TELEGRAM_DELETE_WINDOW_MS = 48 * 3600000;
+const terminal = value => ['sent', 'skipped', 'deleting', 'deleted', 'expired'].includes(value?.status);
+const needsDeletion = value => Boolean(value?.readAt && value?.chatId && Number(value?.messageId) > 0 && !value?.deletedAt && !value?.deleteExpiredAt && !['deleted', 'expired'].includes(value?.status));
 const clock = now => Number(typeof now === 'function' ? now() : now);
 const findBurst = (db, circleId, burstId) => db.circles?.[circleId]?.reactionBursts?.find(item => item.id === burstId);
+
+/** Acknowledgements mean the app displayed the reaction, not a Telegram read receipt. */
+export function reconcileReactionReadState(circle, burst, at) {
+  if (!burst) return false;
+  const seen = (circle.reactions || []).filter(item => (item.burstId || item.id) === burst.id && item.to === burst.to && item.seenAt);
+  // Keep the count when old, already-seen inbox items are evicted at capacity.
+  burst.seenCount = Math.min(Number(burst.count) || 0, Math.max(Number(burst.seenCount) || 0, seen.length));
+  const state = burst.notification ||= { status: 'pending' };
+  if (burst.count > 0 && burst.seenCount >= burst.count) {
+    state.readAt ||= seen.reduce((latest, item) => Math.max(latest, Number(item.seenAt) || 0), 0) || at;
+    state.readCount = burst.count;
+    return true;
+  }
+  delete state.readAt;
+  delete state.readCount;
+  return false;
+}
 
 export function reactionNotificationText({ name = '', emoji = '', count = 1 } = {}, language = 'zh') {
   const lang = resolveLanguage(language, 'zh');
@@ -42,7 +60,9 @@ function telegramCaller(token, custom) {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(parameters), signal: AbortSignal.timeout(30000),
     });
     const payload = await response.json().catch(() => null);
-    if (!response.ok || !payload?.ok) throw new Error('telegram-reaction-send-failed');
+    if (!response.ok || !payload?.ok) throw Object.assign(new Error('telegram-reaction-send-failed'), {
+      telegramDescription: String(payload?.description || ''), telegramCode: Number(payload?.error_code || response.status),
+    });
     return payload.result;
   };
 }
@@ -56,7 +76,7 @@ function telegramCaller(token, custom) {
 export function createReactionNotificationService({ store, token = '', callTelegram, now = () => Date.now(), enqueueTask, localTimers = true } = {}) {
   if (!store || typeof store.run !== 'function') throw new TypeError('Reaction notifications require a store');
   const telegram = telegramCaller(token, callTelegram);
-  const inflight = new Map(), scheduling = new Map();
+  const inflight = new Map(), scheduling = new Map(), deletions = new Map();
   let timer = null, closed = false;
   const flush = () => typeof store.flush === 'function' ? store.flush() : Promise.resolve();
   const keyFor = (circleId, burstId) => `${circleId}:${burstId}`;
@@ -69,13 +89,15 @@ export function createReactionNotificationService({ store, token = '', callTeleg
       const claimId = randomUUID();
       const task = await store.run(db => {
         const burst = findBurst(db, circleId, burstId);
-        if (!burst || terminal(burst.notification) || burst.lastAt <= at - TTL) return null;
+        if (!burst || terminal(burst.notification) && !needsDeletion(burst.notification) || burst.lastAt <= at - TTL) return null;
         const state = burst.notification ||= { status: 'pending' };
         // One future task is enough: it will re-read the latest deadline and
         // requeue itself if the sender is still tapping. Do not enqueue per tap.
         if (Number(state.enqueuedFor) > at || Number(state.scheduleClaimUntil) > at) return null;
         Object.assign(state, { scheduleClaim: claimId, scheduleClaimUntil: at + LEASE_MS });
-        return { circleId, burstId, scheduledFor: Math.max(burst.dueAt, at) };
+        return { circleId, burstId, scheduledFor: needsDeletion(state)
+          ? Math.max(Number(state.deleteRetryAt) || at, Number(state.deleteClaimUntil) || 0, at)
+          : Math.max(burst.dueAt, at) };
       });
       if (!task) return false;
       try {
@@ -108,6 +130,10 @@ export function createReactionNotificationService({ store, token = '', callTeleg
       if (!burst || terminal(burst.notification)) return null;
       const state = burst.notification ||= { status: 'pending' };
       if (Number(burst.dueAt) > at || state.status === 'sending' && Number(state.claimUntil) > at) return null;
+      if (reconcileReactionReadState(circle, burst, at)) {
+        Object.assign(state, { status: 'skipped', skippedAt: at, reason: 'already-read', claimUntil: 0 });
+        return null;
+      }
       const recipient = recipientChat(db, burst.to);
       if (burst.lastAt <= at - TTL || !circle.members?.includes(burst.from) || !circle.members?.includes(burst.to) || burst.from === burst.to || !db.users?.[burst.from] || !db.users?.[burst.to] || !recipient) {
         Object.assign(state, { status: 'skipped', skippedAt: at, reason: 'recipient-unavailable', claimUntil: 0 });
@@ -121,6 +147,17 @@ export function createReactionNotificationService({ store, token = '', callTeleg
       // Checkpoint before the external send to serialize task retries and
       // simultaneous request repair. Telegram has no sendMessage idempotency key.
       await flush();
+      // An acknowledgement may arrive while the durable checkpoint is writing.
+      // Suppress the send if it became read before the network call began.
+      const stillUnread = await store.run(db => {
+        const circle = db.circles?.[circleId], burst = findBurst(db, circleId, burstId);
+        const state = burst?.notification;
+        if (!burst || state?.claim !== claimId) return false;
+        if (!reconcileReactionReadState(circle, burst, clock(now))) return true;
+        Object.assign(state, { status: 'skipped', skippedAt: clock(now), reason: 'already-read', claimUntil: 0 });
+        return false;
+      });
+      if (!stillUnread) { await flush(); return { sent: 0, failed: 0, pending: 0 }; }
       const response = await telegram('sendMessage', { chat_id: snapshot.recipient.chatId, text: snapshot.text, disable_notification: true });
       if (!Number.isSafeInteger(Number(response?.message_id)) || Number(response.message_id) <= 0) throw new Error('telegram-message-id-missing');
       await store.run(db => {
@@ -128,15 +165,80 @@ export function createReactionNotificationService({ store, token = '', callTeleg
         if (state?.claim === claimId) Object.assign(state, { status: 'sent', sentAt: clock(now), messageId: Number(response.message_id), chatId: snapshot.recipient.chatId, claimUntil: 0, error: '' });
       });
       await flush();
-      return { sent: 1, failed: 0, pending: 0 };
+      // If the app displayed the burst during sendMessage, remove the accepted
+      // message as soon as its id is known. The read flag survives that race.
+      const removed = await deleteOne(circleId, burstId, clock(now));
+      return { sent: 1, failed: removed.failed, pending: removed.pending, deleted: removed.deleted };
     } catch {
       await store.run(db => {
         const state = findBurst(db, circleId, burstId)?.notification;
-        if (state?.claim === claimId && state.status !== 'sent') Object.assign(state, { status: 'failed', failedAt: clock(now), retryAt: clock(now) + RETRY_MS, claimUntil: 0, error: 'telegram-reaction-send-failed' });
+        if (state?.claim === claimId && !terminal(state)) Object.assign(state, { status: 'failed', failedAt: clock(now), retryAt: clock(now) + RETRY_MS, claimUntil: 0, error: 'telegram-reaction-send-failed' });
       });
       await flush().catch(() => {});
       return { sent: 0, failed: 1, pending: 0 };
     }
+  }
+
+  async function deleteOne(circleId, burstId, at) {
+    const key = keyFor(circleId, burstId);
+    if (deletions.has(key)) { await deletions.get(key); return { deleted: 0, failed: 0, pending: 0 }; }
+    const work = (async () => {
+      if (!telegram) return { deleted: 0, failed: 0, pending: 1 };
+      const claimId = randomUUID();
+      const message = await store.run(db => {
+        const circle = db.circles?.[circleId], burst = findBurst(db, circleId, burstId);
+        if (!burst) return null;
+        reconcileReactionReadState(circle, burst, at);
+        const state = burst.notification;
+        if (!needsDeletion(state)) return null;
+        if (Number(state.sentAt) > 0 && at - Number(state.sentAt) >= TELEGRAM_DELETE_WINDOW_MS) {
+          // Ordinary Telegram messages cannot be deleted through Bot API once
+          // 48h old. Keep an honest terminal marker instead of retrying forever.
+          Object.assign(state, { status: 'expired', deleteExpiredAt: at, deleteReason: 'telegram-48h-limit', deleteClaimUntil: 0, deleteRetryAt: 0 });
+          return { expired: true };
+        }
+        if (Number(state.deleteRetryAt || 0) > at || Number(state.deleteClaimUntil || 0) > at) return { deferred: true };
+        Object.assign(state, { status: 'deleting', deleteClaim: claimId, deleteClaimUntil: at + LEASE_MS, deleteAttempts: Number(state.deleteAttempts || 0) + 1 });
+        return { chatId: state.chatId, messageId: state.messageId };
+      });
+      if (!message) return { deleted: 0, failed: 0, pending: 0 };
+      if (message.expired) { await flush(); return { deleted: 0, failed: 0, pending: 0, expired: 1 }; }
+      if (message.deferred) {
+        await ensureScheduled(circleId, burstId, at);
+        const state = typeof enqueueTask === 'function' ? await store.run(db => structuredClone(findBurst(db, circleId, burstId)?.notification || {})) : null;
+        const failed = state && needsDeletion(state) && Number(state.enqueuedFor || 0) <= at && Number(state.scheduleClaimUntil || 0) <= at ? 1 : 0;
+        return { deleted: 0, failed, pending: 1 };
+      }
+      try {
+        await flush();
+        try { await telegram('deleteMessage', { chat_id: message.chatId, message_id: message.messageId }); }
+        catch (error) {
+          // Idempotent after a lost response, a retry, or midnight cleanup.
+          if (!/message (?:to delete )?not found/i.test(String(error?.telegramDescription || error?.description || error?.message || ''))) throw error;
+        }
+        await store.run(db => {
+          const state = findBurst(db, circleId, burstId)?.notification;
+          if (state?.deleteClaim === claimId) Object.assign(state, { status: 'deleted', deletedAt: clock(now), deleteReason: 'read', deleteClaimUntil: 0, deleteRetryAt: 0, deleteError: '' });
+        });
+        await flush();
+        return { deleted: 1, failed: 0, pending: 0 };
+      } catch (error) {
+        const expired = await store.run(db => {
+          const state = findBurst(db, circleId, burstId)?.notification;
+          if (state?.deleteClaim !== claimId || state.deletedAt) return false;
+          const unavailable = /message (?:can(?:not|'t)|cannot) be deleted/i.test(String(error?.telegramDescription || error?.description || error?.message || ''));
+          if (unavailable) Object.assign(state, { status: 'expired', deleteExpiredAt: clock(now), deleteReason: 'telegram-delete-unavailable', deleteClaimUntil: 0, deleteRetryAt: 0 });
+          else Object.assign(state, { status: 'sent', deleteClaimUntil: 0, deleteRetryAt: clock(now) + RETRY_MS, deleteError: 'telegram-reaction-delete-failed' });
+          return unavailable;
+        });
+        await flush().catch(() => {});
+        if (expired) return { deleted: 0, failed: 0, pending: 0, expired: 1 };
+        await ensureScheduled(circleId, burstId, at);
+        return { deleted: 0, failed: 1, pending: 1 };
+      }
+    })();
+    deletions.set(key, work);
+    try { return await work; } finally { if (deletions.get(key) === work) deletions.delete(key); }
   }
 
   async function processOne(circleId, burstId, at) {
@@ -144,7 +246,9 @@ export function createReactionNotificationService({ store, token = '', callTeleg
     if (inflight.has(key)) { await inflight.get(key); return { sent: 0, failed: 0, pending: 0 }; }
     const work = (async () => {
       const burst = await store.run(db => structuredClone(findBurst(db, circleId, burstId) || null));
-      if (!burst || terminal(burst.notification)) return { sent: 0, failed: 0, pending: 0 };
+      if (!burst) return { sent: 0, failed: 0, pending: 0 };
+      if (needsDeletion(burst.notification)) return { sent: 0, ...await deleteOne(circleId, burstId, at) };
+      if (terminal(burst.notification)) return { sent: 0, failed: 0, pending: 0 };
       if (Number(burst.dueAt) > at) {
         await ensureScheduled(circleId, burstId, at);
         const state = typeof enqueueTask === 'function' ? await store.run(db => structuredClone(findBurst(db, circleId, burstId)?.notification || {})) : null;
@@ -165,7 +269,9 @@ export function createReactionNotificationService({ store, token = '', callTeleg
     timer = null;
     const at = clock(now);
     const next = await store.run(db => {
-      const deadlines = Object.values(db.circles || {}).flatMap(circle => (circle.reactionBursts || []).filter(item => !terminal(item.notification) && item.lastAt > at - TTL).map(item => Math.max(Number(item.dueAt), Number(item.notification?.retryAt || 0), Number(item.notification?.claimUntil || 0))));
+      const deadlines = Object.values(db.circles || {}).flatMap(circle => (circle.reactionBursts || []).filter(item => (!terminal(item.notification) || needsDeletion(item.notification)) && item.lastAt > at - TTL).map(item => needsDeletion(item.notification)
+        ? Math.max(at, Number(item.notification?.deleteRetryAt || 0), Number(item.notification?.deleteClaimUntil || 0))
+        : Math.max(Number(item.dueAt), Number(item.notification?.retryAt || 0), Number(item.notification?.claimUntil || 0))));
       return deadlines.length ? Math.min(...deadlines) : null;
     });
     if (next === null || closed) return;
@@ -178,6 +284,17 @@ export function createReactionNotificationService({ store, token = '', callTeleg
     const scheduled = await ensureScheduled(circleId, burstId);
     await armTimer();
     return { scheduled };
+  }
+
+  async function afterAcknowledgement({ circleId, burstIds = [] } = {}) {
+    const result = { deleted: 0, failed: 0, pending: 0 };
+    if (!circleId || !Array.isArray(burstIds) || closed) return result;
+    for (const burstId of new Set(burstIds)) {
+      const removal = await deleteOne(circleId, burstId, clock(now));
+      result.deleted += removal.deleted; result.failed += removal.failed; result.pending += removal.pending;
+    }
+    await armTimer();
+    return result;
   }
 
   async function deliver({ circleId, burstId, scheduledFor, at = clock(now) } = {}) {
@@ -194,11 +311,15 @@ export function createReactionNotificationService({ store, token = '', callTeleg
 
   async function tick({ at = clock(now) } = {}) {
     if (closed) return { ok: true, sent: 0, failed: 0, pending: 0 };
-    const items = await store.run(db => Object.values(db.circles || {}).flatMap(circle => (circle.reactionBursts || []).filter(item => !terminal(item.notification)).map(item => ({ circleId: circle.id, burstId: item.id }))));
-    const totals = { ok: true, sent: 0, failed: 0, pending: 0 };
+    const items = await store.run(db => Object.values(db.circles || {}).flatMap(circle => {
+      for (const burst of circle.reactionBursts || []) reconcileReactionReadState(circle, burst, Number(at));
+      return (circle.reactionBursts || []).filter(item => !terminal(item.notification) || needsDeletion(item.notification)).map(item => ({ circleId: circle.id, burstId: item.id }));
+    }));
+    const totals = { ok: true, sent: 0, failed: 0, pending: 0, deleted: 0 };
     for (const item of items) {
       const result = await processOne(item.circleId, item.burstId, Number(at));
       totals.sent += result.sent; totals.failed += result.failed; totals.pending += result.pending;
+      totals.deleted += result.deleted || 0;
     }
     totals.ok = totals.failed === 0;
     await armTimer();
@@ -209,10 +330,10 @@ export function createReactionNotificationService({ store, token = '', callTeleg
     closed = true;
     if (timer) clearTimeout(timer);
     timer = null;
-    await Promise.allSettled([...inflight.values(), ...scheduling.values()]);
+    await Promise.allSettled([...inflight.values(), ...scheduling.values(), ...deletions.values()]);
   }
 
-  return { afterReaction, deliver, tick, close, start: armTimer, cloudTasks: typeof enqueueTask === 'function' };
+  return { afterReaction, afterAcknowledgement, deliver, tick, close, start: armTimer, cloudTasks: typeof enqueueTask === 'function' };
 }
 
 /** No new SDK dependency: the already-installed GoogleAuth signs REST calls. */
