@@ -436,7 +436,7 @@ export default function AiImportPage({ t, profile, settings, busy = false, run, 
       <small className="quiet-copy">{t('aiImportFileLimits')}</small>
       <div className="ai-import-actions">
         <Button type="submit" className="panel-primary" disabled={!canParse}>{operation === 'parse' ? t('aiImportParsing') : t('aiImportParse')}</Button>
-        {(text || files.length || items.length) && <Button type="button" mode="plain" className="text-button" disabled={working || busy} onClick={clear}>{t('aiImportClear')}</Button>}
+        {Boolean(text || files.length || items.length) && <Button type="button" mode="plain" className="text-button" disabled={working || busy} onClick={clear}>{t('aiImportClear')}</Button>}
       </div>
       {files.some(file => IMAGE_TYPES.has(fileMime(file))) && imageAttempted && <div className="ai-import-enhanced"><span>{t('aiImportEnhancedHint')}</span><Button type="button" mode="plain" className="ai-import-enhanced-button" disabled={!canParse} onClick={event => parse(event, true)}><span className="ai-import-enhanced-label"><Icon name="receipt"/>{operation === 'enhanced' ? t('aiImportEnhancing') : t('aiImportEnhanced')}</span></Button></div>}
     </form>

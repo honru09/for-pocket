@@ -7,7 +7,7 @@ import { aiSummaryUiEnabled } from './ai-availability.mjs';
 import PocketIllustration from './PocketIllustration.jsx';
 import './ai-summary.css';
 
-export default function AiSummary({ t, profile, settings, currency = settings?.currency || 'JPY', busy = false, run, service, isRemote = false, config = {}, onAccount }) {
+export default function AiSummary({ t, profile, settings, currency = settings?.currency || 'JPY', memberIds = [], busy = false, run, service, isRemote = false, config = {}, onAccount }) {
   const [open, setOpen] = useState(false);
   const [period, setPeriod] = useState('month');
   const [question, setQuestion] = useState('');
@@ -18,7 +18,8 @@ export default function AiSummary({ t, profile, settings, currency = settings?.c
   const panelId = useId();
   const activeCurrency = Object.hasOwn(CURRENCIES, currency) ? currency : 'JPY';
   const language = settings?.language || 'zh';
-  const scope = `${profile?.user?.id || ''}:${profile?.ledgerId || ''}:${activeCurrency}:${language}`;
+  const memberScope = [...new Set((Array.isArray(memberIds) ? memberIds : []).filter(id => typeof id === 'string' && id))].sort().join(',');
+  const scope = `${profile?.user?.id || ''}:${profile?.ledgerId || ''}:${activeCurrency}:${language}:${memberScope}`;
   const scopeRef = useRef(scope), operationRef = useRef(0), workingRef = useRef(false), mountedRef = useRef(true);
   scopeRef.current = scope;
   const enabled = aiSummaryUiEnabled({ isRemote, config, service });
@@ -65,7 +66,7 @@ export default function AiSummary({ t, profile, settings, currency = settings?.c
     setWorking(true); setError('');
     const operation = async () => {
       try {
-        const response = await service.aiSummary({ period, question: question.trim(), timezone: Intl.DateTimeFormat().resolvedOptions().timeZone, currency: activeCurrency, ledgerId: profile?.ledgerId });
+        const response = await service.aiSummary({ period, question: question.trim(), timezone: Intl.DateTimeFormat().resolvedOptions().timeZone, currency: activeCurrency, ledgerId: profile?.ledgerId, ...(memberScope ? { memberIds: memberScope.split(',') } : {}) });
         if (!response?.stats || typeof response.text !== 'string') throw new Error('aiSummaryError');
         return response;
       } catch (caught) {

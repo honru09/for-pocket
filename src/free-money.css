@@ -1,9 +1,114 @@
-.free-money-card{margin-top:14px;border-radius:20px;background:color-mix(in srgb,var(--sage) 62%,var(--paper));overflow:hidden;box-shadow:0 7px 20px color-mix(in srgb,var(--ink) 6%,transparent)}
-.free-money-entry{width:100%;min-height:76px;padding:8px 14px 8px 8px;display:flex;align-items:center;gap:10px;border:0;background:transparent;text-align:left;cursor:pointer}
-.free-money-entry:disabled{cursor:default;opacity:.55}.free-money-art-wrap{width:64px;height:60px;display:grid;place-items:center;flex:none;overflow:hidden}.free-money-art-wrap img{width:74px;height:74px;object-fit:contain;display:block;transition:transform 420ms var(--spring)}
-.free-money-entry:hover .free-money-art-wrap img{transform:translateY(-3px) rotate(-3deg) scale(1.05)}.free-money-entry:active .free-money-art-wrap img{transform:scale(.92) rotate(2deg);transition-duration:90ms}
-.free-money-copy{min-width:0;display:grid;gap:2px}.free-money-copy strong{font-size:14px;line-height:1.2}.free-money-copy small{font-size:11px;line-height:1.35;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.free-money-chevron{margin-left:auto;font-size:24px;line-height:1;color:var(--muted)}
-.free-money-balance{display:flex;align-items:center;gap:8px;padding:0 14px 11px 82px;color:var(--muted);font-size:11px}.free-money-balance strong{font-size:16px;color:var(--ink);font-variant-numeric:tabular-nums}.free-money-balance button{margin-left:auto;border:0;background:transparent;color:var(--muted);font-size:11px;padding:8px;border-radius:10px;cursor:pointer}.free-money-balance button:hover{background:color-mix(in srgb,var(--paper) 60%,transparent);color:var(--ink)}
-.free-money-sheet{max-width:480px}.free-money-sheet-art{height:88px;display:grid;place-items:center;overflow:hidden;margin:-4px 24px -8px}.free-money-sheet-art img{width:180px;height:116px;object-fit:contain}.free-money-stepper{display:flex;align-items:center;justify-content:center;gap:8px;margin:0 0 12px}.free-money-stepper span{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;background:var(--line);color:var(--muted);font-size:11px;font-weight:800}.free-money-stepper span.active{background:var(--orange);color:#fff}.free-money-stepper i{width:30px;height:2px;background:var(--line)}
-.free-money-form,.free-money-diagnosis{display:grid;gap:11px}.free-money-form .quiet-copy,.free-money-diagnosis .quiet-copy{font-size:12px;margin-bottom:2px}.free-money-field{display:grid;grid-template-columns:minmax(0,1fr) minmax(120px,180px);align-items:center;gap:12px;font-size:13px;font-weight:800}.free-money-input-wrap{display:flex;align-items:center;min-height:44px;border:1px solid var(--line);border-radius:14px;background:var(--paper);padding:0 11px;gap:7px}.free-money-input-wrap:focus-within{border-color:color-mix(in srgb,var(--orange) 60%,var(--line));box-shadow:0 0 0 3px color-mix(in srgb,var(--orange) 16%,transparent)}.free-money-input-wrap input{width:100%;min-width:0;border:0;background:transparent;outline:0;text-align:right;font-variant-numeric:tabular-nums}.free-money-input-wrap b{font-size:11px;color:var(--muted);font-weight:800}.free-money-preview{display:flex;justify-content:space-between;align-items:center;border-radius:16px;padding:14px 16px;background:color-mix(in srgb,var(--sage) 60%,var(--paper))}.free-money-preview span{font-size:12px;color:var(--muted)}.free-money-preview strong{font-size:28px;line-height:1;font-variant-numeric:tabular-nums}.free-money-sheet .sheet-actions{margin-top:8px}.free-money-sheet .compact-save{min-height:44px;min-width:120px}
-@media(max-width:420px){.free-money-field{grid-template-columns:1fr;gap:5px}.free-money-input-wrap{width:100%}.free-money-balance{padding-left:82px}.free-money-sheet-art{height:74px}.free-money-sheet-art img{width:148px;height:100px}}
+/* Free-money is a small tactile layer on top of the existing paper system.
+   The raster gives it a handmade object; every label and amount stays live. */
+.free-money-card {
+  position: relative;
+  margin-top: 14px;
+  border-radius: 20px;
+  background: color-mix(in srgb, var(--sage) 62%, var(--paper));
+  overflow: hidden;
+  box-shadow: 0 7px 20px color-mix(in srgb, var(--ink) 6%, transparent);
+}
+.free-money-entry { width: 100%; min-height: 76px; padding: 8px 14px 8px 8px; display: flex; align-items: center; gap: 10px; border: 0; background: transparent; text-align: left; cursor: pointer; }
+.free-money-entry:disabled { cursor: default; opacity: .55; }
+.free-money-art-wrap { width: 64px; height: 60px; display: grid; place-items: center; flex: none; overflow: hidden; }
+.free-money-art-wrap img { width: 74px; height: 74px; object-fit: contain; display: block; transition: transform 180ms var(--ease-out); }
+.free-money-copy { min-width: 0; display: grid; gap: 2px; }
+.free-money-copy strong { font-size: 14px; line-height: 1.2; }
+.free-money-copy small { font-size: 11px; line-height: 1.35; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.free-money-chevron { margin-left: auto; font-size: 24px; line-height: 1; color: var(--muted); }
+.free-money-balance { display: flex; align-items: center; gap: 8px; padding: 0 14px 11px 82px; color: var(--muted); font-size: 11px; }
+.free-money-balance strong { color: var(--ink); font-size: 16px; font-variant-numeric: tabular-nums; }
+.free-money-balance button { min-height: 36px; margin-left: auto; padding: 8px; border: 0; border-radius: 10px; background: transparent; color: var(--muted); font-size: 11px; cursor: pointer; }
+
+@media (hover: hover) and (pointer: fine) {
+  .free-money-entry:hover .free-money-art-wrap img { transform: translateY(-2px) rotate(-2deg) scale(1.03); }
+  .free-money-balance button:hover { background: color-mix(in srgb, var(--paper) 60%, transparent); color: var(--ink); }
+}
+
+/* First-run entry lives in the page flow. It keeps the quick action visible
+   without sitting on top of the keypad, note or location controls. */
+.free-money-orb-entry { position: relative; z-index: 4; width: 100%; height: 70px; margin: 0; display: flex; align-items: center; justify-content: flex-end; pointer-events: none; }
+.free-money-orb { position: relative; right: auto; bottom: auto; width: 58px; height: 58px; min-width: 58px; min-height: 58px; margin-right: 4px; padding: 0; border: 0; border-radius: 50%; background: transparent; cursor: pointer; pointer-events: auto; filter: drop-shadow(0 8px 10px color-mix(in srgb, var(--ink) 12%, transparent)); animation: free-money-orb-bob 3.2s ease-in-out infinite; }
+.free-money-orb img { width: 100%; height: 100%; object-fit: contain; }
+.free-money-orb i { position: absolute; top: 3px; right: 2px; display: grid; place-items: center; width: 21px; height: 21px; border-radius: 50%; background: var(--paper); color: var(--orange); font-style: normal; font-size: 12px; box-shadow: 0 2px 6px color-mix(in srgb, var(--ink) 12%, transparent); }
+.free-money-orb-bubble { position: absolute; right: 66px; top: 50%; display: flex; align-items: flex-start; gap: 4px; width: max-content; max-width: 166px; min-height: 34px; padding: 8px 8px 8px 11px; border: 1px solid color-mix(in srgb, var(--orange) 24%, var(--paper)); border-radius: 15px 15px 5px 15px; background: color-mix(in srgb, var(--paper) 93%, var(--yellow)); color: var(--ink); font-size: 11px; line-height: 1.3; box-shadow: 0 5px 14px color-mix(in srgb, var(--ink) 10%, transparent); pointer-events: auto; transform: translateY(-50%); animation: free-money-bubble-in 180ms var(--ease-out) both; }
+.free-money-orb-bubble::after { content: ''; position: absolute; right: -6px; top: 50%; bottom: auto; width: 10px; height: 10px; background: inherit; border-right: 1px solid color-mix(in srgb, var(--orange) 24%, var(--paper)); border-bottom: 1px solid color-mix(in srgb, var(--orange) 24%, var(--paper)); transform: translateY(-50%) rotate(-45deg); }
+.free-money-orb-bubble span { max-width: 132px; }
+.free-money-orb-bubble button { position: relative; z-index: 1; width: 22px; min-width: 22px; height: 22px; min-height: 22px; padding: 0; border: 0; border-radius: 50%; background: transparent; color: var(--muted); cursor: pointer; }
+
+/* Configured home badge: an inline object, not a full-width promotional card. */
+.free-money-coin-badge { display: flex; align-items: center; width: min(100%, 330px); min-height: 64px; margin: 0 auto 3px; padding: 3px 12px 3px 0; border: 0; border-radius: 18px; background: color-mix(in srgb, var(--paper) 54%, var(--yellow)); color: var(--ink); text-align: left; cursor: pointer; transform-origin: 24% 52%; transition: transform 160ms var(--ease-out), box-shadow 160ms ease, background-color 160ms ease; }
+.free-money-coin-art { width: 66px; height: 58px; flex: none; overflow: hidden; display: grid; place-items: center; }
+.free-money-coin-art img { width: 82px; height: 82px; object-fit: contain; transform: rotate(-1deg); }
+.free-money-coin-copy { min-width: 0; display: grid; gap: 1px; }
+.free-money-coin-copy small { color: var(--muted); font-size: 10px; font-weight: 800; }
+.free-money-coin-copy strong { font-size: clamp(19px, 6vw, 25px); line-height: 1; font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
+.free-money-coin-copy em { color: var(--muted); font-size: 10px; font-style: normal; }
+.free-money-coin-badge.is-over { background: color-mix(in srgb, var(--peach) 65%, var(--paper)); }
+.free-money-coin-badge.is-pulsing { animation: free-money-coin-pulse 250ms var(--spring-bouncy) both; }
+.free-money-inline-error { margin: 0 14px 10px 82px; color: var(--orange); font-size: 11px; line-height: 1.35; }
+
+/* The sheet uses the existing native dialog/focus lifecycle. */
+.free-money-sheet { width: min(480px, calc(100% - 24px)); max-width: 480px; max-height: calc(var(--pocket-height, 100dvh) - 24px); }
+.free-money-sheet-art { height: 88px; display: grid; place-items: center; overflow: hidden; margin: -4px 24px -8px; }
+.free-money-sheet-art img { width: 180px; height: 116px; object-fit: contain; }
+.free-money-stepper { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 0 0 14px; }
+.free-money-stepper span { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; background: var(--line); color: var(--muted); font-size: 11px; font-weight: 800; }
+.free-money-stepper span.active { background: var(--orange); color: #fff; }
+.free-money-stepper i { width: 34px; height: 2px; background: var(--line); }
+.free-money-form { display: grid; gap: 11px; }
+.free-money-form > .quiet-copy { font-size: 12px; line-height: 1.5; }
+.free-money-field { display: grid; grid-template-columns: minmax(0, 1fr) minmax(120px, 180px); align-items: center; gap: 12px; font-size: 13px; font-weight: 800; }
+.free-money-field-label { display: grid; gap: 2px; }
+.free-money-field-label small { color: var(--muted); font-size: 10px; font-weight: 500; }
+.free-money-input-wrap { display: flex; align-items: center; min-height: 44px; border: 1px solid var(--line); border-radius: 14px; background: var(--paper); padding: 0 11px; gap: 7px; }
+.free-money-input-wrap:focus-within { border-color: color-mix(in srgb, var(--orange) 60%, var(--line)); box-shadow: 0 0 0 3px color-mix(in srgb, var(--orange) 16%, transparent); }
+.free-money-input-wrap input { width: 100%; min-width: 0; min-height: 42px; border: 0; background: transparent; outline: 0; text-align: right; font-variant-numeric: tabular-nums; }
+.free-money-input-wrap b { color: var(--muted); font-size: 11px; font-weight: 800; }
+.free-money-preview { display: flex; justify-content: space-between; align-items: center; border-radius: 16px; padding: 14px 16px; background: color-mix(in srgb, var(--sage) 60%, var(--paper)); }
+.free-money-preview span { color: var(--muted); font-size: 12px; }
+.free-money-preview strong { font-size: 28px; line-height: 1; font-variant-numeric: tabular-nums; }
+
+.free-money-diagnosis-card { display: grid; grid-template-columns: 58px minmax(0, 1fr); align-items: center; gap: 10px; min-height: 78px; padding: 8px 11px 8px 5px; border: 1px solid color-mix(in srgb, var(--orange) 14%, var(--line)); border-radius: 17px; background: color-mix(in srgb, var(--yellow) 35%, var(--paper)); }
+.free-money-diagnosis-card > img { width: 66px; height: 66px; object-fit: contain; }
+.free-money-diagnosis-copy { min-width: 0; display: grid; gap: 3px; }
+.free-money-diagnosis-copy strong { font-size: 12px; }
+.free-money-diagnosis-copy span { color: var(--muted); font-size: 11px; line-height: 1.4; }
+.free-money-diagnosis-copy em { color: var(--ink); font-size: 20px; font-style: normal; font-variant-numeric: tabular-nums; }
+.free-money-diagnosis-copy button,.free-money-try-again { justify-self: start; min-height: 32px; padding: 6px 10px; border: 0; border-radius: 10px; background: var(--peach); color: var(--ink); font-size: 11px; cursor: pointer; }
+.free-money-diagnosis-card.is-loading > img { animation: free-money-cloud-breathe 900ms ease-in-out infinite; }
+.free-money-diagnosis-card.is-error { border-color: color-mix(in srgb, var(--orange) 32%, var(--line)); }
+.free-money-diagnosis-card.is-success { background: color-mix(in srgb, var(--sage) 48%, var(--paper)); }
+.free-money-sheet .sheet-actions { margin-top: 4px; }
+.free-money-sheet .compact-save { min-width: 120px; min-height: 44px; }
+.free-money-detail-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.free-money-detail-grid > div { min-width: 0; display: grid; gap: 3px; padding: 11px 12px; border-radius: 14px; background: color-mix(in srgb, var(--sage) 38%, var(--paper)); }
+.free-money-detail-grid span { color: var(--muted); font-size: 10px; }
+.free-money-detail-grid strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; font-size: 16px; line-height: 1.15; font-variant-numeric: tabular-nums; }
+.free-money-detail-grid .is-negative { color: var(--orange); }
+.free-money-try-again { margin-top: -4px; }
+.free-money-confetti { position: fixed; z-index: 30; inset: 0; display: grid; place-items: center; pointer-events: none; animation: free-money-confetti-in 220ms var(--ease-out) both; }
+.free-money-confetti img { width: min(360px, 86vw); height: min(260px, 52vh); object-fit: contain; }
+
+@keyframes free-money-orb-bob { 0%, 100% { transform: translateY(0) rotate(-1deg); } 50% { transform: translateY(-4px) rotate(1deg); } }
+@keyframes free-money-bubble-in { from { opacity: 0; transform: translateY(calc(-50% + 5px)) scale(.96); } to { opacity: 1; transform: translateY(-50%) scale(1); } }
+@keyframes free-money-coin-pulse { 0% { transform: scale(1) rotate(0); } 45% { transform: scale(1.035) rotate(-1deg); } 100% { transform: scale(1) rotate(0); } }
+@keyframes free-money-cloud-breathe { 0%, 100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-2px) scale(1.035); } }
+@keyframes free-money-confetti-in { from { opacity: 0; } to { opacity: 1; } }
+
+@media (max-width: 420px) {
+  .free-money-field { grid-template-columns: 1fr; gap: 5px; }
+  .free-money-input-wrap { width: 100%; }
+  .free-money-sheet-art { height: 74px; }
+  .free-money-sheet-art img { width: 148px; height: 100px; }
+  .free-money-orb-entry { height: 70px; }
+  .free-money-orb { width: 52px; height: 52px; min-width: 52px; min-height: 52px; margin-right: 0; }
+  .free-money-orb-bubble { right: 60px; max-width: min(166px, calc(100vw - 92px)); }
+  .free-money-inline-error { margin-left: 14px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .free-money-orb { animation: none; }
+  .free-money-orb-bubble,.free-money-confetti { animation: free-money-confetti-in 160ms ease both; }
+  .free-money-diagnosis-card.is-loading > img { animation: none; }
+  .free-money-entry,.free-money-art-wrap img,.free-money-coin-badge { transition-duration: 1ms; }
+}

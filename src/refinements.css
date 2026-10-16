@@ -486,3 +486,108 @@
     grid-template-columns:56px minmax(0,1fr) 50px 36px;
   }
 }
+
+/* Keep the footer action row clear of the fixed tabs on 320px-class WebViews.
+   The exact 568px viewport is still above the runtime compact threshold, but
+   its 74px category track plus the full four-row keypad makes the footer
+   overflow into the navigation. Reclaim the heading lane for the horizontal
+   drawer and keep every touch target inside the usable pane. */
+@media (max-width:600px) and (max-height:580px) {
+  .for-root[data-view="record"] #record-view .record-layout {
+    grid-template-columns:minmax(0,1fr);
+    grid-template-rows:minmax(76px,1fr) 46px minmax(182px,1.6fr) 44px;
+    gap:2px;
+  }
+  .for-root[data-view="record"] #record-view .amount-stage { grid-column:1; grid-row:1; }
+  .for-root[data-view="record"] #record-view .purposes {
+    grid-column:1;
+    grid-row:2;
+    min-height:46px;
+    flex-direction:row;
+    align-items:center;
+    gap:4px;
+  }
+  .for-root[data-view="record"] #record-view .purposes .section-heading {
+    flex:0 0 auto;
+    order:2;
+    margin:0;
+  }
+  .for-root[data-view="record"] #record-view .purposes h2 {
+    position:absolute;
+    width:1px;
+    height:1px;
+    padding:0;
+    margin:-1px;
+    overflow:hidden;
+    clip:rect(0,0,0,0);
+    white-space:nowrap;
+  }
+  .for-root[data-view="record"] #record-view .purposes .text-button {
+    min-height:44px;
+    height:44px;
+    padding:0 4px;
+  }
+  .for-root[data-view="record"] #record-view .categories.category-drawer {
+    flex:1 1 0;
+    width:auto;
+    height:46px;
+    min-height:46px;
+  }
+  .for-root[data-view="record"] #record-view .keypad {
+    grid-column:1;
+    grid-row:3;
+    grid-template-rows:repeat(4,minmax(44px,1fr));
+    gap:2px;
+  }
+  .for-root[data-view="record"] #record-view .key { min-height:44px; }
+  .for-root[data-view="record"] #record-view .finish { grid-column:1; grid-row:4; }
+}
+
+/* Circle ledger member filter: keep it as a quiet avatar rail between the
+   toolbar and total card. The signed-in avatar is always selected; the other
+   avatars are 44px touch targets that can be toggled without adding labels or
+   vertical noise to the ledger. */
+.for-root .history-member-filter {
+  display:flex;
+  align-items:center;
+  gap:7px;
+  min-height:48px;
+  margin:-4px 0 10px;
+  padding:3px 2px;
+  overflow-x:auto;
+  overscroll-behavior-x:contain;
+  scrollbar-width:none;
+}
+.for-root .history-member-filter::-webkit-scrollbar { display:none; }
+.for-root .history-member-avatar {
+  display:grid;
+  place-items:center;
+  flex:0 0 44px;
+  width:44px;
+  height:44px;
+  min-width:44px;
+  padding:3px;
+  border:1px solid transparent;
+  border-radius:15px;
+  background:transparent;
+  color:var(--ink);
+  cursor:pointer;
+  touch-action:manipulation;
+  transition:transform 180ms var(--ease-out), background-color 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+}
+.for-root .history-member-avatar .person-avatar,
+.for-root .history-member-avatar .person-avatar :is(svg,.cloud-avatar) { width:36px; height:36px; }
+.for-root .history-member-avatar.is-selected {
+  background:var(--accent-soft);
+  border-color:color-mix(in srgb,var(--accent-strong) 32%,transparent);
+  box-shadow:0 3px 10px color-mix(in srgb,var(--accent-strong) 14%,transparent);
+}
+.for-root .history-member-avatar:not(:disabled):active { transform:scale(.9); }
+.for-root .history-member-avatar:focus-visible { outline:2px solid color-mix(in srgb,var(--accent-strong) 55%,transparent); outline-offset:2px; }
+.for-root .history-member-avatar:disabled { cursor:default; opacity:1; }
+@media (max-width:360px) {
+  .for-root .history-member-filter { gap:5px; margin-bottom:8px; }
+  .for-root .history-member-avatar { flex-basis:40px; width:40px; min-width:40px; height:40px; border-radius:13px; }
+  .for-root .history-member-avatar .person-avatar,
+  .for-root .history-member-avatar .person-avatar :is(svg,.cloud-avatar) { width:32px; height:32px; }
+}

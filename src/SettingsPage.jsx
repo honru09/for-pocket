@@ -5,7 +5,7 @@ import { Icon } from './icons.jsx';
 import CandidateIcon from './CandidateIcon.jsx';
 import FreeMoney from './FreeMoney.jsx';
 
-export default function SettingsPage({ profile, settings, expenses = [], t, ready, disabled, navigate, updateSettings, onLocation, locationEnabled, onSoundPreview }) {
+export default function SettingsPage({ profile, settings, expenses = [], t, ready, disabled, navigate, updateSettings, saveFixedCapital, analyzeBudget, onLocation, locationEnabled, onSoundPreview }) {
   const [themeOpen, setThemeOpen] = useState(false);
   const row = (view, label, icon) => <Button key={view} mode="plain" className="settings-row" onClick={() => navigate(view)} disabled={!ready}><Icon name={icon}/><span>{t(label)}</span><span aria-hidden="true">›</span></Button>;
   return <div className="settings-home settings-organized">
@@ -16,7 +16,7 @@ export default function SettingsPage({ profile, settings, expenses = [], t, read
     <section className="settings-group" aria-label={t('settingsTools')}>
       {row('ai-import','aiImportTitle','receipt')}{row('recurring','recurringTitle','repeat')}
       <Button mode="plain" className="settings-row" onClick={onLocation} disabled={!ready}><CandidateIcon name="privacy-location-tactile-v1"/><span>{t('locationTitle')}</span><small>{t(locationEnabled ? 'locationAutoOn' : 'sound_off')}</small><span aria-hidden="true">›</span></Button>
-      <FreeMoney settings={settings} expenses={expenses} t={t} disabled={disabled} updateSettings={updateSettings}/>
+      <FreeMoney settings={settings} expenses={expenses} ledgerId={profile?.ledgerId} t={t} disabled={disabled} updateSettings={updateSettings} saveFixedCapital={saveFixedCapital} analyzeBudget={analyzeBudget}/>
     </section>
     <section className="settings-group" aria-label={t('settingsPersonalize')}>
       <label className="settings-choice" htmlFor="language"><span>{t('language')}</span><select id="language" value={settings.language} disabled={disabled} onChange={e => updateSettings({ language:e.target.value })}><option value="zh">中文</option><option value="en">English</option><option value="uk">Українська</option></select></label>

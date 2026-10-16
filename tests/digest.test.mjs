@@ -115,6 +115,21 @@ test('preferences keyed by uid discover a bound chat and failed recipients retry
   assert.equal(second.results.find(item => item.ledgerId === 'shared').deliveryFailed, false);
 });
 
+for (const chatType of [undefined, 'supergroup']) test(`digest rejects negative chat ids with ${chatType || 'missing'} chat type`, async t => {
+  const initial = state({ expenses: [expense('group-safe', '2026-10-10T16:00:00.000Z')] });
+  delete initial.identities['telegram:101'];
+  initial.telegram = {
+    preferences: { '101': { chatId: '-100999', chatType, language: 'zh' } },
+    drafts: { old: { uid: '101', chatId: '-100998', language: 'zh' } },
+    locations: { old: { uid: '101', chatId: '-100997', language: 'zh' } },
+    updates: { old: { locationEntry: { uid: '101', chatId: '-100996' } } },
+  };
+  const f = await serviceFixture(t, initial, at);
+  const result = await f.service.processSlot('morning', { at });
+  assert.equal(result.results[0].recipients.length, 0);
+  assert.equal(f.calls.length, 0);
+});
+
 test('cron digest rejects a missing or incorrect X-Cron-Secret with 401', async t => {
   const dataDir = await mkdtemp(path.join(os.tmpdir(), 'for-digest-http-'));
   t.after(async () => rm(dataDir, { recursive: true, force: true }));

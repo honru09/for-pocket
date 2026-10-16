@@ -1,5 +1,7 @@
 import { initialSettings, validateSettings, validateExpense, validateExpenseUpdate, validateUserProfile, validateEntryTime, dateKey } from '../public/shared.mjs';
 import { validTimezone } from '../public/timezone.mjs';
+import { analyzeBudget as analyzeBudgetResult } from '../budget-analysis.mjs';
+import { calculateDailyAllowance } from '../public/fixed-capital.mjs';
 export const PREVIEW_KEY = 'for-pocket.preview.v1';
 export const SESSION_KEY = 'for-pocket.session.v1';
 const FILE_MIME_BY_EXTENSION = {
@@ -28,15 +30,50 @@ export function localService(defaultLang = 'zh') {
     try { localStorage.setItem(PREVIEW_KEY, JSON.stringify(p)); } catch { throw new Error('errorLocalSpace'); }
     return result;
   };
+  const normalizeCapital = (capital, timezone, fallbackCurrency = 'JPY', at = new Date()) => {
+    const input = capital && typeof capital === 'object' && capital.currency === undefined
+      ? { ...capital, currency: fallbackCurrency }
+      : capital;
+    const valid = validateSettings({ ...initialSettings(defaultLang), currency: fallbackCurrency, timezone, fixedCapital: input }).fixedCapital;
+    return { ...valid,
+      dailyAllowance: valid.enabled ? calculateDailyAllowance(valid.incomesTotal, valid.expensesTotal, valid.savingsTarget, valid.payday, at, timezone) : 0,
+      lastCalculatedAt: valid.enabled ? at.toISOString() : null,
+    };
+  };
   return {
     getProfile: async () => visible(load()),
     syncTimezone: async timezone => mutate(p => { const zone = validTimezone(timezone); if (!zone) throw new Error('errorEntryTime'); p.settings.timezone = zone; return { timezone:zone, ledgerId:'local' }; }),
-    saveSettings: async settings => mutate(p => { p.settings = validateSettings({ ...settings, consumers: p.settings.consumers }); return visible(p); }),
+    saveSettings: async settings => mutate(p => {
+      const next = validateSettings({ ...settings, fixedCapital: Object.hasOwn(settings || {}, 'fixedCapital') ? settings.fixedCapital : p.settings.fixedCapital, consumers: p.settings.consumers });
+      next.fixedCapital = normalizeCapital(next.fixedCapital, next.timezone, next.fixedCapital.currency);
+      p.settings = next;
+      return visible(p);
+    }),
+    saveFixedCapital: async (capital, scope = 'local') => mutate(p => {
+      if (scope && scope !== 'local') throw new Error('errorLedgerChanged');
+      const fixedCapital = normalizeCapital(capital, p.settings.timezone, p.settings.fixedCapital?.currency || p.settings.currency || 'JPY');
+      p.settings = validateSettings({ ...p.settings, fixedCapital, consumers: p.settings.consumers });
+      return visible(p);
+    }),
+    analyzeBudget: async ({ fixedCapital, currency, timezone, ledgerId = 'local' } = {}) => {
+      const profile = visible(load());
+      if (ledgerId !== 'local') throw new Error('errorLedgerChanged');
+      const capital = fixedCapital ?? profile.settings.fixedCapital;
+      return analyzeBudgetResult({
+        expenses: profile.expenses,
+        fixedCapital: capital,
+        currency: currency || capital?.currency || profile.settings.currency,
+        timezone: timezone || profile.settings.timezone,
+        ledgerId,
+        language: profile.settings.language,
+      }, null);
+    },
     updateUserProfile: async value => mutate(p => { p.user = { ...p.user, ...validateUserProfile(value) }; p.settings.consumers = [p.user]; return visible(p); }),
     addExpense: async value => mutate(p => {
       const existing = p.expenses.find(e => e.id === value.id);
       if (existing) { if (existing.deletedAt) throw new Error('errorDeleted'); return existing; }
-      const valid = validateExpense(value, p.settings);
+      const consumer = p.settings.consumers.some(item => item.id === value.consumer) ? value.consumer : p.user.id;
+      const valid = validateExpense({ ...value, consumer }, p.settings);
       const occurredAt = valid.occurredAt || new Date().toISOString();
       const entry = { ...valid, occurredAt, ledgerId: 'local', createdAt: new Date().toISOString(), dayKey: dateKey(new Date(occurredAt), valid.timezone), member: structuredClone(p.user), canDelete: true };
       p.expenses.push(entry); return entry;
@@ -154,6 +191,10 @@ export function remoteService(telegram) {
     getProfile: async () => { const sequence = ++profileRequestSequence; await exchangeTelegram(); return track(await request('/profile'), sequence); },
     syncTimezone: (timezone, scope = ledgerId) => request('/timezone', 'PUT', { timezone, ledgerId:scope }),
     saveSettings: ({ consumers, ...settings }, scope = ledgerId) => profileAction('/settings', { ...settings, ledgerId: scope }, 'PUT'),
+    saveFixedCapital: async (capital, scope = ledgerId) => {
+      await exchangeTelegram();
+      return profileAction('/fixed-capital', { fixedCapital: capital, ledgerId: scope }, 'PUT');
+    },
     updateUserProfile: p => profileAction('/user-profile', p, 'PUT'),
     addExpense: payload => request('/expenses', 'POST', { ledgerId, ...payload }),
     importExpenses: async entries => {
@@ -172,6 +213,10 @@ export function remoteService(telegram) {
     clearLocationPresence: scope => request('/location/presence-clear', 'POST', { ledgerId:scope || ledgerId }),
     aiParseExpense,
     aiSummary: async input => { await exchangeTelegram(); return request('/ai/summary', 'POST', { ledgerId, ...input }, { timeout: 60000 }); },
+    analyzeBudget: async ({ fixedCapital, currency, timezone, ledgerId: requestedLedgerId = ledgerId } = {}) => {
+      await exchangeTelegram();
+      return request('/ai/analyze-budget', 'POST', { fixedCapital, currency, timezone, ledgerId: requestedLedgerId }, { timeout: 60000 });
+    },
     loginWithGoogle: async (credential, link = false, language) => {
       const sequence = ++profileRequestSequence;
       const res = await request('/auth/google', 'POST', { credential, link, language });

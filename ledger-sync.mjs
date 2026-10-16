@@ -4,10 +4,19 @@ import { createHash } from 'node:crypto';
  * ledger and their circles, never through another member's circle graph.
  * Original shared-ledger history remains there when a member leaves. */
 export function expenseOwnerId(db, entry) {
+  const userId = value => {
+    if (typeof value !== 'string' || !value.trim()) return null;
+    const id = value.trim();
+    if (db.users?.[id]) return id;
+    if (id.startsWith('u_') && db.users?.[id.slice(2)]) return id.slice(2);
+    return null;
+  };
   for (const member of [entry?.consumer, entry?.member?.id]) {
-    if (typeof member === 'string' && member.startsWith('u_') && db.users?.[member.slice(2)]) return member.slice(2);
+    const id = userId(member);
+    if (id) return id;
   }
-  if (db.users?.[entry?.createdBy]) return entry.createdBy;
+  const creator = userId(entry?.createdBy);
+  if (creator) return creator;
   return db.users?.[entry?.ledgerId] ? entry.ledgerId : null;
 }
 

@@ -54,6 +54,22 @@ test('spender determines ownership for old records entered on behalf of a partne
   assert.deepEqual(ids(db,'B'),['on-behalf']);
 });
 
+test('legacy plain account ids still project to the correct owner', () => {
+  const db=database();
+  // Early snapshots stored the underlying account id in consumer/member,
+  // without the UI u_ prefix and sometimes without createdBy.
+  db.ledgers.B.expenses=[{
+    id:'legacy-plain-owner', ledgerId:'B', consumer:'b', member:{ id:'b' },
+    amountMinor:100, createdAt:'2026-10-13T03:00:00.000Z',
+  }];
+  syncAllLedgerGroups(db);
+  assert.deepEqual(ids(db,'b'),['legacy-plain-owner']);
+  assert.deepEqual(ids(db,'B'),['legacy-plain-owner']);
+  assert.deepEqual(ids(db,'a'),[]);
+  assert.deepEqual(ids(db,'C'),[]);
+  assert.equal(db.ledgerSyncArchive?.length || 0,0);
+});
+
 test('instant undo and split changes are authoritative even in the same millisecond', () => {
   const db=database(), timestamp='2026-10-13T03:00:00.000Z';
   const deleted=entry('instant-undo','a','B',{deletedAt:timestamp,splitParticipants:['u_a','u_b']});

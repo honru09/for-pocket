@@ -4,6 +4,7 @@ import { validTimezone } from './public/timezone.mjs';
 import { expenseOwnerId, syncLedgerGroup, syncAllLedgerGroups } from './ledger-sync.mjs';
 import { handleCircleReactions } from './circle-reactions.mjs';
 import { circleMemberLocation, updateCirclePresence } from './circle-presence.mjs';
+import { calculateDailyAllowance } from './public/fixed-capital.mjs';
 
 export class RequestError extends Error { constructor(message, status = 400) { super(message); this.status = status; } }
 export const fail = (message, status) => { throw new RequestError(message, status); };
@@ -51,6 +52,24 @@ function canManageEntry(db, uid, entry) {
 }
 function viewCircle(db, c, uid) { return { id: c.id, name: c.name, isAdmin: c.admins.includes(uid), memberCount: c.members.length, members: c.members.map(id => ({ ...member(db, id), isAdmin: c.admins.includes(id), ...(circleMemberLocation(c,id) ? {location:circleMemberLocation(c,id)} : {}) })) }; }
 function requireAdmin(c, uid) { if (!c.admins.includes(uid)) fail('errorAdminOnly', 403); }
+function normalizeFixedCapitalForServer(value, timezone, now) {
+  const enabled = value.enabled === true;
+  return { ...value,
+    dailyAllowance: enabled ? calculateDailyAllowance(value.incomesTotal, value.expensesTotal, value.savingsTarget, value.payday, new Date(now), timezone) : 0,
+    lastCalculatedAt: enabled ? new Date(now).toISOString() : null,
+  };
+}
+function fixedCapitalEditable(value) {
+  value = value && typeof value === 'object' ? value : {};
+  return {
+    enabled: value.enabled === true,
+    currency: value.currency,
+    incomesTotal: value.incomesTotal,
+    expensesTotal: value.expensesTotal,
+    savingsTarget: value.savingsTarget,
+    payday: value.payday,
+  };
+}
 export function visible(db, uid) {
   const user = db.users[uid], { circle, ledgerId, ledger, consumers } = context(db, uid);
   const keys = Object.keys(db.identities).filter(k => db.identities[k] === uid);
@@ -186,9 +205,37 @@ export function handleDomain(db, uid, route, method, body, { now, limit, ledgerQ
     return { timezone:zone, ledgerId:ctx.ledgerId };
   }
   if (route === '/settings' && method === 'PUT') {
-    const ctx = checkLedger(db, uid, body.ledgerId), valid = validateSettings({ ...body, consumers: ctx.consumers });
-    if (ctx.circle && !ctx.circle.admins.includes(uid) && (JSON.stringify(valid.categories) !== JSON.stringify(ctx.ledger.settings.categories) || JSON.stringify(valid.incomeCategories) !== JSON.stringify(ctx.ledger.settings.incomeCategories))) fail('errorAdminOnly', 403);
+    const ctx = checkLedger(db, uid, body.ledgerId);
+    // Older clients omit fixedCapital when saving language, categories, or
+    // currency. Keep the persisted budget instead of silently resetting it.
+    let fixedCapital = Object.hasOwn(body, 'fixedCapital') ? body.fixedCapital : ctx.ledger.settings.fixedCapital;
+    if (fixedCapital && typeof fixedCapital === 'object' && !Array.isArray(fixedCapital) && fixedCapital.currency === undefined) {
+      fixedCapital = { ...fixedCapital, currency: ctx.ledger.settings.fixedCapital?.currency || ctx.ledger.settings.currency };
+    }
+    const valid = validateSettings({ ...body, fixedCapital, consumers: ctx.consumers });
+    valid.fixedCapital = normalizeFixedCapitalForServer(valid.fixedCapital, valid.timezone, now);
+    if (ctx.circle && !ctx.circle.admins.includes(uid) && (
+      JSON.stringify(valid.categories) !== JSON.stringify(ctx.ledger.settings.categories)
+      || JSON.stringify(valid.incomeCategories) !== JSON.stringify(ctx.ledger.settings.incomeCategories)
+      || (Object.hasOwn(body, 'fixedCapital') && JSON.stringify(fixedCapitalEditable(valid.fixedCapital)) !== JSON.stringify(fixedCapitalEditable(ctx.ledger.settings.fixedCapital)))
+    )) fail('errorAdminOnly', 403);
     db.users[uid].settings = { ...valid, consumers: [] }; ctx.ledger.settings = { ...valid, consumers: [] }; return visible(db, uid);
+  }
+  if (route === '/fixed-capital' && method === 'PUT') {
+    const ctx = checkLedger(db, uid, body.ledgerId);
+    if (ctx.circle) requireAdmin(ctx.circle, uid);
+    if (!body.fixedCapital || typeof body.fixedCapital !== 'object' || Array.isArray(body.fixedCapital)) fail('自由金格式有误。', 400);
+    const previousCurrency = ctx.ledger.settings.fixedCapital?.currency || ctx.ledger.settings.currency;
+    const fixedCapitalInput = Object.hasOwn(body.fixedCapital, 'currency')
+      ? body.fixedCapital
+      : { ...body.fixedCapital, currency: previousCurrency };
+    const validated = validateSettings({ ...ctx.ledger.settings, fixedCapital: fixedCapitalInput, consumers: ctx.consumers });
+    const valid = normalizeFixedCapitalForServer(validated.fixedCapital, validated.timezone, now);
+    ctx.ledger.settings.fixedCapital = valid;
+    // Keep the personal projection in sync for a private ledger and for
+    // clients that later switch back from a circle without reloading.
+    if (!ctx.circle) db.users[uid].settings.fixedCapital = structuredClone(valid);
+    return visible(db, uid);
   }
   if (route === '/circles/create' && method === 'POST') {
     const name = String(body.name || '').trim(); if (!name || Array.from(name).length > 24) fail('errorCircleName');

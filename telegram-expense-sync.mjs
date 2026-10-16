@@ -1,6 +1,9 @@
 import { CURRENCIES, resolveLanguage } from './public/shared.mjs';
 
-const TELEGRAM_ID = /^-?\d{1,20}$/;
+// Expense companion cards are private member notifications. Telegram group
+// and supergroup chat IDs are negative, so reject them before any Bot API
+// call even when a stale preference still contains one.
+const TELEGRAM_ID = /^[1-9]\d{0,19}$/;
 
 function safeChat(value) {
   const text = String(value ?? '').trim();
@@ -42,6 +45,7 @@ function knownChats(db, ledgerId) {
   const result = new Map();
   for (const uid of ids) {
     const preference = db.telegram?.preferences?.[uid];
+    if (preference?.chatType && preference.chatType !== 'private') continue;
     const chatId = safeChat(preference?.chatId);
     if (chatId) result.set(chatId, { chatId, uid, language: resolveLanguage(preference?.language || db.users?.[uid]?.settings?.language, 'zh') });
   }

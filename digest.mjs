@@ -193,9 +193,13 @@ function compactAggregate(records) {
 
 function telegramIds(db, memberIds) {
   const result = new Map();
+  // Digests are private companion messages. Telegram group/supergroup chat
+  // IDs are negative; rejecting them also prevents stale legacy preferences
+  // from leaking a couple's ledger into a group.
+  const privateChatId = value => /^[1-9]\d{0,19}$/.test(String(value ?? '').trim());
   const add = (chatId, uid, language, { preferLanguage = false } = {}) => {
     const key = String(chatId ?? '').trim();
-    if (!key || key.length > 64) return;
+    if (!privateChatId(key)) return;
     const existing = result.get(key);
     // Telegram preferences capture the language used in the latest private
     // message. Prefer that over a stale profile setting when both sources
@@ -214,6 +218,7 @@ function telegramIds(db, memberIds) {
       // drafts/locations normally carry it explicitly.
       const uid = item?.uid || item?.userId || item?.locationEntry?.uid || (pool === state.preferences && key);
       if (!memberSet.has(uid)) continue;
+      if (item?.chatType && item.chatType !== 'private') continue;
       const chatId = item?.chatId || item?.chat_id || item?.telegramChatId || item?.editingChatId || item?.locationEntry?.chatId;
       if (chatId !== undefined) add(chatId, uid, item?.language || db.users?.[uid]?.settings?.language, { preferLanguage: pool === state.preferences && Boolean(item?.language) });
     }

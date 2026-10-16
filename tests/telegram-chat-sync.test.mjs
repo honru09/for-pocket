@@ -116,6 +116,20 @@ test('expense notification fan-out excludes the Telegram account that recorded i
   assert.equal(calls[0].params.disable_notification, true);
 });
 
+for (const chatType of [undefined, 'supergroup']) test(`expense notifications reject negative chat ids with ${chatType || 'missing'} chat type`, async t => {
+  const fixture = syncState();
+  fixture.telegram.preferences['101'] = { chatId: '-100555', chatType, language: 'en' };
+  const { store } = await storeFixture(t, fixture), calls = [];
+  const sync = createTelegramExpenseSync({ store, callTelegram: async (method, params) => {
+    calls.push({ method, params }); return { message_id: 901 };
+  } });
+  const entry = await store.run(db => structuredClone(db.ledgers.cir_ledger.expenses[0]));
+  const result = await sync.notify(entry);
+  assert.equal(result.sent, 1);
+  assert.deepEqual(calls.map(call => call.params.chat_id), ['202']);
+  assert.equal(calls[0].params.disable_notification, true);
+});
+
 test('expense sync deduplicates concurrent sends and never leaks a personal ledger', async t => {
   const fixture = syncState();
   const { store } = await storeFixture(t, fixture);

@@ -11,7 +11,8 @@ import { createLocationResolver } from './location.mjs';
 import { normalizeLocation, currencyForCountry } from './public/location.mjs';
 import { updateCirclePresence } from './circle-presence.mjs';
 import { RequestError, fail, hash, ensureUser, issueSession, googleLogin, handleDomain } from './domain.mjs';
-import { CURRENCIES, MAX_CUSTOM_AVATAR_LENGTH, resolveLanguage } from './public/shared.mjs';
+import { CURRENCIES, MAX_CUSTOM_AVATAR_LENGTH, resolveLanguage, validateFixedCapital } from './public/shared.mjs';
+import { analyzeBudget } from './budget-analysis.mjs';
 import { AiError, createExpenseParser, createExpenseSummarizer, createExpenseChat } from './ai.mjs';
 import { summarizeExpenses } from './ai-summary.mjs';
 import { createTelegramHandler } from './telegram-ai.mjs';
@@ -298,6 +299,7 @@ export function createApp({ token = process.env.BOT_TOKEN || '', dataDir = path.
           if (body.currency !== undefined && (typeof body.currency !== 'string' || !Object.hasOwn(CURRENCIES, body.currency))) fail('errorAiInput');
           if (body.question !== undefined && (typeof body.question !== 'string' || body.question.length > 500)) fail('errorAiInput');
           if (body.ledgerId !== undefined && typeof body.ledgerId !== 'string') fail('errorAiInput');
+          if (body.memberIds !== undefined && (!Array.isArray(body.memberIds) || body.memberIds.length > 8 || body.memberIds.some(id => typeof id !== 'string' || !id.trim()))) fail('errorAiInput');
           if (body.timezone !== undefined) {
             if (typeof body.timezone !== 'string' || !body.timezone || body.timezone.length > 80) fail('errorAiInput');
             try { new Intl.DateTimeFormat('en', { timeZone: body.timezone }).format(); } catch { fail('errorAiInput'); }
@@ -310,12 +312,60 @@ export function createApp({ token = process.env.BOT_TOKEN || '', dataDir = path.
             // account's connected personal/circle files. Reports keep their
             // explicit ledger scope so a recap cannot accidentally mix a
             // different circle's private context into its prompt.
-            const scoped = { ...profile, expenses: profile.expenses.filter(entry => !entry.ledgerId || entry.ledgerId === profile.ledgerId) };
+            const selectedMembers = body.memberIds === undefined ? null : new Set(body.memberIds);
+            if (selectedMembers) {
+              const allowedMembers = new Set((profile.settings.consumers || []).map(member => member.id));
+              for (const id of selectedMembers) if (!allowedMembers.has(id)) fail('errorMembership', 403);
+            }
+            const scoped = { ...profile, expenses: profile.expenses.filter(entry => (!entry.ledgerId || entry.ledgerId === profile.ledgerId) && (!selectedMembers || selectedMembers.has(entry.consumer))) };
             return { uid, profile: scoped };
           });
           limit(`ai-summary:${context.uid}`, 6);
           const result = await summarizeExpenses(body, context.profile, aiSummarizer, now());
           await store.run(db => { const p = handleDomain(db, context.uid, '/profile', 'GET', {}, { now: now(), limit }); if (p.ledgerId !== context.profile.ledgerId) fail('errorLedgerChanged', 409); });
+          await send(res, 200, { ...result, ...(req.telegramSessionToken ? { sessionToken: req.telegramSessionToken } : {}) }); return;
+        }
+        if (url.pathname === '/api/ai/analyze-budget' && req.method === 'POST') {
+          const context = await store.run(db => {
+            const uid = resolveAuth(db, req);
+            const profile = handleDomain(db, uid, '/profile', 'GET', {}, { now: now(), limit });
+            if (body.ledgerId && body.ledgerId !== profile.ledgerId) fail('errorLedgerChanged', 409);
+            return { uid, profile };
+          });
+          limit(`ai-budget:${context.uid}`, 8);
+          if (Object.hasOwn(body, 'fixedCapital') && (!body.fixedCapital || typeof body.fixedCapital !== 'object' || Array.isArray(body.fixedCapital))) fail('errorAiInput', 400);
+          const requestedFixedCapital = Object.hasOwn(body, 'fixedCapital')
+            ? body.fixedCapital
+            : context.profile.settings.fixedCapital;
+          const capitalCurrency = requestedFixedCapital
+            && typeof requestedFixedCapital === 'object'
+            && !Array.isArray(requestedFixedCapital)
+            && Object.hasOwn(requestedFixedCapital, 'currency')
+            ? requestedFixedCapital.currency
+            : context.profile.settings.fixedCapital?.currency;
+          const currency = body.currency === undefined
+            ? capitalCurrency ?? context.profile.settings.currency
+            : body.currency;
+          if (typeof currency !== 'string' || !Object.hasOwn(CURRENCIES, currency)) fail('errorAiInput', 400);
+          const timezone = body.timezone === undefined ? context.profile.settings.timezone : body.timezone;
+          if (typeof timezone !== 'string' || !timezone || timezone.length > 80) fail('errorAiInput', 400);
+          try { new Intl.DateTimeFormat('en', { timeZone: timezone }).format(); } catch { fail('errorAiInput', 400); }
+          let fixedCapital;
+          try { fixedCapital = validateFixedCapital(requestedFixedCapital, currency); }
+          catch (error) { fail(error.message, 400); }
+          const result = await analyzeBudget({
+            expenses: context.profile.expenses,
+            fixedCapital,
+            currency,
+            timezone,
+            now: new Date(now()),
+            ledgerId: context.profile.ledgerId,
+            language: body.language || context.profile.settings.language,
+          }, aiSummarizer);
+          await store.run(db => {
+            const p = handleDomain(db, context.uid, '/profile', 'GET', {}, { now: now(), limit });
+            if (p.ledgerId !== context.profile.ledgerId) fail('errorLedgerChanged', 409);
+          });
           await send(res, 200, { ...result, ...(req.telegramSessionToken ? { sessionToken: req.telegramSessionToken } : {}) }); return;
         }
         let googlePayload;
@@ -392,7 +442,7 @@ export function createApp({ token = process.env.BOT_TOKEN || '', dataDir = path.
       fail('errorNotFound', 404);
     } catch (error) {
       if (!req.complete) req.resume();
-      const validation = !(error instanceof RequestError) && (['errorEntryTime', 'errorSplit', 'errorFileRead'].includes(error.message) || /^(请|分类|收入分类|角色|记录|备注|时区)/.test(error.message));
+      const validation = !(error instanceof RequestError) && (['errorEntryTime', 'errorSplit', 'errorFileRead'].includes(error.message) || /^(请|分类|收入分类|角色|记录|备注|时区|自由金)/.test(error.message));
       if (!res.headersSent) await send(res, error.status || (validation ? 400 : 500), { error: error instanceof RequestError || error instanceof AiError || validation ? error.message : 'errorSave' }); else res.end();
       if (!(error instanceof RequestError) && !(error instanceof AiError) && !validation) console.error('Request failed:', error.name, error.code || 'internal');
     }

@@ -139,6 +139,14 @@
 .cloud-stop-sign-wrap > .cloud-stop-sign { visibility: visible !important; }
 .cloud-stop-sign-wrap[data-ready='false'] > .cloud-stop-sign { opacity: 0; }
 
+/* Sheets are the only nested scroll surface in the app. Containing the
+   overscroll keeps a quick upward swipe inside the Telegram-style drawer
+   instead of moving the page behind it, especially on iOS WebViews. */
+.for-root .pocket-sheet {
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
 @media (max-width: 600px) {
   .for-root .app-header { grid-template-columns: 36px minmax(0, 1fr) 36px; }
   .for-root .app-header .ledger-switcher { width: min(190px, 100%); max-width: calc(100vw - 112px); }
@@ -146,4 +154,61 @@
   .for-root #keypad { gap: 6px; }
   .for-root #keypad .key { min-height: 44px; height: 44px; }
   .for-root #record-view .amount-bottom { min-height: 16px; }
+}
+
+/* The compact keyboard uses nearly all of a short viewport. Keep transient
+   connection notices slim so they sit in the gap above the bottom navigation
+   instead of covering the final keypad row. */
+@media (max-width: 600px) and (max-height: 520px) {
+  .for-root .notice > div { padding: 9px 12px; border-radius: 15px; }
+  .for-root .notice #notice-text { font-size: 10px; }
+}
+@media (max-width: 600px) and (max-height: 430px) {
+  .for-root .notice { top: calc(var(--tg-content-safe-area-inset-top, 0px) + 8px); bottom: auto; }
+}
+
+/* Keep the true empty ledger state above the fixed tabs on short phones.
+   The illustration remains the visual anchor, but a slightly smaller
+   footprint preserves the primary record action as a reachable target. */
+@media (max-width: 600px) and (max-height: 600px) {
+  .for-root[data-view="history"] .ledger-empty-state {
+    gap: 7px;
+    padding-block: 0 14px;
+  }
+  .for-root[data-view="history"] .ledger-empty-state .pocket-illustration {
+    inline-size: 132px;
+  }
+}
+
+/* Utility controls keep their compact glyphs, but the surrounding hit area
+   stays comfortable on narrow Telegram WebViews. These rules deliberately
+   leave the surrounding grid tracks unchanged. */
+.for-root[data-view="record"] #record-view .finish :is(.location-trigger, .note-trigger) {
+  flex: 0 0 var(--pocket-touch);
+  width: var(--pocket-touch);
+  min-width: var(--pocket-touch);
+  height: var(--pocket-touch);
+  min-height: var(--pocket-touch);
+}
+.for-root .history-summary .postcard-export {
+  width: var(--pocket-touch);
+  min-width: var(--pocket-touch);
+  height: var(--pocket-touch);
+  min-height: var(--pocket-touch);
+  padding: 10px;
+}
+.for-root .page-heading > .text-button {
+  min-width: var(--pocket-touch);
+  min-height: var(--pocket-touch);
+  padding-inline: 8px;
+  justify-content: center;
+}
+
+/* The category editor action remains visually quiet while gaining a wider
+   horizontal target. Its row height stays owned by the existing responsive
+   layout, so the six-pill drawer never gets pushed down. */
+.for-root #record-view .purposes .section-heading > #edit-categories {
+  min-width: var(--pocket-touch);
+  padding-inline: 8px;
+  justify-content: center;
 }

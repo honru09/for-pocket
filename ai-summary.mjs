@@ -13,9 +13,11 @@ export function expenseStats(input = {}, profile, now = Date.now()) {
   else anchor.setUTCDate(1);
   const startDay = anchor.toISOString().slice(0, 10);
   const byConsumer = new Map(), byCategory = new Map();
+  const memberIds = Array.isArray(input.memberIds) ? new Set(input.memberIds.filter(id => typeof id === 'string' && id)) : null;
   let expenseMinor = 0, incomeMinor = 0, count = 0;
   for (const entry of profile.expenses || []) {
     if (entry.deletedAt || !isBudgetEntry(entry) || entry.currency !== currency || !Number.isSafeInteger(entry.amountMinor) || entry.amountMinor < 1) continue;
+    if (memberIds && !memberIds.has(entry.consumer)) continue;
     let day;
     try { day = dateKey(new Date(entry.occurredAt || entry.createdAt), timezone); } catch { continue; }
     if (day < startDay || day > endDay) continue;

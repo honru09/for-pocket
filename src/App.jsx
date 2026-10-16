@@ -16,10 +16,10 @@ import CircleReactions from './CircleReactions.jsx';
 import TimeEditor from './TimeEditor.jsx';
 import usePocketViewport from './usePocketViewport.js';
 import { createId } from './id.mjs';
-import { normalizeLocation, currencyForCountry, locationLabel } from '../public/location.mjs';
+import { normalizeLocation, currencyForCountry, locationLabel, summarizeFootprints } from '../public/location.mjs';
 import { createLocationClient, locationPreference } from './location-client.mjs';
 import { resolveExpenseLocation } from './expense-location.mjs';
-import { LocationSheet } from './LocationViews.jsx';
+import { LocationSheet, Footprints } from './LocationViews.jsx';
 import CategorySuggestions from './CategorySuggestions.jsx';
 import { deviceTimezone } from '../public/timezone.mjs';
 import { bindForegroundRefresh } from './foreground-refresh.mjs';
@@ -29,6 +29,7 @@ import { createEntryMutations } from './entry-mutations.mjs';
 import ExpenseEditor from './ExpenseEditor.jsx';
 import SettingsPage from './SettingsPage.jsx';
 import { createWeatherClient, weatherCell, mascotEnvironment as resolveMascotEnvironment } from './weather.mjs';
+import { filterLedgerEntries, selectedLedgerMembers } from './history-filter.mjs';
 
 const telegram = window.Telegram?.WebApp;
 const language = resolveLanguage(telegram?.initDataUnsafe?.user?.language_code || navigator.language);
@@ -160,6 +161,24 @@ const Categories = memo(function Categories({ categories, lang, selected, disabl
   </div>;
 });
 
+/* The shared ledger starts in a personal view.  Avatars are intentionally
+ * icon-only so the filter stays as quiet as the rest of the ledger toolbar. */
+const HistoryMemberFilter = memo(function HistoryMemberFilter({ circle, userId, selected, onToggle, t, disabled }) {
+  if (!circle || circle.members.length < 2) return null;
+  return <div className="history-member-filter" role="group" aria-label={t('circlePeople')}>
+    {circle.members.map(person => {
+      // Older circle snapshots stored member ids as strings. Normalize them
+      // here so the compact avatar rail remains usable across old and new
+      // records instead of rendering blank, unclickable buttons.
+      const member = typeof person === 'string' ? { id: person, name: person } : person;
+      const memberId = typeof member?.id === 'string' && member.id.startsWith('u_') ? member.id : (member?.id ? `u_${member.id}` : null);
+      const own = memberId === userId;
+      const pressed = own || selected.has(memberId);
+      return <button type="button" key={memberId || member?.name} className={`history-member-avatar ${pressed ? 'is-selected' : ''}`} data-member-id={memberId || ''} data-selected={pressed ? 'true' : 'false'} aria-label={own ? t('myProfile') : t('includeLedgerMember', { name: member?.name })} aria-pressed={pressed} aria-disabled={own || disabled} title={member?.name} disabled={own || disabled} onClick={() => onToggle(memberId)}><Avatar person={member}/></button>;
+    })}
+  </div>;
+});
+
 const SwipeExpenseRow = memo(function SwipeExpenseRow({ children, entry, t, onDelete, onCopy, onEdit }) {
   const ACTION_WIDTH = 72, OPEN_WIDTH = ACTION_WIDTH * 3;
   const [offset, setOffset] = useState(0), [dragging, setDragging] = useState(false);
@@ -232,7 +251,7 @@ export default function App() {
   const [timeEditor, setTimeEditor] = useState(null);
   const [noteEditor, setNoteEditor] = useState(false);
   const [editingCategoryId, setEditingCategoryId] = useState(null), [editingEntry, setEditingEntry] = useState(null);
-  const [historyCategory, setHistoryCategory] = useState('all');
+  const [historyCategory, setHistoryCategory] = useState('all'), [historyMembers, setHistoryMembers] = useState(() => new Set());
   const [locationGeneration, setLocationGeneration] = useState(0);
   const lastLocation = useRef(null);
   const [locationSheet, setLocationSheet] = useState(false), [locationEnabled, setLocationEnabled] = useState(false), [locationBusy, setLocationBusy] = useState(false);
@@ -309,6 +328,7 @@ export default function App() {
     const scopeChanged = previous?.ledgerId !== p.ledgerId || previous?.user.id !== p.user.id;
     if (scopeChanged) {
       setTimeEditor(null); setEditingEntry(null); setLocationSheet(false); setHistoryCategory('all');
+      setHistoryMembers(new Set([p.user.id]));
       lastLocation.current = null;
       locationRound.current++; locationSuppressed.current = false; activeCapture.current = null; setLocationBusy(false);
       if (previous) drafts.current.set(`${previous.user.id}:${previous.ledgerId}`, { ...state.current.draft, baseCurrency: settingsRef.current.currency });
@@ -332,6 +352,9 @@ export default function App() {
   }, [apply, notify, showError]);
   const navigate = useCallback(next => {
     if (busyRef.current) return;
+    // Each visit to the ledger starts with the signed-in member's own view.
+    // Additional avatars are an intentional, temporary comparison selection.
+    if (next === 'history' && currentProfile.current?.user?.id) setHistoryMembers(new Set([currentProfile.current.user.id]));
     setPicker(false); setView(next); window.scrollTo({ top: 0, behavior: 'instant' }); haptic();
   }, []);
   // The member rail is a record-footer portal. Drop a detached target before
@@ -675,14 +698,20 @@ export default function App() {
   function updateSettings(patch) {
     const before = currentProfile.current, backend = service.current;
     const scope = `${before.user.id}:${before.ledgerId}`, id = createId();
+    const includesFixedCapital = Object.hasOwn(patch || {}, 'fixedCapital');
     const next = validateSettings({ ...settingsRef.current, ...patch, ...(patch.language ? { languageManual: true } : {}) });
-    settingWrites.current.set(scope, { id, settings: next, backend }); epoch.current++;
+    settingWrites.current.set(scope, { id, settings: next, backend, includesFixedCapital }); epoch.current++;
     apply({ ...before, settings: next });
     // Serialize settings so rapid language/currency changes cannot arrive out of order.
     settingQueue.current = settingQueue.current.catch(() => {}).then(async () => {
       let succeeded = true;
       try {
-        const result = await backend.saveSettings(next, before.ledgerId);
+        // A budget save is serialized through the same queue. If a language,
+        // theme, or category patch was captured while that save was in flight,
+        // keep the freshly persisted budget instead of writing an old snapshot
+        // back over it.
+        const payload = includesFixedCapital ? next : { ...next, fixedCapital: settingsRef.current.fixedCapital };
+        const result = await backend.saveSettings(payload, before.ledgerId);
         confirmedSettings.current.set(scope, validateSettings(result.settings));
         if (settingWrites.current.get(scope)?.id !== id) return;
         settingWrites.current.delete(scope);
@@ -700,6 +729,37 @@ export default function App() {
       return succeeded;
     });
     return settingQueue.current;
+  }
+  async function saveFixedCapital(capital) {
+    const before = currentProfile.current, backend = service.current;
+    if (!before || !backend?.saveFixedCapital) throw new Error('errorSignIn');
+    const scope = `${before.user.id}:${before.ledgerId}`;
+    const task = settingQueue.current.catch(() => {}).then(async () => {
+      const liveBefore = currentProfile.current;
+      if (backend !== service.current || `${liveBefore?.user.id}:${liveBefore?.ledgerId}` !== scope) throw new Error('errorLedgerChanged');
+      const result = await backend.saveFixedCapital(capital, before.ledgerId);
+      const current = currentProfile.current;
+      if (backend !== service.current || `${current?.user.id}:${current?.ledgerId}` !== scope) throw new Error('errorLedgerChanged');
+      const normalized = validateSettings(result.settings);
+      confirmedSettings.current.set(scope, normalized);
+      const pendingSetting = settingWrites.current.get(scope);
+      if (pendingSetting?.backend === backend && pendingSetting.includesFixedCapital !== true) {
+        pendingSetting.settings = { ...pendingSetting.settings, fixedCapital: normalized.fixedCapital };
+      }
+      apply({ ...result, expenses: current.expenses });
+      return result;
+    });
+    settingQueue.current = task.catch(() => {});
+    return task;
+  }
+  async function analyzeBudget(input = {}) {
+    const backend = service.current, current = currentProfile.current;
+    if (!current || !backend?.analyzeBudget) throw new Error('errorSignIn');
+    const scope = `${current.user.id}:${current.ledgerId}`;
+    const result = await backend.analyzeBudget({ ...input, ledgerId: current.ledgerId });
+    const live = currentProfile.current;
+    if (backend !== service.current || `${live?.user.id}:${live?.ledgerId}` !== scope) throw new Error('errorLedgerChanged');
+    return result;
   }
   const startEditing = () => { setEditingType(draft.type); setEditing(structuredClone(categories)); navigate('manage'); };
   async function saveCategories(e) {
@@ -819,13 +879,33 @@ export default function App() {
     for (const e of expenses) if (e.category?.id && !options.has(categoryKey(e))) options.set(categoryKey(e), { key:categoryKey(e), type:e.type || 'expense', category:e.category });
     return [...options.values()];
   }, [settings.categories, settings.incomeCategories, expenses]);
-  const history = useMemo(() => expenses.filter(e => e.currency === historyCurrency
-    && (historyCategory === 'all' || categoryKey(e) === historyCategory)
-    && (period === 'all' || e.dayKey.startsWith(today.slice(0,7))))
-    .sort((a,b) => (b.occurredAt || b.createdAt).localeCompare(a.occurredAt || a.createdAt)), [expenses, historyCurrency, historyCategory, period, today]);
+  const historyMemberIds = useMemo(() => selectedLedgerMembers({ circle, userId: profile?.user?.id, selected: historyMembers }), [circle?.id, circle?.members, profile?.user?.id, historyMembers]);
+  const historyMemberKey = useMemo(() => [...historyMemberIds].sort().join(','), [historyMemberIds]);
+  const history = useMemo(() => filterLedgerEntries(expenses, { circle, userId: profile?.user?.id, selected: historyMemberIds })
+    .filter(e => e.currency === historyCurrency
+      && (historyCategory === 'all' || categoryKey(e) === historyCategory)
+      && (period === 'all' || e.dayKey.startsWith(today.slice(0,7))))
+    .sort((a,b) => (b.occurredAt || b.createdAt).localeCompare(a.occurredAt || a.createdAt)), [expenses, historyCurrency, historyCategory, period, today, circle?.id, profile?.user?.id, historyMemberKey]);
   const historyExpense = total(history, 'expense'), historyIncome = total(history, 'income');
+  const historyToday = useMemo(() => history.filter(entry => entry.dayKey === today), [history, today]);
+  const historyTodayExpense = total(historyToday, 'expense'), historyTodayIncome = total(historyToday, 'income');
+  const historyFootprints = useMemo(() => summarizeFootprints(history), [history]);
   const historyMonthLabel = useMemo(() => new Intl.DateTimeFormat(locale, { month:'short', timeZone:'UTC' }).format(new Date(`${today}T12:00:00Z`)), [today, locale]);
   const days = [...new Set(history.map(e => e.dayKey))];
+  const toggleHistoryMember = useCallback(memberId => {
+    const normalized = typeof memberId === 'string' && memberId.startsWith('u_') ? memberId : (memberId ? `u_${memberId}` : null);
+    if (!circle || !normalized || normalized === profile?.user?.id || !circle.members.some(member => {
+      const id = typeof member === 'string' ? member : member?.id;
+      return typeof id === 'string' && (id.startsWith('u_') ? id : `u_${id}`) === normalized;
+    })) return;
+    setHistoryMembers(current => {
+      const next = new Set(current);
+      if (next.has(normalized)) next.delete(normalized); else next.add(normalized);
+      if (profile?.user?.id) next.add(profile.user.id);
+      return next;
+    });
+    haptic();
+  }, [circle?.id, circle?.members, profile?.user?.id]);
   const mascotEnvironment = resolveMascotEnvironment(weather, clock, timezone);
   const keypadKeys = ['1','2','3','4','5','6','7','8','9',digits ? '.' : 'clear','0','backspace'];
   const saveLabel = t(busy ? 'saving' : !amountMinor ? 'enterAmount' : !draft.selected ? 'selectCategory' : draft.type === 'income' ? 'saveIncome' : 'save');
@@ -852,8 +932,8 @@ export default function App() {
       <select id="history-category" aria-label={t('categoryFilter')} value={historyCategory} onChange={e => setHistoryCategory(e.target.value)}><option value="all">{t('allCategoriesShort')}</option>{['expense','income'].map(type => <optgroup key={type} label={t(type)}>{historyCategories.filter(option => option.type === type).map(option => <option key={option.key} value={option.key}>{categoryDisplayLabel(option.category,settings.language)}</option>)}</optgroup>)}</select>
       <select id="history-currency" aria-label={t('ledgerCurrency')} value={historyCurrency} onChange={e => setHistoryCurrency(e.target.value)}>{Object.keys(CURRENCIES).map(c => <option key={c}>{c}</option>)}</select>
       <button type="button" id="history-quick-entry" className="postcard-button" onClick={() => navigate('ai-import')} aria-label={t('aiImportTitle')} title={t('aiImportTitle')}><Icon name="receipt"/></button>
-    </div></div><section className="history-summary"><div className="history-summary-amount"><span>{t('netBalance')}</span><strong id="history-total">{money(historyIncome - historyExpense, historyCurrency)}</strong><div className="history-summary-tools"><small id="history-total-count">{countText(history.length, settings.language, historyCurrency)}</small><button type="button" className="postcard-export" onClick={exportPostcard} aria-label={t('postcardExport')} title={t('postcardExport')}><CandidateIcon name="export-envelope-tactile-v1"/></button></div></div><div className="balance-details"><div><span>{t('expense')}</span><strong>{money(historyExpense,historyCurrency)}</strong></div><div><span>{t('income')}</span><strong className="income-value">+{money(historyIncome,historyCurrency)}</strong></div></div></section><AiSummary t={t} profile={profile} settings={settings} currency={historyCurrency} busy={busy} run={run} service={service.current} isRemote={isRemote} config={config} onAccount={() => navigate('account')}/><div className="history-list">{!history.length && <LedgerEmptyState ready={ready} failed={failed || syncFailed} filtered={expenses.length > 0 || historyCategory !== 'all' || historyCurrency !== settings.currency} t={t} onRetry={() => setRetryCount(n => n + 1)} onRecord={() => navigate('record')}/>} {days.map(day => <section key={day}><div className="history-day">{day === today ? t('today') : new Intl.DateTimeFormat(locale,{ timeZone:'UTC',month:'short',day:'numeric' }).format(new Date(`${day}T12:00:00Z`))}</div>{history.filter(e => e.dayKey === day).map(e => <SwipeExpenseRow key={e.id} entry={e} t={t} onDelete={removeEntry} onCopy={fillFromEntry} onEdit={entry => { if (entry.canDelete !== false) setEditingEntry(entry); }}><Cell Component="article" readOnly multiline key={e.id} className={`expense-row ${e.type === 'income' ? 'is-income' : ''}`} before={<span className="category-icon" style={{ background:`var(--${e.category.color})` }}><Icon name={e.category.icon}/></span>} subtitle={<span className="expense-meta"><span className={`consumer-badge consumer-color-${e.member?.color || 'blue'}`}><i/>{e.member?.name || settings.consumers.find(c => c.id === e.consumer)?.name || t('unknownConsumer')}</span><button type="button" className="entry-time" aria-label={t('editEntryTime')} disabled={busy || e.canDelete === false} onClick={() => setTimeEditor({ entry:e, ledgerId:profile.ledgerId })}><time dateTime={e.occurredAt || e.createdAt}>{new Intl.DateTimeFormat(locale,{timeZone:e.timezone || timezone,hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(new Date(e.occurredAt || e.createdAt))}</time></button></span>} description={e.note ? <span className="expense-description"><span className="expense-note">{e.note}</span></span> : undefined} after={<div className="expense-actions"><span className="expense-money">{e.type === 'income' ? '+' : '−'}{money(e.amountMinor,e.currency)}</span><Button className="entry-more" mode="plain" size="s" aria-label={t('entryActions')} onClick={() => document.dispatchEvent(new CustomEvent('pocket:entry-actions', { detail:e.id }))}><Icon name="more"/></Button></div>}><strong>{categoryDisplayLabel(e.category,settings.language)}</strong>{!isBudgetEntry(e) && <small className="entry-kind">{t(e.recordKind === 'transfer' ? 'recordKindTransfer' : 'recordKindReimbursement')}</small>}</Cell></SwipeExpenseRow>)}</section>)}</div><div className="today-balance"><span>{t('todayBalance')}</span><strong>{money(todayIncome - todayExpense)}</strong></div></>}
-    {view === 'settings' && <SettingsPage profile={profile} settings={settings} expenses={expenses} t={t} ready={ready} disabled={disabled} navigate={navigate} updateSettings={updateSettings} onLocation={() => setLocationSheet(true)} locationEnabled={locationEnabled} onSoundPreview={playKeySound}/>}
+    </div></div><HistoryMemberFilter circle={circle} userId={profile?.user?.id} selected={historyMemberIds} onToggle={toggleHistoryMember} t={t} disabled={disabled}/><section className="history-summary"><div className="history-summary-amount"><span>{t('netBalance')}</span><strong id="history-total">{money(historyIncome - historyExpense, historyCurrency)}</strong><div className="history-summary-tools"><small id="history-total-count">{countText(history.length, settings.language, historyCurrency)}</small><button type="button" className="postcard-export" onClick={exportPostcard} aria-label={t('postcardExport')} title={t('postcardExport')}><CandidateIcon name="export-envelope-tactile-v1"/></button></div></div><div className="balance-details"><div><span>{t('expense')}</span><strong>{money(historyExpense,historyCurrency)}</strong></div><div><span>{t('income')}</span><strong className="income-value">+{money(historyIncome,historyCurrency)}</strong></div></div></section><Footprints items={historyFootprints} t={t}/><AiSummary t={t} profile={profile} settings={settings} currency={historyCurrency} memberIds={[...historyMemberIds]} busy={busy} run={run} service={service.current} isRemote={isRemote} config={config} onAccount={() => navigate('account')}/><div className="history-list">{!history.length && <LedgerEmptyState ready={ready} failed={failed || syncFailed} filtered={expenses.length > 0 || historyCategory !== 'all' || historyCurrency !== settings.currency} t={t} onRetry={() => setRetryCount(n => n + 1)} onRecord={() => navigate('record')}/>} {days.map(day => <section key={day}><div className="history-day">{day === today ? t('today') : new Intl.DateTimeFormat(locale,{ timeZone:'UTC',month:'short',day:'numeric' }).format(new Date(`${day}T12:00:00Z`))}</div>{history.filter(e => e.dayKey === day).map(e => <SwipeExpenseRow key={e.id} entry={e} t={t} onDelete={removeEntry} onCopy={fillFromEntry} onEdit={entry => { if (entry.canDelete !== false) setEditingEntry(entry); }}><Cell Component="article" readOnly multiline key={e.id} className={`expense-row ${e.type === 'income' ? 'is-income' : ''}`} before={<span className="category-icon" style={{ background:`var(--${e.category.color})` }}><Icon name={e.category.icon}/></span>} subtitle={<span className="expense-meta"><span className={`consumer-badge consumer-color-${e.member?.color || 'blue'}`}><i/>{e.member?.name || settings.consumers.find(c => c.id === e.consumer)?.name || t('unknownConsumer')}</span><button type="button" className="entry-time" aria-label={t('editEntryTime')} disabled={busy || e.canDelete === false} onClick={() => setTimeEditor({ entry:e, ledgerId:profile.ledgerId })}><time dateTime={e.occurredAt || e.createdAt}>{new Intl.DateTimeFormat(locale,{timeZone:e.timezone || timezone,hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(new Date(e.occurredAt || e.createdAt))}</time></button></span>} description={(e.note || locationLabel(e.location)) ? <span className="expense-description">{e.note && <span className="expense-note">{e.note}</span>}{locationLabel(e.location) && <span className="expense-location"><Icon name="pin"/><span>{locationLabel(e.location)}</span></span>}</span> : undefined} after={<div className="expense-actions"><span className="expense-money">{e.type === 'income' ? '+' : '−'}{money(e.amountMinor,e.currency)}</span><Button className="entry-more" mode="plain" size="s" aria-label={t('entryActions')} onClick={() => document.dispatchEvent(new CustomEvent('pocket:entry-actions', { detail:e.id }))}><Icon name="more"/></Button></div>}><strong>{categoryDisplayLabel(e.category,settings.language)}</strong>{!isBudgetEntry(e) && <small className="entry-kind">{t(e.recordKind === 'transfer' ? 'recordKindTransfer' : 'recordKindReimbursement')}</small>}</Cell></SwipeExpenseRow>)}</section>)}</div><div className="today-balance"><span>{t('todayBalance')}</span><strong>{money(historyTodayIncome - historyTodayExpense, historyCurrency)}</strong></div></>}
+    {view === 'settings' && <SettingsPage profile={profile} settings={settings} expenses={expenses} t={t} ready={ready} disabled={disabled} navigate={navigate} updateSettings={updateSettings} saveFixedCapital={saveFixedCapital} analyzeBudget={analyzeBudget} onLocation={() => setLocationSheet(true)} locationEnabled={locationEnabled} onSoundPreview={playKeySound}/>}
     {view === 'recurring' && <RecurringEditor settings={settings} categories={settings.categories} t={t} updateSettings={updateSettings} disabled={disabled}/>}
     {view === 'profile' && profile && <ProfileEditor key={profile.user.id} user={profile.user} t={t} busy={busy} run={run} service={service.current}/>}
     {view === 'account' && profile && <AccountPage t={t} profile={profile} isRemote={isRemote} config={config} language={settings.language} busy={busy} run={run} service={service.current} onGoogle={login} onLogout={logout} copy={copy} failedCount={failedCount} onRetryWrites={retryWrites}/>}

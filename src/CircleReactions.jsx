@@ -182,6 +182,11 @@ export default function CircleReactions({ circle, ledgerId, userId, service, t, 
   // exactly one allowed home. Never fall back to rendering beside AppRoot
   // while its portal target is unmounted or still being attached.
   const railTarget = entryTarget?.isConnected && entryTarget.matches('#record-view .finish .circle-presence-host') ? entryTarget : null;
+  // App passes `null` outside the record view so the member rail disappears
+  // from settings and the ledger. When the component is used on its own
+  // (for example in an embedded surface or a test harness), keep a small
+  // inline rail instead of silently rendering nothing.
+  const inlineRail = entryTarget === undefined;
   const people = <div className="consumer-buttons circle-presence" role="group" aria-label={t('circlePeople')}>
     {circle.members.map(person => <Tappable Component="button" type="button" key={person.id} ref={node => { if (node) portraits.current.set(person.id,node); else portraits.current.delete(person.id); }}
       className={`consumer-chip presence-chip consumer-color-${person.color}`} data-member-id={person.id} data-self={person.id === userId}
@@ -193,6 +198,7 @@ export default function CircleReactions({ circle, ledgerId, userId, service, t, 
   const targetFailures = target ? scopedFailures.filter(payload => payload.recipientId === target.id) : scopedFailures;
   return <>
     {railTarget && createPortal(people,railTarget)}
+    {inlineRail && people}
     {target && <Sheet title={person.name} className="emoji-sheet" style={sheetStyle} onClose={() => { setTarget(null); setOutgoing([]); }}>
       <div className="emoji-person-row"><span className="emoji-recipient" ref={targetPortrait}><Avatar person={person}/></span><div className="emoji-person-info"><strong>{person.name}</strong></div></div>
       <div className="emoji-drawer" role="group" aria-label={t('emojiChoices')}>{REACTION_EMOJIS.map(emoji => <Tappable Component="button" type="button" key={emoji} aria-label={t('sendEmoji',{emoji})} data-emoji={emoji} disabled={disabled} onClick={event => send(emoji,event.currentTarget)}>{emoji}</Tappable>)}<Tappable Component="button" type="button" className="emoji-custom-toggle" aria-label={t('customEmoji')} aria-expanded={customOpen} onClick={() => setCustomOpen(value => !value)}>⌨️</Tappable></div>

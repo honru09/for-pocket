@@ -29,11 +29,12 @@ export const MAX_CUSTOM_AVATAR_LENGTH = 256 * 1024;
 export const MAX_RECURRING_EXPENSES = 64;
 export const EMPTY_FIXED_CAPITAL = Object.freeze({
   enabled: false,
+  currency: 'JPY',
   incomesTotal: 0,
   expensesTotal: 0,
   savingsTarget: 0,
   dailyAllowance: 0,
-  payday: null,
+  payday: 1,
   lastCalculatedAt: null,
 });
 const MAX_FIXED_CAPITAL_MINOR = 10 ** 14;
@@ -90,8 +91,11 @@ export function initialSettings(lang = 'zh') {
   };
 }
 
-export function validateFixedCapital(value) {
-  const input = value && typeof value === 'object' && !Array.isArray(value) ? value : EMPTY_FIXED_CAPITAL;
+export function validateFixedCapital(value, fallbackCurrency = 'JPY') {
+  const supplied = value && typeof value === 'object' && !Array.isArray(value);
+  const input = supplied ? value : EMPTY_FIXED_CAPITAL;
+  const currency = supplied && input.currency !== undefined ? input.currency : fallbackCurrency;
+  if (!Object.hasOwn(CURRENCIES, currency)) throw new Error('自由金币种格式有误。');
   const money = key => {
     const amount = input[key] === undefined ? 0 : input[key];
     if (!Number.isSafeInteger(amount) || amount < 0 || amount > MAX_FIXED_CAPITAL_MINOR) throw new Error('自由金金额格式有误。');
@@ -101,14 +105,19 @@ export function validateFixedCapital(value) {
   const expensesTotal = money('expensesTotal');
   const savingsTarget = money('savingsTarget');
   const dailyAllowance = money('dailyAllowance');
-  if (expensesTotal + savingsTarget > incomesTotal) throw new Error('自由金收入、支出和储蓄目标需要留出可用余额。');
-  const payday = input.payday == null || input.payday === '' ? null : Number(input.payday);
-  if (payday !== null && (!Number.isInteger(payday) || payday < 1 || payday > 31)) throw new Error('自由金发薪日需为 1–31。');
-  const lastCalculatedAt = input.lastCalculatedAt == null || input.lastCalculatedAt === '' ? null : String(input.lastCalculatedAt);
-  if (lastCalculatedAt !== null && (lastCalculatedAt.length > 80 || !Number.isFinite(Date.parse(lastCalculatedAt)))) throw new Error('自由金计算时间有误。');
+  if (!Number.isSafeInteger(expensesTotal + savingsTarget) || expensesTotal + savingsTarget > incomesTotal) throw new Error('自由金收入、支出和储蓄目标需要留出可用余额。');
+  // Older snapshots used null for the payday. Treat that as the first day
+  // while keeping the rest of the snapshot readable by old clients.
+  const payday = input.payday == null || input.payday === '' ? 1 : Number(input.payday);
+  if (!Number.isInteger(payday) || payday < 1 || payday > 31) throw new Error('自由金发薪日需为 1–31。');
+  let lastCalculatedAt = input.lastCalculatedAt == null || input.lastCalculatedAt === '' ? null : String(input.lastCalculatedAt);
+  if (lastCalculatedAt !== null) {
+    if (lastCalculatedAt.length > 80 || !Number.isFinite(Date.parse(lastCalculatedAt))) throw new Error('自由金计算时间有误。');
+    lastCalculatedAt = new Date(lastCalculatedAt).toISOString();
+  }
   const enabled = input.enabled === true;
   if (enabled && incomesTotal < 1) throw new Error('开启自由金前请先填写收入。');
-  return { enabled, incomesTotal, expensesTotal, savingsTarget, dailyAllowance, payday, lastCalculatedAt };
+  return { enabled, currency, incomesTotal, expensesTotal, savingsTarget, dailyAllowance, payday, lastCalculatedAt };
 }
 
 /**
@@ -211,7 +220,7 @@ export function validateSettings(value) {
     recurringIds.add(normalized.id);
     return normalized;
   });
-  const fixedCapital = validateFixedCapital(input.fixedCapital);
+  const fixedCapital = validateFixedCapital(input.fixedCapital, input.currency);
   const soundPack = ['off', 'water', 'wood'].includes(input.soundPack) ? input.soundPack : 'off';
   const theme = ['matcha', 'cheese', 'peach', 'sea'].includes(input.theme) ? input.theme : 'matcha';
   return {

@@ -96,6 +96,17 @@ test('week boundaries follow the requested timezone when local Monday is still S
   assert.equal(utc.count, 1);
 });
 
+test('summary member scope follows the ledger avatar filter', () => {
+  const profile = profileWith([
+    expense('summary-me', { consumer: 'u_101', amountMinor: 300 }),
+    expense('summary-partner', { consumer: 'u_202', amountMinor: 700 }),
+  ]);
+  const scoped = expenseStats({ period: 'month', timezone: 'Asia/Tokyo', currency: 'JPY', memberIds: ['u_101'] }, profile, now);
+  assert.equal(scoped.count, 1);
+  assert.equal(scoped.expenseMinor, 300);
+  assert.deepEqual(scoped.byConsumer.map(item => item.id), ['u_101']);
+});
+
 test('summary prompts use verified currency totals and never send raw notes or receipt text', () => {
   const profile = profileWith([expense('private-note', { currency: 'USD', amountMinor: 1234,
     note: 'PRIVATE_RECEIPT_NOTE_SENTINEL', rawText: 'PRIVATE_SCREENSHOT_TEXT_SENTINEL', merchant: 'PRIVATE_MERCHANT_SENTINEL',
