@@ -1,4 +1,4 @@
-# for. · 花给生活
+> **In English:** for. is a Telegram Mini App for expense tracking that opens and just works. Defaults to JPY, supports Chinese / English / Українська. Type the amount → pick a category → save. Personal ledger is automatic; group ledgers (circles) with real members, invite codes, and per-circle balances. Receipt OCR via Gemini. Live at Cloud Run.\n\n---\n\n# for. · 花给生活
 
 一个打开就能记账的 Telegram Mini App。默认日元 JPY，支持中文、English、Українська。
 
