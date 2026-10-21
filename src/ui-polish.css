@@ -98,11 +98,11 @@
    restrained press state that remains clear when a hardware keyboard is used. */
 .for-root #keypad { gap: 8px; }
 .for-root #keypad .key { min-height: var(--pocket-touch); height: var(--pocket-touch); border-radius: 15px; }
-.for-root #keypad .key-cap { display: grid; place-items: center; width: 100%; height: 100%; }
+.for-root #keypad .key-cap { display: grid; place-items: center; width: 100%; height: 100%; will-change: transform; }
 .for-root #keypad .key-label { display: grid; place-items: center; line-height: 1; font-variant-numeric: tabular-nums; }
 .for-root #keypad .key:not(.key-secondary) .key-label { font-size: 24px; font-weight: 800; }
 .for-root #keypad .key-secondary .key-label { font-size: 13px; font-weight: 800; }
-.for-root #keypad .key[data-pressed='true'] .key-cap { transform: translateY(1px) scale(.965); }
+.for-root #keypad .key[data-pressed='true'] .key-cap { transform: translate3d(0, 1.5px, 0) scale(.965, .95); }
 
 /* The only member faces on the entry surface are the intentional reaction
    targets in the footer. They are avatar-only, never name pills. */
@@ -152,9 +152,32 @@
   .for-root .app-header .ledger-switcher { width: min(190px, 100%); max-width: calc(100vw - 112px); }
   .for-root .settings-group { padding-inline: 12px; }
   .for-root #keypad { gap: 6px; }
-  .for-root #keypad .key { min-height: 44px; height: 44px; }
+  /* The keypad owns a flexible grid track on phones. Filling each track
+     removes the large dead bands that appeared when a fixed 44px button
+     was left inside a taller row. The min-height keeps the touch target
+     intact on the shortest Telegram WebViews. */
+  .for-root[data-view="record"] #record-view #keypad .key { min-height: 44px; height: 100%; }
   .for-root #record-view .amount-bottom { min-height: 16px; }
 }
+
+/* The note drawer is a short, focused commit step. Keep the field and its
+   action in one readable column so the action is never reduced to a tiny
+   icon hit area on a narrow phone. */
+.for-root .note-form {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 14px;
+}
+.for-root .note-form .note-field { width: 100%; min-height: 48px; }
+.for-root .note-form .note-submit {
+  width: 100%;
+  min-height: 48px;
+  border-radius: 16px;
+  justify-content: center;
+  gap: 8px;
+}
+.for-root .note-form .note-submit .for-icon { width: 19px; height: 19px; }
 
 /* The compact keyboard uses nearly all of a short viewport. Keep transient
    connection notices slim so they sit in the gap above the bottom navigation

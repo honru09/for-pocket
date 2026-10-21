@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { createStore } from '../store.mjs';
 import { createApp } from '../server.mjs';
-import { createHmac, randomInt } from 'node:crypto';
+import { createHmac } from 'node:crypto';
 import { once } from 'node:events';
 import { deriveTelegramWebhookSecret } from '../telegram-config.mjs';
 
@@ -19,12 +19,12 @@ function signed() {
 async function appFixture(t, options) {
   const dataDir = await mkdtemp(path.join(os.tmpdir(), 'for-store-test-'));
   let server, base;
-  // This host can allocate ephemeral ports in Fetch's forbidden low range.
-  // Pick from a safe high range and retry collisions without making an HTTP
-  // probe that would interfere with intentional persistence-failure tests.
+  // Let the OS choose an available ephemeral port. Hard-coded high ranges can
+  // overlap Windows' excluded-port reservations and fail with EACCES before
+  // the HTTP fixture has a chance to start.
   for (let attempt = 0; attempt < 12; attempt++) {
     server = createApp({ dataDir, storeOptions: { debounceMs: 5000 }, token, ...options });
-    server.listen(randomInt(20000,60000), '127.0.0.1');
+    server.listen(0, '127.0.0.1');
     try { await once(server, 'listening'); base = `http://127.0.0.1:${server.address().port}`; break; }
     catch (error) {
       await new Promise(resolve => server.close(resolve));
