@@ -26,7 +26,7 @@ export default function NoteEntrySheet({ t, note, disabled, canSave, saveLabel, 
     document.activeElement?.blur();
     close();
   };
-  return <Sheet title={t('noteTitle')} className={`note-sheet${closing ? ' is-closing' : ''}`} onClose={close}>
+  return <Sheet title={t('noteTitle')} className={`note-sheet${closing ? ' is-closing' : ''}`} onClose={close} managedExit={false}>
     <form className="note-form" onSubmit={submit}>
       <Input id="note" className="note-field" autoFocus aria-label={t('note')} placeholder={t('notePlaceholder')}
         value={text} maxLength={160} disabled={disabled || closing}

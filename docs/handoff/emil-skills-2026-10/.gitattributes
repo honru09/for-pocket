@@ -1,0 +1,3 @@
+# Keep committed bytes identical to the SHA-256 archive manifest.
+* text eol=lf
+# Exact exceptions preserve existing upstream whitespace only.

@@ -114,6 +114,7 @@ function signed(id, language) {
         assert.equal(await recipient.locator('.incoming-emoji .emoji-burst-count').count(),0,'one emoji has no count');
         await recipient.locator('.incoming-emoji').evaluate(node=>{window.__receivedNode=node;});
         await recipient.locator('.emoji-sheet>header button').tap();
+        await expect(recipient.locator('.emoji-sheet')).toHaveCount(0);
         await expect(recipient.locator('.incoming-emoji')).toBeVisible();
         assert.ok(await recipient.locator('.incoming-emoji').evaluate(node=>!node.closest('dialog')),'received emoji stays above the current page after closing its dialog');
         assert.ok(await recipient.locator('.incoming-emoji').evaluate(node=>node===window.__receivedNode),'the same animated node moves out of the dialog without replaying');

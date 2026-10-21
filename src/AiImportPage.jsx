@@ -1,5 +1,6 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import PocketIllustration from './PocketIllustration.jsx';
+import JournalMaterial, { ReceiptMaterial } from './JournalMaterial.jsx';
 import { Button, Input, Select, Tappable, Textarea } from '@telegram-apps/telegram-ui';
 import { CURRENCIES, validateExpense } from '../public/shared.mjs';
 import { categoryLabel, translateError } from '../public/i18n.mjs';
@@ -449,7 +450,7 @@ export default function AiImportPage({ t, profile, settings, busy = false, run, 
       <div className="ai-import-divider"><span>{t('aiImportImageLabel')}</span></div>
       <input ref={inputRef} className="ai-import-file-input" type="file" multiple accept="image/png,image/jpeg,image/webp,image/gif,application/pdf,text/csv,text/plain,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" onChange={event => { updateFiles(event.target.files); event.target.value = ''; }} disabled={working || busy}/>
       <div className="ai-import-file-row">
-        {!files.length && <Button type="button" mode="outline" className="ai-import-file-button" disabled={working || busy} onClick={() => inputRef.current?.click()}><Icon name="receipt"/><span>{t('aiImportChooseImage')}</span></Button>}
+        {!files.length && <Button type="button" mode="outline" className="ai-import-file-button" disabled={working || busy} onClick={() => inputRef.current?.click()}><JournalMaterial name="receipt-stack"/><span>{t('aiImportChooseImage')}</span></Button>}
         {files.length > 0 && <div className="ai-import-file-list" role="list">
           {files.map(file => {
             const key = `${file.name}:${file.size}:${file.lastModified}`;
@@ -457,7 +458,7 @@ export default function AiImportPage({ t, profile, settings, busy = false, run, 
             return <div role="listitem" key={key} className="ai-import-preview">
               <span className="ai-import-file-media">
                 {preview ? <img src={preview} alt=""/> : <span className="ai-import-file-type">{fileTypeLabel(file)}</span>}
-                <span className="ai-import-paperclip"><Icon name="clip"/></span>
+                <span className="ai-import-paperclip"><JournalMaterial name="paperclip"/></span>
               </span>
               <span className="ai-import-filename">{sourceLabel(file, t)}</span><button type="button" className="ai-import-file-remove" aria-label={t('aiImportRemoveFile', { name: file.name })} disabled={working || busy} onClick={() => updateFiles(files.filter(item => item !== file))}>×</button>
             </div>;
@@ -465,7 +466,7 @@ export default function AiImportPage({ t, profile, settings, busy = false, run, 
         </div>}
         {files.length > 0 && <Button type="button" mode="plain" className="ai-import-add-file" disabled={working || busy} onClick={() => inputRef.current?.click()}>{t('aiImportReplaceImage')}</Button>}
       </div>
-      {isRemote && aiEnabled && files.length > 0 && !currentItems.length && !working && !busy && !status && !error && <PocketIllustration name="receipt-review-tactile-v1" compact className="ai-import-receipt-art"/>}
+      {isRemote && aiEnabled && files.length > 0 && !currentItems.length && !working && !busy && !status && !error && <ReceiptMaterial/>}
       <small className="quiet-copy">{t('aiImportFileLimits')}</small>
       {missingFiles.length > 0 && <p className="quiet-copy ai-import-restored-files" role="status">{({
         zh: '文件需重新选择；已整理的记录还在。',
@@ -484,7 +485,7 @@ export default function AiImportPage({ t, profile, settings, busy = false, run, 
 
     {currentItems.length > 0 && <form className="ai-import-results" onSubmit={saveAll}>
       <header className="ai-import-results-header">
-        <PocketIllustration name={hasReviewDetails ? 'partial-import' : 'import-review'} compact/>
+        <JournalMaterial name={hasReviewDetails ? 'receipt-stack' : 'ledger-book'}/>
         <div className="ai-import-results-heading"><h2>{t('aiImportResults', { n: currentItems.length })}</h2><p>{t(hasReviewDetails ? 'importReviewPartial' : 'importReviewReady')}</p></div>
       </header>
       {currentItems.some(item => ['transfer', 'reimbursement'].includes(item.recordKind)) && <p className="quiet-copy">{t('recordKindBudgetHint')}</p>}

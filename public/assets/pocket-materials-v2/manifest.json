@@ -1,0 +1,451 @@
+{
+  "version": 2,
+  "generatedAt": "2026-10-21T16:26:04.459Z",
+  "method": "Built-in image_gen.imagegen; one new-image call per asset; no reference image; no vector/code drawing.",
+  "style": "Japanese paper journal; matte cream/butter yellow/sage; restrained paper texture; no stars, bubbles, gloss or characters.",
+  "postProcessing": "Original PNG preserved. WebP is only resized with Pillow Lanczos and encoded quality 88; alpha preserved.",
+  "assets": [
+    {
+      "name": "pocket-open",
+      "prompt": "Use case: stylized-concept. Asset type: one transparent raster UI component for a Japanese paper journal budgeting app. Unified style: clear softly rounded geometry, flat matte paper cutout illustration with only very light paper grain; warm cream, pale butter yellow and muted sage green. Readable at 45 pixels. True transparent PNG alpha background, never a checkerboard painted into the image. One object only, centered, fills 85% of canvas with enough padding to prevent clipping. No words, logos, speech bubbles, stars, glitter, gloss, large highlights, photorealism, scene, ground shadow or extra decoration. Primary request: a single empty open-top pale butter yellow paper envelope pocket for compositing falling coins and notes. Front view with only a tiny 3/4 turn, broad rounded rectangular pocket body, clear open mouth across top with darker warm-cream interior and a folded curved front lip, visible opening, simple soft side folds. No flap covering the opening, no strap, no drawstrings. Completely empty: no money, coins, notes, currency symbols, face or other objects. Square canvas.",
+      "source": "C:\\Users\\wangxr\\.codex\\generated_images\\01a15f1c-6a92-7b41-9fe0-c6452e0bdf75\\exec-74fc1b97-0711-4d10-b871-f14ca8420c90.png",
+      "png": "pocket-open.png",
+      "webp": "pocket-open.webp",
+      "visualReview": "Inspected generated image: single requested object, clean readable silhouette, no checkerboard or extra objects.",
+      "usage": "Composable free-money pocket body; layer incoming cash/coin over the open mouth, avoid adding this as unrelated home decoration.",
+      "original": {
+        "path": "pocket-open.png",
+        "width": 1254,
+        "height": 1254,
+        "bytes": 1423828,
+        "sha256": "110eb7f1014c3daddef63305c86e55b2c979d5a96c657593bcc40efa51ffbe13"
+      },
+      "derivative": {
+        "path": "pocket-open.webp",
+        "derivedFrom": "pocket-open.png",
+        "width": 384,
+        "height": 384,
+        "bytes": 13296,
+        "sha256": "cb3efb1108ff72b94600e8c4789aaa9ec89c20fccd5409f9cac2d6fd92c3537c",
+        "encoding": "Pillow Lanczos downscale; WebP quality=88, method=6, exact=True; no redrawing, recoloring or compositing."
+      },
+      "alphaValidation": {
+        "originalMode": "RGBA",
+        "range": [
+          0,
+          255
+        ],
+        "cornerAlpha": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "transparentPixels": 598690,
+        "opaquePixels": 962,
+        "derivativeRange": [
+          0,
+          255
+        ]
+      }
+    },
+    {
+      "name": "cash-note",
+      "prompt": "Use case: stylized-concept. Asset type: one transparent raster UI component for a Japanese paper journal budgeting app. Unified style: clear softly rounded geometry, flat matte paper cutout illustration with only very light paper grain; warm cream, pale butter yellow and muted sage green. Readable at 45 pixels. True transparent PNG alpha background, never a checkerboard painted into the image. One object only, centered, fills 85% of canvas with enough padding to prevent clipping. No words, logos, speech bubbles, stars, glitter, gloss, large highlights, photorealism, scene, ground shadow or extra decoration. Primary request: a single horizontal muted sage green paper banknote, softly rounded corners, front facing with a slight playful 8 degree tilt. One simple dark sage ¥ symbol centered and a restrained thin inset rectangular outline. No numbers, serials, words, portraits, band or ribbon. This is one flat note only. Square canvas.",
+      "source": "C:\\Users\\wangxr\\.codex\\generated_images\\01a15f1c-6a92-7b41-9fe0-c6452e0bdf75\\exec-7c50de94-76bd-4709-884d-de39dbca32aa.png",
+      "png": "cash-note.png",
+      "webp": "cash-note.webp",
+      "visualReview": "Inspected generated image: single requested object, clean readable silhouette, no checkerboard or extra objects.",
+      "usage": "Composable single note for free-money movements and cash actions.",
+      "original": {
+        "path": "cash-note.png",
+        "width": 1254,
+        "height": 1254,
+        "bytes": 1169117,
+        "sha256": "9386c6b8fed04d46d4ed3ecbaf7355fcfbd3c59538bb8c42f4ac8d1a4b3787a8"
+      },
+      "derivative": {
+        "path": "cash-note.webp",
+        "derivedFrom": "cash-note.png",
+        "width": 384,
+        "height": 384,
+        "bytes": 16090,
+        "sha256": "f583289f34a02afdadd74415b47bde759612b53dfbe57be8a8dbcbad965b7a7d",
+        "encoding": "Pillow Lanczos downscale; WebP quality=88, method=6, exact=True; no redrawing, recoloring or compositing."
+      },
+      "alphaValidation": {
+        "originalMode": "RGBA",
+        "range": [
+          0,
+          255
+        ],
+        "cornerAlpha": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "transparentPixels": 919784,
+        "opaquePixels": 1564,
+        "derivativeRange": [
+          0,
+          255
+        ]
+      }
+    },
+    {
+      "name": "coin",
+      "prompt": "Use case: stylized-concept. Asset type: one transparent raster UI component for a Japanese paper journal budgeting app. Unified style: clear softly rounded geometry, flat matte paper cutout illustration with only very light paper grain; warm cream, pale butter yellow, muted sage green and occasional soft peach. Readable at 45 pixels. True transparent PNG alpha background, never a checkerboard painted into the image. One object only, centered, fills 85% of canvas with enough padding to prevent clipping. No words, logos, speech bubbles, stars, glitter, gloss, large highlights, photorealism, scene, ground shadow or extra decoration. Primary request: one single round warm pale gold coin, front-facing with a very slight visible paper-like thickness on one edge, one centered simple ¥ symbol in muted warm ochre. Restrained thin inset circular rim. Matte flat colors, no metallic shine, no beveled glowing edges, no engraved micro-details. Square canvas.",
+      "source": "C:\\Users\\wangxr\\.codex\\generated_images\\01a15f1c-6a92-7b41-9fe0-c6452e0bdf75\\exec-70f7ebea-92e7-4db5-a7b5-a6d693f6bfa8.png",
+      "png": "coin.png",
+      "webp": "coin.webp",
+      "visualReview": "Inspected generated image: requested single matte object, no extra text/decorations, visible transparent surround.",
+      "usage": "Composable coin for free-money movements and savings actions.",
+      "original": {
+        "path": "coin.png",
+        "width": 1254,
+        "height": 1254,
+        "bytes": 1345138,
+        "sha256": "04d1dd1484fdda8861a62d3c32db467857fddbe1d0f9713d2df6c8ec747e8d1b"
+      },
+      "derivative": {
+        "path": "coin.webp",
+        "derivedFrom": "coin.png",
+        "width": 384,
+        "height": 384,
+        "bytes": 18328,
+        "sha256": "054c8e76718cfb1c45eadc7dd9de91541597de2c6278136af65e2629a990bad1",
+        "encoding": "Pillow Lanczos downscale; WebP quality=88, method=6, exact=True; no redrawing, recoloring or compositing."
+      },
+      "alphaValidation": {
+        "originalMode": "RGBA",
+        "range": [
+          0,
+          255
+        ],
+        "cornerAlpha": [
+          0,
+          0,
+          1,
+          0
+        ],
+        "transparentPixels": 666229,
+        "opaquePixels": 1364,
+        "derivativeRange": [
+          0,
+          255
+        ]
+      }
+    },
+    {
+      "name": "reserve-envelope",
+      "prompt": "Use case: stylized-concept. Asset type: one transparent raster UI component for a Japanese paper journal budgeting app. Unified style: clear softly rounded geometry, flat matte paper cutout illustration with only very light paper grain; warm cream, pale butter yellow, muted sage green and occasional soft peach. Readable at 45 pixels. True transparent PNG alpha background, never a checkerboard painted into the image. One object only, centered, fills 85% of canvas with enough padding to prevent clipping. No words, logos, speech bubbles, stars, glitter, gloss, large highlights, photorealism, scene, ground shadow or extra decoration. Primary request: one single sealed pastel peach paper envelope, softly rounded rectangular outline, front-facing view of the folded back with a closed triangular flap and one subtle folded seam. Warm cream interior edging only if needed; no seal, stamp, writing, hearts, money, face, hands or other objects. Slight 6 degree tilt, large simple silhouette. Square canvas.",
+      "source": "C:\\Users\\wangxr\\.codex\\generated_images\\01a15f1c-6a92-7b41-9fe0-c6452e0bdf75\\exec-3a01082f-7c00-4f10-b0b4-7763703fd7ea.png",
+      "png": "reserve-envelope.png",
+      "webp": "reserve-envelope.webp",
+      "visualReview": "Inspected generated image: requested single matte object, no extra text/decorations, visible transparent surround.",
+      "usage": "Savings/reserve drawer item.",
+      "original": {
+        "path": "reserve-envelope.png",
+        "width": 1254,
+        "height": 1254,
+        "bytes": 1252373,
+        "sha256": "b321d58b812fb56eb13cf82b9db480fc827834066e39fc2eb330e278bf8f46e3"
+      },
+      "derivative": {
+        "path": "reserve-envelope.webp",
+        "derivedFrom": "reserve-envelope.png",
+        "width": 384,
+        "height": 384,
+        "bytes": 14150,
+        "sha256": "5bec2378a648886520d02413abddc4340d2aed07ba7921116c7cf215ed2b3528",
+        "encoding": "Pillow Lanczos downscale; WebP quality=88, method=6, exact=True; no redrawing, recoloring or compositing."
+      },
+      "alphaValidation": {
+        "originalMode": "RGBA",
+        "range": [
+          0,
+          255
+        ],
+        "cornerAlpha": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "transparentPixels": 753686,
+        "opaquePixels": 983,
+        "derivativeRange": [
+          0,
+          255
+        ]
+      }
+    },
+    {
+      "name": "ledger-book",
+      "prompt": "Use case: stylized-concept. Asset type: one transparent raster UI component for a Japanese paper journal budgeting app. Unified style: clear softly rounded geometry, flat matte paper cutout illustration with only very light paper grain; warm cream, pale butter yellow, muted sage green and occasional soft peach. Readable at 45 pixels. True transparent PNG alpha background, never a checkerboard painted into the image. One object only, centered, fills 85% of canvas with enough padding to prevent clipping. No words, logos, speech bubbles, stars, glitter, gloss, large highlights, photorealism, scene, ground shadow or extra decoration. Primary request: one single closed small muted sage green accounting notebook, soft rounded cover, simple cream paper page edges visible at right and bottom, one small pale butter yellow ribbon bookmark peeking from bottom. Slight 3/4 front view and very subtle tilt; no pen, coins, face, letters, title, numbers, symbols or illustration on the blank cover. Clear compact silhouette. Square canvas.",
+      "source": "C:\\Users\\wangxr\\.codex\\generated_images\\01a15f1c-6a92-7b41-9fe0-c6452e0bdf75\\exec-47a89862-f7d4-4537-b67e-4bf7aba10584.png",
+      "png": "ledger-book.png",
+      "webp": "ledger-book.webp",
+      "visualReview": "Inspected generated image: requested clear matte paper object, no readable text or extra decoration; silhouette remains legible.",
+      "usage": "Ledger/settings drawer item.",
+      "original": {
+        "path": "ledger-book.png",
+        "width": 1254,
+        "height": 1254,
+        "bytes": 1410124,
+        "sha256": "f11fb48a9d72a2ddcafa077bb5b94adf7924a87f6a32031f0068951f1febcda3"
+      },
+      "derivative": {
+        "path": "ledger-book.webp",
+        "derivedFrom": "ledger-book.png",
+        "width": 384,
+        "height": 384,
+        "bytes": 17354,
+        "sha256": "2bcb017b0a7342e494eb84b103097aa7011ac95ee3cb43fffa6c9d03501f3a6c",
+        "encoding": "Pillow Lanczos downscale; WebP quality=88, method=6, exact=True; no redrawing, recoloring or compositing."
+      },
+      "alphaValidation": {
+        "originalMode": "RGBA",
+        "range": [
+          0,
+          255
+        ],
+        "cornerAlpha": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "transparentPixels": 830476,
+        "opaquePixels": 651,
+        "derivativeRange": [
+          0,
+          255
+        ]
+      }
+    },
+    {
+      "name": "receipt-stack",
+      "prompt": "Use case: stylized-concept. Asset type: one transparent raster UI component for a Japanese paper journal budgeting app. Unified style: clear softly rounded geometry, flat matte paper cutout illustration with only very light paper grain; warm cream, pale butter yellow, muted sage green and occasional soft peach. Readable at 45 pixels. True transparent PNG alpha background, never a checkerboard painted into the image. One object only, centered, fills 85% of canvas with enough padding to prevent clipping. No words, logos, speech bubbles, stars, glitter, gloss, large highlights, photorealism, scene, ground shadow or extra decoration. Primary request: a tiny tidy stack of exactly two warm cream receipt paper slips, rear slip offset slightly up and left, foremost slip mostly front facing, softly rounded top corners and softly zigzag cut bottom edges. Only three short muted sage horizontal dash marks on the front receipt to suggest printing; absolutely no readable letters, numbers, headings or currency characters. No clips, pins, coins, face or extra objects. Square canvas.",
+      "source": "C:\\Users\\wangxr\\.codex\\generated_images\\01a15f1c-6a92-7b41-9fe0-c6452e0bdf75\\exec-5c8c3377-ab97-4670-b5f5-6bf29a113df3.png",
+      "png": "receipt-stack.png",
+      "webp": "receipt-stack.webp",
+      "visualReview": "Inspected generated image: requested clear matte paper object, no readable text or extra decoration; silhouette remains legible.",
+      "usage": "Receipt/file import drawer item.",
+      "original": {
+        "path": "receipt-stack.png",
+        "width": 1254,
+        "height": 1254,
+        "bytes": 947228,
+        "sha256": "0cd86133f242f2145f0c5ca54039dd7a8e11b978eff78535732be9156850c753"
+      },
+      "derivative": {
+        "path": "receipt-stack.webp",
+        "derivedFrom": "receipt-stack.png",
+        "width": 384,
+        "height": 384,
+        "bytes": 13868,
+        "sha256": "4fc6d636e441c913f93c11bac66266960ae8b677dc940734e9f410d7e7579e6f",
+        "encoding": "Pillow Lanczos downscale; WebP quality=88, method=6, exact=True; no redrawing, recoloring or compositing."
+      },
+      "alphaValidation": {
+        "originalMode": "RGBA",
+        "range": [
+          0,
+          255
+        ],
+        "cornerAlpha": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "transparentPixels": 913286,
+        "opaquePixels": 962,
+        "derivativeRange": [
+          0,
+          255
+        ]
+      }
+    },
+    {
+      "name": "calendar",
+      "prompt": "Use case: stylized-concept. Asset type: one transparent raster UI component for a Japanese paper journal budgeting app. Unified style: clear softly rounded geometry, flat matte paper cutout illustration with only very light paper grain; warm cream, pale butter yellow, muted sage green and occasional soft peach. Readable at 45 pixels. True transparent PNG alpha background, never a checkerboard painted into the image. One object only, centered, fills 85% of canvas with enough padding to prevent clipping. No words, logos, speech bubbles, stars, glitter, gloss, large highlights, photorealism, scene, ground shadow or extra decoration. Primary request: one small warm cream standing desktop paper calendar with pale butter yellow top band, two simple muted sage binding loops, softly rounded square paper page and subtly visible triangular stand. A single medium muted sage circular dot centered on the otherwise blank page replaces every date and number. No date grid, no letters, no numerals, no other marks or decorations. Mostly front view, very slight 3/4 turn. Square canvas.",
+      "source": "C:\\Users\\wangxr\\.codex\\generated_images\\01a15f1c-6a92-7b41-9fe0-c6452e0bdf75\\exec-bbc21e6a-88f2-4ba1-b1e4-715bec95dee7.png",
+      "png": "calendar.png",
+      "webp": "calendar.webp",
+      "visualReview": "Inspected generated image: requested clear matte object, no readable text or extra decoration; transparent cutout with clean small-size silhouette.",
+      "usage": "Recurring expense drawer item.",
+      "original": {
+        "path": "calendar.png",
+        "width": 1254,
+        "height": 1254,
+        "bytes": 1356371,
+        "sha256": "3008f17fd58560ddd3a398b6b087f48f0e28cdfe9c82c0e3e9ac9d9c59074555"
+      },
+      "derivative": {
+        "path": "calendar.webp",
+        "derivedFrom": "calendar.png",
+        "width": 384,
+        "height": 384,
+        "bytes": 14516,
+        "sha256": "e6eaddfc4f29816f173ffec1e773e07a5661ec419b217bc2d110f365d57f3f09",
+        "encoding": "Pillow Lanczos downscale; WebP quality=88, method=6, exact=True; no redrawing, recoloring or compositing."
+      },
+      "alphaValidation": {
+        "originalMode": "RGBA",
+        "range": [
+          0,
+          255
+        ],
+        "cornerAlpha": [
+          0,
+          0,
+          1,
+          0
+        ],
+        "transparentPixels": 695737,
+        "opaquePixels": 1258,
+        "derivativeRange": [
+          0,
+          255
+        ]
+      }
+    },
+    {
+      "name": "paperclip",
+      "prompt": "Use case: stylized-concept. Asset type: one transparent raster UI component for a Japanese paper journal budgeting app. Unified style: clear softly rounded geometry, flat matte paper cutout illustration with only very light paper grain; warm cream, pale butter yellow, muted sage green and occasional soft peach. Readable at 45 pixels. True transparent PNG alpha background, never a checkerboard painted into the image. One object only, centered, fills 85% of canvas with enough padding to prevent clipping. No words, logos, speech bubbles, stars, glitter, gloss, large highlights, photorealism, scene, ground shadow or extra decoration. Primary request: one single traditional elongated rounded paperclip, soft matte muted pale gold brass color, thick enough simplified wire silhouette to read at 45 pixels. Front view at a slight 15 degree tilt. All holes and interior negative spaces are genuinely transparent. No papers attached, no other objects, no text. Flat softly outlined matte color, absolutely no metallic shine or light reflection. Square canvas.",
+      "source": "C:\\Users\\wangxr\\.codex\\generated_images\\01a15f1c-6a92-7b41-9fe0-c6452e0bdf75\\exec-c066ab00-372c-47fe-ab5a-de56c1f9848c.png",
+      "png": "paperclip.png",
+      "webp": "paperclip.webp",
+      "visualReview": "Inspected generated image: requested clear matte object, no readable text or extra decoration; transparent cutout with clean small-size silhouette.",
+      "usage": "Small restrained paper attachment for drawer components.",
+      "original": {
+        "path": "paperclip.png",
+        "width": 1254,
+        "height": 1254,
+        "bytes": 561444,
+        "sha256": "c9fc4a6478f664efdc24b366057c4764d9f7e12ca0b4cdb8c6f59ff9a4ea83ff"
+      },
+      "derivative": {
+        "path": "paperclip.webp",
+        "derivedFrom": "paperclip.png",
+        "width": 384,
+        "height": 384,
+        "bytes": 24382,
+        "sha256": "d31f1f481030b39283dfddee93900bdfb2dd9dd9cbc7c1929e354673dd90dc66",
+        "encoding": "Pillow Lanczos downscale; WebP quality=88, method=6, exact=True; no redrawing, recoloring or compositing."
+      },
+      "alphaValidation": {
+        "originalMode": "RGBA",
+        "range": [
+          0,
+          255
+        ],
+        "cornerAlpha": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "transparentPixels": 1297821,
+        "opaquePixels": 2112,
+        "derivativeRange": [
+          0,
+          255
+        ]
+      }
+    },
+    {
+      "name": "key-cap",
+      "prompt": "Use case: stylized-concept. Asset type: one transparent raster keycap UI surface for a Japanese paper journal budgeting app. Generate a single blank warm ivory paper keycap, centered on a landscape 4:3 canvas. Straight-on perfectly frontal orthographic view, no perspective or rotation. Rounded rectangular silhouette about 4:3, fills 88% of canvas width and height, subtly thick rounded corners. Flat matte warm-ivory face with extremely light paper grain, a narrow softly shaded paper edge below and restrained thin soft shadow directly hugging the edge to suggest a pressable layer. Keep interior uniform and blank for separately rendered live number text. Palette warm ivory with minimal creamy beige edge. Actual alpha transparent external background; no checkerboard baked into image. Absolutely no digits, letters, text, symbols, stars, decoration, particles, glitter, glossy highlights, bubbles, outline border or surrounding objects. Quiet, minimal, crisp and readable at a 60px tall UI button.",
+      "source": "C:\\Users\\wangxr\\.codex\\generated_images\\01a15f1c-6a92-7b41-9fe0-c6452e0bdf75\\exec-f9da0627-6ed2-449b-9788-e3c8d3158bac.png",
+      "png": "key-cap.png",
+      "webp": "key-cap.webp",
+      "visualReview": "Inspected generated image: blank matte paper component with restrained soft lower edge, no text, symbols, bubbles, glitter or glossy highlights; real transparent exterior.",
+      "usage": "Decorative key-cap inner surface beneath live keypad numerals; never a separate hit target.",
+      "original": {
+        "path": "key-cap.png",
+        "width": 1448,
+        "height": 1086,
+        "bytes": 2033965,
+        "sha256": "fbdee769d38cad7659a69ecfd689788a4416fd00578c96687abd324b02680adb"
+      },
+      "derivative": {
+        "path": "key-cap.webp",
+        "derivedFrom": "key-cap.png",
+        "width": 256,
+        "height": 192,
+        "bytes": 4980,
+        "sha256": "ad1f2616400602fcfde8c9215fc2d204b3b594f2432fb81d7d0548a8706b50b6",
+        "encoding": "Pillow Lanczos downscale maximum 256px; WebP quality=88, method=6, exact=True; no redrawing, recoloring or compositing."
+      },
+      "alphaValidation": {
+        "originalMode": "RGBA",
+        "range": [
+          0,
+          255
+        ],
+        "cornerAlpha": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "transparentPixels": 343316,
+        "opaquePixels": 455,
+        "derivativeRange": [
+          0,
+          255
+        ]
+      }
+    },
+    {
+      "name": "pill-tab",
+      "prompt": "Use case: stylized-concept. Asset type: one transparent raster selected-tab surface for a Japanese paper journal budgeting app. Generate a single blank narrow pale butter-yellow paper capsule tab, centered on a landscape 3:1 canvas, its shape approximately 3:1 width to height. Straight-on perfectly frontal orthographic view, no perspective or rotation. Smooth fully rounded ends, fills 88% of canvas dimensions with transparent margin. Flat matte very pale butter yellow with extremely light paper grain, restrained thin soft lower edge to suggest a single piece of paper; clean uniform center for separately rendered live text. Actual alpha transparent external background; never a checkerboard baked into image. No letters, numbers, symbols, logo, stars, glitter, gloss, shiny highlights, gradients across face, particles, face, speech bubble tail, surrounding objects or extra decoration. Quiet and clear, readable in a 36px tall bottom navigation selected slider.",
+      "source": "C:\\Users\\wangxr\\.codex\\generated_images\\01a15f1c-6a92-7b41-9fe0-c6452e0bdf75\\exec-a93f8e5a-6415-410d-9f26-bec854fe9ecf.png",
+      "png": "pill-tab.png",
+      "webp": "pill-tab.webp",
+      "visualReview": "Inspected generated image: blank matte paper component with restrained soft lower edge, no text, symbols, bubbles, glitter or glossy highlights; real transparent exterior.",
+      "usage": "Decorative selected slider surface beneath live bottom navigation labels; never a separate hit target.",
+      "original": {
+        "path": "pill-tab.png",
+        "width": 2172,
+        "height": 724,
+        "bytes": 1378445,
+        "sha256": "b2f43ebe6417e414c58415824af7ea6faf6446fed50dda4ff30fdcf60aea5376"
+      },
+      "derivative": {
+        "path": "pill-tab.webp",
+        "derivedFrom": "pill-tab.png",
+        "width": 256,
+        "height": 85,
+        "bytes": 3294,
+        "sha256": "294e10d2faf4316a5217da9581dad4bd5882639c95c03e652e400a6db21dcd9e",
+        "encoding": "Pillow Lanczos downscale maximum 256px; WebP quality=88, method=6, exact=True; no redrawing, recoloring or compositing."
+      },
+      "alphaValidation": {
+        "originalMode": "RGBA",
+        "range": [
+          0,
+          255
+        ],
+        "cornerAlpha": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "transparentPixels": 653991,
+        "opaquePixels": 1134,
+        "derivativeRange": [
+          0,
+          255
+        ]
+      }
+    }
+  ],
+  "totalWebpBytes": 140258,
+  "totalOriginalBytes": 12878033
+}

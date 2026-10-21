@@ -18,6 +18,10 @@ import '/src/styles.css';
 import '/src/account-styles.css';
 import '/src/pocket-layout.css';
 import '/src/refinements.css';
+import '/src/ui-polish.css';
+import '/src/popup-materials.css';
+import '/src/secondary-motion.css';
+import '/src/journal-materials.css';
 import AiImportPage from '/src/AiImportPage.jsx';
 import { AccountPage, CirclesPage } from '/src/AccountViews.jsx';
 import { LocationSheet } from '/src/LocationViews.jsx';
@@ -112,7 +116,8 @@ createRoot(document.getElementById('root')).render(<AppRoot className="for-root"
         await expect.poll(()=>image.evaluate(node=>node.complete && node.naturalWidth > 0)).toBe(true);
         const actionBox = await page.locator('.ledger-empty-state button').boundingBox();
         const navBox = await page.locator('.bottom-nav').boundingBox();
-        assert.ok(actionBox.y + actionBox.height <= navBox.y, 'Empty-state action should stay above mobile navigation');
+        if (actionBox.y + actionBox.height > navBox.y) await page.screenshot({path:path.join(ARTIFACTS,'empty-ledger-overlap.png'),fullPage:true});
+        assert.ok(actionBox.y + actionBox.height <= navBox.y, `Empty-state action should stay above mobile navigation: ${JSON.stringify({actionBox,navBox,artifacts:ARTIFACTS})}`);
         await page.screenshot({path:path.join(ARTIFACTS,'empty-ledger-320.png'),fullPage:true});
         await page.setViewportSize({width:320,height:480});
         await expect.poll(async ()=>(await page.locator('.bottom-nav').boundingBox()).y).toBeLessThan(440);
@@ -139,7 +144,7 @@ createRoot(document.getElementById('root')).render(<AppRoot className="for-root"
       await expect(page.locator('.pocket-illustration')).toHaveCount(0);
       await page.locator('.ai-import-source button[type="submit"]').click();
       if (['clean','partial'].includes(scenario)) {
-        const image = page.locator(`[data-illustration="${scenario === 'partial' ? 'partial-import' : 'import-review'}"]`);
+        const image = page.locator(`.ai-import-results-header [data-material="${scenario === 'partial' ? 'receipt-stack' : 'ledger-book'}"]`);
         await expect(image).toBeVisible();
         await expect.poll(()=>image.evaluate(node=>node.complete && node.naturalWidth > 0)).toBe(true);
         assert.equal(await page.evaluate(()=>window.__saved),0, 'Review illustration is not a saved record');

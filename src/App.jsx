@@ -90,7 +90,7 @@ function countText(n, lang, currency) {
   return `${n} ${unit} · ${currency}`;
 }
 const Categories = memo(function Categories({ categories, lang, selected, disabled, onSelect }) {
-  const drawerRef = useRef(null), gesture = useRef(null), blockClick = useRef(false), pointerSelection = useRef(null);
+  const drawerRef = useRef(null), gesture = useRef(null), blockClick = useRef(false), pointerSelection = useRef(null), selectionInput = useRef('pointer');
   const [scrollHints, setScrollHints] = useState({ left: false, right: false });
   const clearClickBlock = useCallback(() => {
     // A native horizontal touch scroll may dispatch a click after pointerup.
@@ -103,10 +103,10 @@ const Categories = memo(function Categories({ categories, lang, selected, disabl
     const drawer = drawerRef.current;
     const active = [...(drawer?.children || [])].find(node => node.dataset.category === selected);
     if (!active) return;
-    const left = active.offsetLeft - drawer.offsetLeft, right = left + active.offsetWidth;
-    if (left < drawer.scrollLeft + 4) drawer.scrollTo({ left:Math.max(0,left - 4), behavior:'smooth' });
-    else if (right > drawer.scrollLeft + drawer.clientWidth - 4) drawer.scrollTo({ left:right - drawer.clientWidth + 4, behavior:'smooth' });
-  }, [selected, categories]);
+    const bounds = drawer.getBoundingClientRect(), item = active.getBoundingClientRect();
+    const delta = item.left < bounds.left + 4 ? item.left - bounds.left - 4 : item.right > bounds.right - 4 ? item.right - bounds.right + 4 : 0;
+    if (delta) drawer.scrollBy({ left:delta, behavior:selectionInput.current === 'keyboard' ? 'instant' : 'smooth' });
+  }, [selected, categories, lang]);
   useEffect(() => {
     const drawer = drawerRef.current;
     if (!drawer) return undefined;
@@ -146,11 +146,12 @@ const Categories = memo(function Categories({ categories, lang, selected, disabl
     gesture.current = null;
   };
   return <div ref={drawerRef} className={`categories category-drawer ${scrollHints.left ? 'has-scroll-left' : ''} ${scrollHints.right ? 'has-scroll-right' : ''}`} id="categories" role="group" aria-label={translate(lang, 'categories')}
-    onPointerDownCapture={event => { blockClick.current = false; gesture.current = { x:event.clientX, y:event.clientY, dragged:false }; }}
+    onPointerDownCapture={event => { selectionInput.current = 'pointer'; blockClick.current = false; gesture.current = { x:event.clientX, y:event.clientY, dragged:false }; }}
     onPointerMoveCapture={moved}
     onPointerUpCapture={released}
     onPointerCancelCapture={() => { if (gesture.current?.dragged) clearClickBlock(); gesture.current = null; }}
     onClickCapture={event => {
+      if (event.detail === 0) selectionInput.current = 'keyboard';
       if (blockClick.current) { event.preventDefault(); event.stopPropagation(); blockClick.current = false; return; }
       const target = event.target?.closest?.('[data-category]');
       const pointer = pointerSelection.current;
@@ -210,7 +211,7 @@ const SwipeExpenseRow = memo(function SwipeExpenseRow({ children, entry, t, onDe
       <button type="button" className="swipe-action" disabled={entry.canDelete === false} tabIndex={offset > 0 ? 0 : -1} onClick={() => action(onEdit)}><Icon name="edit"/><span>{t('editEntry')}</span></button>
     </div>
     <div className="swipe-expense-surface" style={{ transform:`translate3d(${offset}px,0,0)` }}
-      onPointerDown={event => { if (event.pointerType === 'mouse' && event.button !== 0) return; suppressClick.current = false; gesture.current = { x:event.clientX, y:event.clientY, startOffset:offset, offset, dragged:false, axis:null, pointerId:event.pointerId }; }}
+      onPointerDown={event => { if (event.pointerType === 'mouse' && event.button !== 0) return; suppressClick.current = false; const paintedOffset = Math.max(0,Math.min(OPEN_WIDTH,new DOMMatrixReadOnly(getComputedStyle(event.currentTarget).transform).m41)); gesture.current = { x:event.clientX, y:event.clientY, startOffset:paintedOffset, offset:paintedOffset, dragged:false, axis:null, pointerId:event.pointerId }; }}
       onPointerMove={event => { const current = gesture.current; if (!current) return; const dx = event.clientX - current.x, dy = event.clientY - current.y; if (!current.axis && (Math.abs(dx) > 8 || Math.abs(dy) > 8)) current.axis = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y'; if (current.axis !== 'x') return; current.dragged = true; setDragging(true); event.preventDefault(); event.currentTarget.setPointerCapture?.(current.pointerId); current.offset = Math.max(0, Math.min(OPEN_WIDTH, current.startOffset + dx)); setOffset(current.offset); }}
       onPointerUp={finish}
       onPointerCancel={() => { gesture.current = null; close(); }}

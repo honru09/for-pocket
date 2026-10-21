@@ -11,14 +11,31 @@ export function Avatar({ person, className = '' }) {
   const image = typeof person?.avatar === 'string' && (/^https:\/\//.test(person.avatar) || /^data:image\//i.test(person.avatar));
   return <span className={`person-avatar consumer-color-${person?.color || 'yellow'} ${cloud ? 'is-cloud' : ''} ${className}`} aria-hidden="true">{image ? <img src={person.avatar} alt="" referrerPolicy="no-referrer"/> : cloud ? <CloudAvatar/> : <Icon name={person.avatar}/>}</span>;
 }
-export function Sheet({ title, onClose, children, className = '', style }) {
+export function Sheet({ title, onClose, children, className = '', style, managedExit = true }) {
   const ref = useRef(null), id = React.useId();
+  const [exiting, setExiting] = useState(false);
+  const closeTimer = useRef(null), closeLocked = useRef(false), closeCallback = useRef(onClose), exitMotion = useRef(null);
+  closeCallback.current = onClose;
+  const requestClose = () => {
+    if (!managedExit) { closeCallback.current(); return; }
+    if (closeLocked.current) return;
+    closeLocked.current = true;
+    // Close from the currently painted frame, even if entry is still running.
+    // Restarting a CSS keyframe here used to jump an early close to full size.
+    const node = ref.current, painted = getComputedStyle(node);
+    exitMotion.current = node.animate?.([
+      { opacity:painted.opacity, transform:painted.transform },
+      { opacity:0, transform:'translate3d(0,6px,0) scale(.985)' },
+    ], { duration:160, easing:'cubic-bezier(.23,1,.32,1)', fill:'forwards' });
+    setExiting(true);
+    closeTimer.current = setTimeout(() => closeCallback.current(), 160);
+  };
   useEffect(() => {
     const focus = document.activeElement, d = ref.current;
     d.showModal(); const previous = document.body.style.overflow; document.body.style.overflow = 'hidden';
-    return () => { d.close(); document.body.style.overflow = previous; focus?.focus?.({ preventScroll: true }); };
+    return () => { clearTimeout(closeTimer.current); exitMotion.current?.cancel(); d.close(); document.body.style.overflow = previous; focus?.focus?.({ preventScroll: true }); };
   }, []);
-  return <dialog ref={ref} className={`pocket-sheet ${className}`} style={style} aria-labelledby={id} onCancel={event => { event.preventDefault(); onClose(); }} onClick={event => { if (event.target === ref.current) { const r = ref.current.getBoundingClientRect(); if (event.clientX < r.left || event.clientX > r.right || event.clientY < r.top || event.clientY > r.bottom) onClose(); } }}><header><h2 id={id}>{title}</h2><Button mode="plain" size="s" aria-label={title + ' ×'} onClick={onClose}>×</Button></header>{children}</dialog>;
+  return <dialog ref={ref} className={`pocket-sheet ${className}`} style={style} aria-labelledby={id} data-exiting={exiting} inert={exiting ? '' : undefined} onCancel={event => { event.preventDefault(); requestClose(); }} onClick={event => { if (event.target === ref.current) { const r = ref.current.getBoundingClientRect(); if (event.clientX < r.left || event.clientX > r.right || event.clientY < r.top || event.clientY > r.bottom) requestClose(); } }}><header><h2 id={id}>{title}</h2><Button mode="plain" size="s" aria-label={title + ' ×'} onClick={requestClose}>×</Button></header>{typeof children === 'function' ? children(requestClose) : children}</dialog>;
 }
 export function CirclePicker({ profile, t, busy, onSwitch, onManage, onClose }) {
   return <Sheet title={t('circlesTitle')} onClose={onClose}><div className="circle-picker-list"><Button mode="plain" className="picker-row" disabled={busy} onClick={() => onSwitch(null)}><span className="picker-content"><Icon name="wallet"/><span className="picker-name">{t('personal')}</span>{!profile.social.activeCircleId && <Icon name="check"/>}</span></Button>{profile.social.circles.map(c => <Button key={c.id} className="picker-row" mode="plain" disabled={busy} onClick={() => onSwitch(c.id)}><span className="picker-content"><span className="circle-stack">{c.members.slice(0, 3).map(p => <Avatar key={p.id} person={p}/>)}</span><span className="picker-name">{c.name}</span>{profile.social.activeCircleId === c.id && <Icon name="check"/>}</span></Button>)}</div><Button className="picker-row" mode="plain" onClick={onManage}><span className="picker-content"><Icon name="users"/><span className="picker-name">{t('manageCircle')}</span><span aria-hidden="true">›</span></span></Button></Sheet>;

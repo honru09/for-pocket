@@ -1,0 +1,25 @@
+{
+  "tool": "image_gen.imagegen",
+  "createdAt": "2026-10-21T16:31:00.829Z",
+  "assets": [
+    {
+      "name": "journal-paper",
+      "prompt": "Create a production raster texture for a minimalist cute Japanese expense journal mobile application. A single full-bleed sheet of warm ivory uncoated paper viewed perfectly flat from overhead. Extremely subtle authentic cotton fibers, barely perceptible small fine grain, gently warmer at the very outer 4% of edges. Center 90% nearly uniform light cream #faf8f1, text will be placed on top. Completely opaque edge to edge. No objects, no drawings, no stains, no vignette, no symbols, no lettering, no gradients with contrast, no frames or shadows. It should read as high quality quiet paper, not noise. Square texture, usable as page and card backgrounds at mobile sizes. This is an actual material asset, not a UI mockup.",
+      "runtimeFile": "journal-paper.webp",
+      "runtimeBytes": 4626,
+      "originalSha256": "a8e2af6a4fc53909085e10ca213bc6cf775eeec9e81d896eb4f8473175089c8a",
+      "runtimeSha256": "5ae1f7a977b997a1ea2b7935ff7b97a8e8d7f2c940bfb3bd8bd677054cfbed57",
+      "processing": "Lanczos resize to <=512px, WebP q85; no retouching"
+    },
+    {
+      "name": "sheet-paper",
+      "prompt": "Edit the provided blank paper-stack asset into a pristine production UI material. Preserve the ivory square blank sheet and the thin pale butter-yellow under-sheet at bottom right. Remove ALL scattered flecks, speckles, ghost pixels, rough tissue edges, or detached pixels outside the sheet silhouette. Outside must be absolutely clean alpha transparency with no checkerboard. Edges should be clean and gently rounded, with one soft continuous contact shadow only within 8 pixels of the sheet. Keep the central paper almost completely flat pale cream, only imperceptible paper texture. No text, objects, added marks or gloss. Do not change the composition.",
+      "initialPrompt": "Create a production transparent PNG UI material for a refined cute Japanese paper journal application. One blank softly rounded rectangular sheet of pale ivory paper, flat front view, occupying 92 percent of a square canvas. Extremely subtle tactile matte paper fibers. Under it two thin offset sheets visible only at bottom right, in muted pale butter yellow and warm ivory, very delicate natural diffuse contact shadow. Corners moderately rounded, no dramatic curls. The main sheet face is completely blank, consistent nearly white cream, huge clear central area. Perfect alpha transparency outside the paper silhouette, no checkerboard. No objects, clips, text, characters, symbols, icons, highlights, gloss, shine, patterns, perspective, or decorative strokes. This is a UI popup shell asset that will be stretched to different popup sizes; plain edges and clean generous blank surface.",
+      "runtimeFile": "sheet-paper.webp",
+      "runtimeBytes": 11306,
+      "originalSha256": "bc785d2b29e81d1c43c3335b2be953dc0e4e605c1de5e37321b50e6fc297b03a",
+      "runtimeSha256": "f034523a13142c4c9ce76eaa8fbd038e625bb5416ff950a88857e76552f2ea70",
+      "processing": "Lanczos resize to <=512px, WebP q85; no retouching"
+    }
+  ]
+}

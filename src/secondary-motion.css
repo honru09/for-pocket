@@ -1,0 +1,144 @@
+/* Small controls share interruptible feedback. Layout and hit areas remain
+   stable; high-frequency keypad and cloud interactions are intentionally out
+   of scope. Existing easing tokens keep these surfaces in the same family. */
+
+/* Selection retargets from the current pose, instead of replaying the old
+   grid-card keyframes whenever a pill is selected. */
+.for-root #record-view .category.category-pill {
+  animation:none;
+  transform:translate3d(0,0,0) scale(1);
+  transition:transform 160ms var(--ease-out);
+}
+.for-root #record-view .category.category-pill .category-icon {
+  animation:none;
+  transform:translate3d(0,0,0) scale(1);
+  transition:transform 180ms var(--ease-out);
+}
+.for-root #record-view .category.category-pill.selected {
+  animation:none;
+  transform:translate3d(0,0,0) scale(1.015);
+}
+.for-root #record-view .category.category-pill.selected .category-icon {
+  animation:none;
+  transform:translate3d(0,0,0) scale(1.04);
+}
+.for-root #record-view .category.category-pill:hover {
+  transform:translate3d(0,0,0) scale(1);
+  box-shadow:0 1px 0 rgba(51,58,48,.03);
+}
+.for-root #record-view .category.category-pill.selected:hover {
+  transform:translate3d(0,0,0) scale(1.015);
+  box-shadow:0 3px 12px rgba(168,126,47,.16);
+}
+@media (hover:hover) and (pointer:fine) {
+  .for-root #record-view .category.category-pill:not(:disabled):hover {
+    transform:translate3d(0,-1px,0) scale(1.015);
+  }
+}
+.for-root #record-view .category.category-pill:active:not(:disabled) {
+  transform:translate3d(0,1px,0) scale(.97)!important;
+  transition:transform 100ms var(--ease-out)!important;
+}
+.for-root #record-view .category.category-pill:focus-visible,
+.for-root #record-view .category.category-pill:focus-visible .category-icon {
+  transform:none!important;
+  transition:none!important;
+}
+.for-root #record-view .category-drawer:has(.category-pill:focus-visible) :is(.category-pill,.category-icon) {
+  transition:none!important;
+}
+
+/* The sliding surface takes 280ms to cover its action rail. Keep the backing
+   painted until then, while removing pointer access immediately on closing. */
+.for-root .swipe-expense .swipe-actions-right {
+  opacity:1;
+  visibility:visible;
+  transition:opacity 120ms var(--ease-out),visibility 0s;
+}
+.for-root .swipe-expense .swipe-actions-right[aria-hidden=true] {
+  opacity:0;
+  visibility:hidden;
+  pointer-events:none;
+  transition:opacity 100ms var(--ease-out) 180ms,visibility 0s linear 280ms;
+}
+.for-root .swipe-expense .swipe-action > :is(.for-icon,span) {
+  transform:translate3d(0,0,0) scale(1);
+  opacity:1;
+  transition:transform 180ms var(--ease-out),opacity 120ms var(--ease-out);
+}
+.for-root .swipe-expense .swipe-actions-right[aria-hidden=true] .swipe-action > :is(.for-icon,span) {
+  transform:translate3d(-6px,0,0) scale(.96);
+  opacity:0;
+  transition-duration:140ms,100ms;
+}
+.for-root .swipe-expense .swipe-action:active:not(:disabled) {
+  transform:none!important;
+}
+.for-root .swipe-expense .swipe-action:active:not(:disabled):not(:focus-visible) > :is(.for-icon,span) {
+  transform:translate3d(0,1px,0) scale(.96);
+  transition-duration:100ms;
+}
+.for-root .swipe-expense .swipe-action:focus-visible > :is(.for-icon,span) {
+  transition:none;
+}
+
+/* A settings row presses inward without pulling its separator or shrinking
+   its touch target. These selectors exclude the nested FreeMoney controls. */
+.for-root .settings-organized > .settings-profile:active:not(:disabled),
+.for-root .settings-organized > .settings-group > .settings-row:active:not(:disabled) {
+  transform:none!important;
+}
+.for-root .settings-organized > .settings-profile > h6,
+.for-root .settings-organized > .settings-group > .settings-row > h6 {
+  transform:translate3d(0,0,0) scale(1);
+  transform-origin:center;
+  transition:transform 160ms var(--ease-out);
+}
+.for-root .settings-organized > .settings-profile:active:not(:disabled):not(:focus-visible) > h6,
+.for-root .settings-organized > .settings-group > .settings-row:active:not(:disabled):not(:focus-visible) > h6 {
+  transform:translate3d(0,1px,0) scale(.985);
+  transition-duration:100ms;
+}
+.for-root .settings-organized > .settings-profile:focus-visible > h6,
+.for-root .settings-organized > .settings-group > .settings-row:focus-visible > h6 {
+  transform:none;
+  transition:none;
+}
+
+/* The miniature responds to the finger; labels and card bounds stay steady.
+   Selection and expanded state can reverse without restarting an animation. */
+.for-root .theme-card,
+.for-root .theme-card:active:not(:disabled),
+.for-root .theme-open:active:not(:disabled) {
+  transform:none!important;
+}
+.for-root .theme-card .theme-preview {
+  transform:translate3d(0,0,0) scale(1);
+  transform-origin:50% 65%;
+  transition:transform 160ms var(--ease-out);
+}
+.for-root .theme-card:active:not(:disabled):not(:focus-visible) .theme-preview {
+  transform:translate3d(0,1px,0) scale(.97);
+  transition-duration:100ms;
+}
+.for-root .theme-card-label .for-icon {
+  transform:scale(.92);
+  transition:transform 140ms var(--ease-out),opacity 140ms var(--ease-out);
+}
+.for-root .theme-card[aria-pressed=true] .theme-card-label .for-icon { transform:scale(1); }
+.for-root .theme-open .for-icon {
+  transform:rotate(0deg) scale(1);
+  transition:transform 180ms var(--ease-drawer);
+}
+.for-root .theme-open[aria-expanded=true] .for-icon { transform:rotate(180deg) scale(1); }
+.for-root .theme-open:active:not(:disabled):not(:focus-visible) .for-icon {
+  transform:rotate(0deg) scale(.94);
+  transition-duration:100ms;
+}
+.for-root .theme-open[aria-expanded=true]:active:not(:disabled):not(:focus-visible) .for-icon {
+  transform:rotate(180deg) scale(.94);
+}
+.for-root .theme-card:focus-visible :is(.theme-preview,.theme-card-label .for-icon),
+.for-root .theme-open:focus-visible .for-icon {
+  transition:none;
+}

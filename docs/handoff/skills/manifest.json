@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-21T16:11:26.972Z",
+  "generatedAt": "2026-10-21T17:07:42.425Z",
   "sourceThreadId": "01a12068-b0ee-7db3-b081-20531fa637b8",
   "mode": "read-command evidence; installed text snapshot",
   "formattingPolicy": "All archived text uses LF with text eol=lf Git attributes so committed bytes match SHA256. Markdown prose has trailing whitespace removed, hard breaks expressed with a backslash and one final newline. Fenced/indented/preformatted code and non-Markdown source text retain meaningful line whitespace; exact-file Git whitespace exceptions record retained source whitespace.",
@@ -181,6 +181,16 @@
           "timestamp": "2026-10-21T13:03:48.965Z",
           "source": "rollout-2026-10-18T13-58-34-01a12068-b0ee-7db3-b081-20531fa637b8_01a14d60-3a66-70f3-8db7-e409bf9ca7ee.jsonl",
           "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-21T16:22:46.140Z",
+          "source": "rollout-2026-10-18T13-58-34-01a12068-b0ee-7db3-b081-20531fa637b8_01a14d60-3a66-70f3-8db7-e409bf9ca7ee.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-21T16:22:56.572Z",
+          "source": "rollout-2026-10-18T13-58-34-01a12068-b0ee-7db3-b081-20531fa637b8_01a14d60-3a66-70f3-8db7-e409bf9ca7ee.jsonl",
+          "evidence": "skill-read-command"
         }
       ],
       "archive": "emil-design-eng/SKILL.md",
@@ -203,6 +213,11 @@
         {
           "timestamp": "2026-10-14T11:22:07.321Z",
           "source": "rollout-2026-10-14T19-35-37-01a12068-b0ee-7db3-b081-20531fa637b8_01a139fb-5f7d-72e1-bca9-859204684883.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-21T16:22:46.140Z",
+          "source": "rollout-2026-10-18T13-58-34-01a12068-b0ee-7db3-b081-20531fa637b8_01a14d60-3a66-70f3-8db7-e409bf9ca7ee.jsonl",
           "evidence": "skill-read-command"
         }
       ],
@@ -566,6 +581,11 @@
           "timestamp": "2026-10-21T16:02:06.620Z",
           "source": "rollout-2026-10-18T13-58-34-01a12068-b0ee-7db3-b081-20531fa637b8_01a14d60-3a66-70f3-8db7-e409bf9ca7ee.jsonl",
           "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-21T16:26:08.042Z",
+          "source": "rollout-2026-10-18T13-58-34-01a12068-b0ee-7db3-b081-20531fa637b8_01a14d60-3a66-70f3-8db7-e409bf9ca7ee.jsonl",
+          "evidence": "skill-read-command"
         }
       ],
       "archive": "imagegen/SKILL.md",
@@ -645,6 +665,69 @@
         {
           "path": "SKILL.md",
           "sha256": "681ddb4ad6d06a2acc78a3535b583f8d0c1ea800ecda3d56370d3310fd2cd4ba",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        }
+      ]
+    },
+    {
+      "name": "skill-installer",
+      "slug": "skill-installer",
+      "sourceFile": "C:/Users/wangxr/.codex/skills/.system/skill-installer/SKILL.md",
+      "observedReads": [
+        {
+          "timestamp": "2026-10-21T16:22:46.140Z",
+          "source": "rollout-2026-10-18T13-58-34-01a12068-b0ee-7db3-b081-20531fa637b8_01a14d60-3a66-70f3-8db7-e409bf9ca7ee.jsonl",
+          "evidence": "skill-read-command"
+        }
+      ],
+      "archive": "skill-installer/SKILL.md",
+      "files": [
+        {
+          "path": "agents/openai.yaml",
+          "sha256": "5ce223d8b1070b82c42298538f1b8d376f788eb9e7a42a987e8c094070d73f0e",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "LICENSE.txt",
+          "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/github_utils.py",
+          "sha256": "61c1bbe2ae217433b4b6f9f09f21aca4df52c12598068343ade719f706e4859b",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/install-skill-from-github.py",
+          "sha256": "38f311b75664bb063808f982c600271ebc4b560830f491705190f88a94e3e781",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/list-skills.py",
+          "sha256": "9d6dfb2abf3afeee7f027a89fb1626b918a973da18f4eb6c25681286301beb41",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "SKILL.md",
+          "sha256": "d68b77e5bbb34dedab89d134da52855f140fc4b4299b80104f534e3b9e98f8ee",
           "whitespace": {
             "trailingLineWhitespace": false,
             "blankLineAtEof": false

@@ -4,7 +4,7 @@
 
 **先读 [CURRENT_TASKS.md](CURRENT_TASKS.md)**：它记录最新用户修改、修复证据与真正未验收项。本文后面的历史功能范围不能代替逐项验收。
 
-最新补充已在工作树接入真实生成的弹窗纸面、按钮底片和原形象云朵印章，原图与生成记录见 `public/assets/popup-kit-v1/manifest.json`；页面加载对应轻量WebP，现金使用192px版本。备注/主题/Emoji弹窗与现金飞行动效的当前验证见 `CURRENT_TASKS.md`。此项尚不能仅凭本交接文件判断已经提交或部署，应查实际Git和Cloud Run状态。
+最新一轮已接入 12 件真实生成素材，覆盖页面、完整弹窗、组件、按键和底部选中胶囊，自由金从零重做并取消网络分析门槛。入口见 [CURRENT_TASKS](CURRENT_TASKS.md) 和 [动效计划](../../plans/2026-10-22-motion-refresh.md)；新版 Emil 技能原文与精确版本见 [独立归档](emil-skills-2026-10/README.md)。之前的弹窗素材与备注飞钞票链路继续保留。不要只根据本文推断发布状态，核对 Git 与 Cloud Run 的实际资源哈希。
 
 ## 1. 接棒入口
 
