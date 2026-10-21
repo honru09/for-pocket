@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-21T17:07:42.425Z",
+  "generatedAt": "2026-10-21T17:38:41.187Z",
   "sourceThreadId": "01a12068-b0ee-7db3-b081-20531fa637b8",
   "mode": "read-command evidence; installed text snapshot",
   "formattingPolicy": "All archived text uses LF with text eol=lf Git attributes so committed bytes match SHA256. Markdown prose has trailing whitespace removed, hard breaks expressed with a backslash and one final newline. Fenced/indented/preformatted code and non-Markdown source text retain meaningful line whitespace; exact-file Git whitespace exceptions record retained source whitespace.",
@@ -584,6 +584,11 @@
         },
         {
           "timestamp": "2026-10-21T16:26:08.042Z",
+          "source": "rollout-2026-10-18T13-58-34-01a12068-b0ee-7db3-b081-20531fa637b8_01a14d60-3a66-70f3-8db7-e409bf9ca7ee.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-21T17:13:13.823Z",
           "source": "rollout-2026-10-18T13-58-34-01a12068-b0ee-7db3-b081-20531fa637b8_01a14d60-3a66-70f3-8db7-e409bf9ca7ee.jsonl",
           "evidence": "skill-read-command"
         }
@@ -2049,6 +2054,11 @@
         {
           "timestamp": "2026-10-13T18:27:13.169Z",
           "source": "rollout-2026-10-13T21-32-33-01a12068-b0ee-7db3-b081-20531fa637b8_01a13540-1275-7a60-944f-cd52a9bccb8f.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-21T17:13:13.823Z",
+          "source": "rollout-2026-10-18T13-58-34-01a12068-b0ee-7db3-b081-20531fa637b8_01a14d60-3a66-70f3-8db7-e409bf9ca7ee.jsonl",
           "evidence": "skill-read-command"
         }
       ],

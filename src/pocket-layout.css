@@ -173,7 +173,6 @@
  html[data-pocket-compact=true] .for-root #record-view .keypad { grid-column:2; grid-row:2; }
  html[data-pocket-compact=true] .for-root #record-view .finish { grid-column:1 / -1; grid-row:3; }
  html[data-pocket-compact=true] .for-root #record-view .categories { grid-template-columns:repeat(2,minmax(0,1fr)); grid-template-rows:repeat(3,minmax(0,1fr)); grid-auto-columns:calc((100% - 4px)/2); }
- html[data-pocket-compact=true] .for-root #record-view .category { grid-column:auto; grid-row:auto; flex-direction:column; gap:2px; font-size:10px; }
 }
 /* 320×568 WebViews can report an exact 568px usable height, which is just
    above the compact data attribute threshold. Apply the same safe cloud

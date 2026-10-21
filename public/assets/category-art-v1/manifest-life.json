@@ -1,0 +1,712 @@
+{
+  "version": 1,
+  "generator": "builtin image_gen",
+  "generatedDate": "2026-10-22",
+  "purpose": "12 distinct life-category assets for for-pocket",
+  "styleReference": "public/assets/pocket-materials-v2/ledger-book.png",
+  "review": {
+    "style": "Matched against the existing sage ledger book: rounded matte paper layers, warm ivory and muted sage/peach/blue/yellow palette, no gloss, lettering, face or sparkle.",
+    "inspection": "Each original was visually inspected; each encoded runtime image was additionally resized to 32x32 for individual visual review. No image content was redrawn, cropped, composited or edited after generation.",
+    "runtimeAlpha": "All twelve 160px WebP files have RGBA channels, alpha extrema [0,255] and all four corners alpha=0."
+  },
+  "encoding": {
+    "format": "webp",
+    "width": 160,
+    "height": 160,
+    "quality": 85,
+    "method": 6,
+    "resampling": "Pillow Image.Resampling.LANCZOS",
+    "operations": "Square resize and encoding only; original PNG files copied byte-for-byte."
+  },
+  "entries": [
+    {
+      "name": "pet",
+      "prompt": "Use case: stylized-concept. Asset type: one production raster category icon for the for-pocket Japanese pocket journal app. Create exactly one isolated composition, not an icon sheet. A very simple, charming Japanese stationery cut-paper miniature with soft rounded silhouettes and subtle matte paper fibers, shallow layered paper depth, no gloss or bright highlights. Palette: warm ivory, pale sage, muted peach, powder blue, pale butter yellow. Keep a strong simple silhouette readable at 32 pixels. Centered square canvas, subject occupies 85 percent with safe padding. True alpha transparent background, no checkerboard, no ground plane, no rectangle, no background color, no ambient halo. No faces, no sparkles/stars, no words, letters, numerals, brands or watermarks. Lighting softly diffuse, tight tiny soft contact shadow within object only. Subject: a cute single peach cat paw-shaped paper cutout leaning beside a small sage cat-food tin; one paw with four pads and one compact cylindrical tin, a cream lid. No animal face.",
+      "source": "C:\\Users\\wangxr\\.codex\\generated_images\\01a15f74-e79d-7da2-8392-98bad13c9928\\exec-933d30ab-0381-4801-9385-603368cd2a79.png",
+      "original": {
+        "path": "public/assets/category-art-v1/pet.png",
+        "sha256": "9b2d61f18e841f68b4fcc8d8582c0694bdebef01c7177914221fadeb1d2e9450",
+        "bytes": 1566017,
+        "width": 1254,
+        "height": 1254,
+        "mode": "RGBA",
+        "alphaExtrema": [
+          0,
+          255
+        ],
+        "transparentPercent": 49.09,
+        "cornerAlpha": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "visibleBounds": [
+          85,
+          115,
+          1174,
+          1131
+        ]
+      },
+      "runtime": {
+        "path": "public/assets/category-art-v1/pet.webp",
+        "sha256": "f1c09b21825bb23c2d8997900036218c706ae5b0760e51472557d7bbc4d17882",
+        "bytes": 5970,
+        "width": 160,
+        "height": 160,
+        "mode": "RGBA",
+        "alphaExtrema": [
+          0,
+          255
+        ],
+        "transparentPercent": 47.46,
+        "cornerAlpha": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "visibleBounds": [
+          11,
+          15,
+          150,
+          145
+        ]
+      },
+      "visualReview32px": "At 32px the peach paw silhouette and sage food tin remain distinct; the paw is the primary cue.",
+      "status": "ready"
+    },
+    {
+      "name": "transport",
+      "prompt": "Use case: stylized-concept. Asset type: one production raster category icon for the for-pocket Japanese pocket journal app. Create exactly one isolated composition, not an icon sheet. A very simple, charming Japanese stationery cut-paper miniature with soft rounded silhouettes and subtle matte paper fibers, shallow layered paper depth, no gloss or bright highlights. Palette: warm ivory, pale sage, muted peach, powder blue, pale butter yellow. Keep a strong simple silhouette readable at 32 pixels. Centered square canvas, subject occupies 85 percent with safe padding. True alpha transparent background, no checkerboard, no ground plane, no rectangle, no background color, no ambient halo. No faces, no sparkles/stars, no words, letters, numerals, brands or watermarks. Lighting softly diffuse, tight tiny soft contact shadow within object only. Subject: a single rounded Japanese local commuter tram viewed three-quarter front, sage and warm cream body, two large blue-gray front windows, tiny dark wheels, softly rounded roof. No rails or signage.",
+      "source": "C:\\Users\\wangxr\\.codex\\generated_images\\01a15f74-e79d-7da2-8392-98bad13c9928\\exec-9799965f-9e38-40e7-b887-5f371d2ee599.png",
+      "original": {
+        "path": "public/assets/category-art-v1/transport.png",
+        "sha256": "bc4f1969fafdafad42e03dc4097f2ed3f2b208e49dcf531345c047556f50bc1d",
+        "bytes": 2268243,
+        "width": 1254,
+        "height": 1254,
+        "mode": "RGBA",
+        "alphaExtrema": [
+          0,
+          255
+        ],
+        "transparentPercent": 35.09,
+        "cornerAlpha": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "visibleBounds": [
+          72,
+          44,
+          1207,
+          1210
+        ]
+      },
+      "runtime": {
+        "path": "public/assets/category-art-v1/transport.webp",
+        "sha256": "1733ecf36cada78d2f04b228322d4e64068f5a1741e7849efe72e49d062d062c",
+        "bytes": 8900,
+        "width": 160,
+        "height": 160,
+        "mode": "RGBA",
+        "alphaExtrema": [
+          0,
+          255
+        ],
+        "transparentPercent": 32.41,
+        "cornerAlpha": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "visibleBounds": [
+          9,
+          5,
+          154,
+          155
+        ]
+      },
+      "visualReview32px": "At 32px the sage tram front, windows and pantograph read as transit. More detailed than the other icons, but the main silhouette remains clear.",
+      "status": "ready"
+    },
+    {
+      "name": "taxi",
+      "prompt": "Use case: stylized-concept. Asset type: one production raster category icon for the for-pocket Japanese pocket journal app. Create exactly one isolated composition, not an icon sheet. A very simple, charming Japanese stationery cut-paper miniature with soft rounded silhouettes and subtle matte paper fibers, shallow layered paper depth, no gloss or bright highlights. Palette: warm ivory, pale sage, muted peach, powder blue, pale butter yellow. Keep a strong simple silhouette readable at 32 pixels. Centered square canvas, subject occupies 85 percent with safe padding. True alpha transparent background, no checkerboard, no ground plane, no rectangle, no background color, no ambient halo. No faces, no sparkles/stars, no words, letters, numerals, brands or watermarks. Lighting softly diffuse, tight tiny soft contact shadow within object only. Subject: a single compact butter-yellow taxi viewed three-quarter side, dark blue-gray windows, two small round wheels, blank tiny ivory taxi roof light. No text.",
+      "source": "C:\\Users\\wangxr\\.codex\\generated_images\\01a15f74-e79d-7da2-8392-98bad13c9928\\exec-94efcb30-3336-4213-b433-772b882b59b2.png",
+      "original": {
+        "path": "public/assets/category-art-v1/taxi.png",
+        "sha256": "10e50fba428010c155c8bf61780f71befe7d5e7df75f7d285a72665d220a4ccf",
+        "bytes": 1449941,
+        "width": 1254,
+        "height": 1254,
+        "mode": "RGBA",
+        "alphaExtrema": [
+          0,
+          255
+        ],
+        "transparentPercent": 53.83,
+        "cornerAlpha": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "visibleBounds": [
+          26,
+          191,
+          1233,
+          1088
+        ]
+      },
+      "runtime": {
+        "path": "public/assets/category-art-v1/taxi.webp",
+        "sha256": "4a6cb8b6635fa89f6a7d0332e44e2b462e24f61bbc55654804a49a229b5741fa",
+        "bytes": 6628,
+        "width": 160,
+        "height": 160,
+        "mode": "RGBA",
+        "alphaExtrema": [
+          0,
+          255
+        ],
+        "transparentPercent": 52.05,
+        "cornerAlpha": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "visibleBounds": [
+          3,
+          24,
+          158,
+          139
+        ]
+      },
+      "visualReview32px": "At 32px yellow body, roof light and wheels remain readable. Wide composition occupies most of the canvas width.",
+      "status": "ready"
+    },
+    {
+      "name": "fuel",
+      "prompt": "Use case: stylized-concept. Asset type: one production raster category icon for the for-pocket Japanese pocket journal app. Create exactly one isolated composition, not an icon sheet. A very simple, charming Japanese stationery cut-paper miniature with soft rounded silhouettes and subtle matte paper fibers, shallow layered paper depth, no gloss or bright highlights. Palette: warm ivory, pale sage, muted peach, powder blue, pale butter yellow. Keep a strong simple silhouette readable at 32 pixels. Centered square canvas, subject occupies 85 percent with safe padding. True alpha transparent background, no checkerboard, no ground plane, no rectangle, no background color, no ambient halo. No faces, no sparkles/stars, no words, letters, numerals, brands or watermarks. Lighting softly diffuse, tight tiny soft contact shadow within object only. Subject: a small vintage rounded fuel pump, peach and ivory body, one dark blue-gray blank display and an attached sage hose ending in a simple nozzle. Minimal broad shapes.",
+      "source": "C:\\Users\\wangxr\\.codex\\generated_images\\01a15f74-e79d-7da2-8392-98bad13c9928\\exec-5b5e3043-9739-4a31-9d09-a96a020097c7.png",
+      "original": {
+        "path": "public/assets/category-art-v1/fuel.png",
+        "sha256": "765be5224dbad5f692c2d6d1e293f595f5e2392ebdf4bbcbc72a576d6b496122",
+        "bytes": 1502698,
+        "width": 1254,
+        "height": 1254,
+        "mode": "RGBA",
+        "alphaExtrema": [
+          0,
+          255
+        ],
+        "transparentPercent": 52.33,
+        "cornerAlpha": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "visibleBounds": [
+          246,
+          77,
+          1189,
+          1191
+        ]
+      },
+      "runtime": {
+        "path": "public/assets/category-art-v1/fuel.webp",
+        "sha256": "090aaf2f718b1a5a4b178fc7128822117f5d61e989c0619fc9e6f4cdff6e76c0",
+        "bytes": 7876,
+        "width": 160,
+        "height": 160,
+        "mode": "RGBA",
+        "alphaExtrema": [
+          0,
+          255
+        ],
+        "transparentPercent": 49.21,
+        "cornerAlpha": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "visibleBounds": [
+          31,
+          10,
+          152,
+          152
+        ]
+      },
+      "visualReview32px": "At 32px the pump silhouette and hose remain visible; the peach body is the primary cue.",
+      "status": "ready"
+    },
+    {
+      "name": "long_trip",
+      "prompt": "Use case: stylized-concept. Asset type: one production raster category icon for the for-pocket Japanese pocket journal app. Create exactly one isolated composition, not an icon sheet. A very simple, charming Japanese stationery cut-paper miniature with soft rounded silhouettes and subtle matte paper fibers, shallow layered paper depth, no gloss or bright highlights. Palette: warm ivory, pale sage, muted peach, powder blue, pale butter yellow. Keep a strong simple silhouette readable at 32 pixels. Centered square canvas, subject occupies 85 percent with safe padding. True alpha transparent background, no checkerboard, no ground plane, no rectangle, no background color, no ambient halo. No faces, no sparkles/stars, no words, letters, numerals, brands or watermarks. Lighting softly diffuse, tight tiny soft contact shadow within object only. Subject: a small cream and powder-blue airplane viewed from above diagonally with a tiny pale yellow blank luggage tag tucked beside one wing; wings fully visible.",
+      "source": "C:\\Users\\wangxr\\.codex\\generated_images\\01a15f74-e79d-7da2-8392-98bad13c9928\\exec-cd4d9a8d-70b9-40e2-9379-7b4e1fdf3c5a.png",
+      "original": {
+        "path": "public/assets/category-art-v1/long_trip.png",
+        "sha256": "36d5fef28ba059d940e518a39c4428f50c517a130abfa1218258c7f934565288",
+        "bytes": 1506451,
+        "width": 1254,
+        "height": 1254,
+        "mode": "RGBA",
+        "alphaExtrema": [
+          0,
+          255
+        ],
+        "transparentPercent": 51.56,
+        "cornerAlpha": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "visibleBounds": [
+          105,
+          87,
+          1225,
+          1130
+        ]
+      },
+      "runtime": {
+        "path": "public/assets/category-art-v1/long_trip.webp",
+        "sha256": "5d0505d507176992784a842178c3fb38f023995a38b654bd707da4b62d6eb291",
+        "bytes": 8878,
+        "width": 160,
+        "height": 160,
+        "mode": "RGBA",
+        "alphaExtrema": [
+          0,
+          255
+        ],
+        "transparentPercent": 49.42,
+        "cornerAlpha": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "visibleBounds": [
+          13,
+          11,
+          156,
+          144
+        ]
+      },
+      "visualReview32px": "At 32px the aircraft wings and fuselage remain distinct; the small luggage tag is secondary.",
+      "status": "ready"
+    },
+    {
+      "name": "movie",
+      "prompt": "Use case: stylized-concept. Asset type: one production raster category icon for the for-pocket Japanese pocket journal app. Create exactly one isolated composition, not an icon sheet. A very simple, charming Japanese stationery cut-paper miniature with soft rounded silhouettes and subtle matte paper fibers, shallow layered paper depth, no gloss or bright highlights. Palette: warm ivory, pale sage, muted peach, powder blue, pale butter yellow. Keep a strong simple silhouette readable at 32 pixels. Centered square canvas, subject occupies 85 percent with safe padding. True alpha transparent background, no checkerboard, no ground plane, no rectangle, no background color, no ambient halo. No faces, no sparkles/stars, no words, letters, numerals, brands or watermarks. Lighting softly diffuse, tight tiny soft contact shadow within object only. Subject: a single peach-and-ivory popcorn carton with a few simple cream popcorn shapes and a small sage movie film reel tucked behind it. Broad shapes, no stripes of text.",
+      "source": "C:\\Users\\wangxr\\.codex\\generated_images\\01a15f74-e79d-7da2-8392-98bad13c9928\\exec-ba5e6094-42fc-40d2-b716-2ff0afccfef9.png",
+      "original": {
+        "path": "public/assets/category-art-v1/movie.png",
+        "sha256": "867d9bb6e0e015cb261bef8cefa4ad9bb7471018d15bde4663ced026bb92f9f8",
+        "bytes": 1576161,
+        "width": 1254,
+        "height": 1254,
+        "mode": "RGBA",
+        "alphaExtrema": [
+          0,
+          255
+        ],
+        "transparentPercent": 49.55,
+        "cornerAlpha": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "visibleBounds": [
+          83,
+          95,
+          1220,
+          1159
+        ]
+      },
+      "runtime": {
+        "path": "public/assets/category-art-v1/movie.webp",
+        "sha256": "fa7ec719ed1f49eb31d2d4cdd3fb9b4c0779218c9462a6e94f952fc98948c1ae",
+        "bytes": 7012,
+        "width": 160,
+        "height": 160,
+        "mode": "RGBA",
+        "alphaExtrema": [
+          0,
+          255
+        ],
+        "transparentPercent": 47.37,
+        "cornerAlpha": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "visibleBounds": [
+          10,
+          12,
+          156,
+          148
+        ]
+      },
+      "visualReview32px": "At 32px popcorn carton and sage reel remain distinguishable.",
+      "status": "ready"
+    },
+    {
+      "name": "sports",
+      "prompt": "Use case: stylized-concept. Asset type: one production raster category icon for the for-pocket Japanese pocket journal app. Create exactly one isolated composition, not an icon sheet. A very simple, charming Japanese stationery cut-paper miniature with soft rounded silhouettes and subtle matte paper fibers, shallow layered paper depth, no gloss or bright highlights. Palette: warm ivory, pale sage, muted peach, powder blue, pale butter yellow. Keep a strong simple silhouette readable at 32 pixels. Centered square canvas, subject occupies 85 percent with safe padding. True alpha transparent background, no checkerboard, no ground plane, no rectangle, no background color, no ambient halo. No faces, no sparkles/stars, no words, letters, numerals, brands or watermarks. Lighting softly diffuse, tight tiny soft contact shadow within object only. Subject: one softly rounded powder-blue and cream athletic sneaker with sage laces, subtle thick cream sole; three-quarter side view with clearly readable shoe silhouette.",
+      "source": "C:\\Users\\wangxr\\.codex\\generated_images\\01a15f74-e79d-7da2-8392-98bad13c9928\\exec-4bde2487-a445-4ace-bdc0-a12447229d48.png",
+      "original": {
+        "path": "public/assets/category-art-v1/sports.png",
+        "sha256": "b17caf17031bab4fa9ff2bfef744f0725cd88caea692d2dea694ac730a367466",
+        "bytes": 1625905,
+        "width": 1254,
+        "height": 1254,
+        "mode": "RGBA",
+        "alphaExtrema": [
+          0,
+          255
+        ],
+        "transparentPercent": 52.01,
+        "cornerAlpha": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "visibleBounds": [
+          20,
+          188,
+          1244,
+          1120
+        ]
+      },
+      "runtime": {
+        "path": "public/assets/category-art-v1/sports.webp",
+        "sha256": "d8f8ef103f136a8396f73987883b9e310138d7f99ade35a3d7effab0ed6107a4",
+        "bytes": 6732,
+        "width": 160,
+        "height": 160,
+        "mode": "RGBA",
+        "alphaExtrema": [
+          0,
+          255
+        ],
+        "transparentPercent": 50.43,
+        "cornerAlpha": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "visibleBounds": [
+          2,
+          24,
+          159,
+          143
+        ]
+      },
+      "visualReview32px": "At 32px the blue sneaker silhouette and cream sole are clear; fine stitching naturally disappears.",
+      "status": "ready"
+    },
+    {
+      "name": "fees",
+      "prompt": "Use case: stylized-concept. Asset type: one production raster category icon for the for-pocket Japanese pocket journal app. Create exactly one isolated composition, not an icon sheet. A very simple, charming Japanese stationery cut-paper miniature with soft rounded silhouettes and subtle matte paper fibers, shallow layered paper depth, no gloss or bright highlights. Palette: warm ivory, pale sage, muted peach, powder blue, pale butter yellow. Keep a strong simple silhouette readable at 32 pixels. Centered square canvas, subject occupies 85 percent with safe padding. True alpha transparent background, no checkerboard, no ground plane, no rectangle, no background color, no ambient halo. No faces, no sparkles/stars, no words, letters, numerals, brands or watermarks. Lighting softly diffuse, tight tiny soft contact shadow within object only. Subject: two small butter-yellow coins beside a small ivory receipt slip with a soft peach top edge and two broad gray-green line marks, no letters or numerals.",
+      "source": "C:\\Users\\wangxr\\.codex\\generated_images\\01a15f74-e79d-7da2-8392-98bad13c9928\\exec-33a36930-cbad-4148-9d51-9fd7bffe1c2d.png",
+      "original": {
+        "path": "public/assets/category-art-v1/fees.png",
+        "sha256": "4f98957b2afcae74c67f602a77c9a5025630891db978d005b41681f4b688fa75",
+        "bytes": 1522516,
+        "width": 1254,
+        "height": 1254,
+        "mode": "RGBA",
+        "alphaExtrema": [
+          0,
+          255
+        ],
+        "transparentPercent": 50.11,
+        "cornerAlpha": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "visibleBounds": [
+          102,
+          90,
+          1154,
+          1177
+        ]
+      },
+      "runtime": {
+        "path": "public/assets/category-art-v1/fees.webp",
+        "sha256": "4fbce49aee936f6076d6e92c0bbc7cb728641391a65418c9c46c55f48b7d34bb",
+        "bytes": 6458,
+        "width": 160,
+        "height": 160,
+        "mode": "RGBA",
+        "alphaExtrema": [
+          0,
+          255
+        ],
+        "transparentPercent": 48.4,
+        "cornerAlpha": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "visibleBounds": [
+          13,
+          11,
+          147,
+          150
+        ]
+      },
+      "visualReview32px": "At 32px receipt and yellow coins remain legible as a combined expense-fees cue.",
+      "status": "ready"
+    },
+    {
+      "name": "clothing",
+      "prompt": "Use case: stylized-concept. Asset type: one production raster category icon for the for-pocket Japanese pocket journal app. Create exactly one isolated composition, not an icon sheet. A very simple, charming Japanese stationery cut-paper miniature with soft rounded silhouettes and subtle matte paper fibers, shallow layered paper depth, no gloss or bright highlights. Palette: warm ivory, pale sage, muted peach, powder blue, pale butter yellow. Keep a strong simple silhouette readable at 32 pixels. Centered square canvas, subject occupies 85 percent with safe padding. True alpha transparent background, no checkerboard, no ground plane, no rectangle, no background color, no ambient halo. No faces, no sparkles/stars, no words, letters, numerals, brands or watermarks. Lighting softly diffuse, tight tiny soft contact shadow within object only. Subject: a folded soft sage knit sweater with warm cream collar and one visible folded sleeve, matte layered paper not realistic fabric, simple clear clothing silhouette.",
+      "source": "C:\\Users\\wangxr\\.codex\\generated_images\\01a15f74-e79d-7da2-8392-98bad13c9928\\exec-d9fa3ec8-8554-4e74-983f-19e3666f2520.png",
+      "original": {
+        "path": "public/assets/category-art-v1/clothing.png",
+        "sha256": "6d48e942da58f7a4e60951f74c296e5627804487fb00cac1510c72dab01331ab",
+        "bytes": 2137795,
+        "width": 1254,
+        "height": 1254,
+        "mode": "RGBA",
+        "alphaExtrema": [
+          0,
+          255
+        ],
+        "transparentPercent": 39.03,
+        "cornerAlpha": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "visibleBounds": [
+          68,
+          137,
+          1185,
+          1128
+        ]
+      },
+      "runtime": {
+        "path": "public/assets/category-art-v1/clothing.webp",
+        "sha256": "4ea2937cfa8b535f38ff0e5dedbb77d8006e1fe795bba31617d8f802b69ac8c2",
+        "bytes": 6916,
+        "width": 160,
+        "height": 160,
+        "mode": "RGBA",
+        "alphaExtrema": [
+          0,
+          255
+        ],
+        "transparentPercent": 37.23,
+        "cornerAlpha": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "visibleBounds": [
+          8,
+          17,
+          151,
+          144
+        ]
+      },
+      "visualReview32px": "At 32px folded sage sweater retains a cream collar and cuff, with knit details softened.",
+      "status": "ready"
+    },
+    {
+      "name": "beauty",
+      "prompt": "Use case: stylized-concept. Asset type: one production raster category icon for the for-pocket Japanese pocket journal app. Create exactly one isolated composition, not an icon sheet. A very simple, charming Japanese stationery cut-paper miniature with soft rounded silhouettes and subtle matte paper fibers, shallow layered paper depth, no gloss or bright highlights. Palette: warm ivory, pale sage, muted peach, powder blue, pale butter yellow. Keep a strong simple silhouette readable at 32 pixels. Centered square canvas, subject occupies 85 percent with safe padding. True alpha transparent background, no checkerboard, no ground plane, no rectangle, no background color, no ambient halo. No faces, no sparkles/stars, no words, letters, numerals, brands or watermarks. Lighting softly diffuse, tight tiny soft contact shadow within object only. Subject: a small peach hand mirror with pale blue blank reflection and rounded cream handle, with a sage wide-tooth comb placed diagonally in front. No shine, no stars.",
+      "source": "C:\\Users\\wangxr\\.codex\\generated_images\\01a15f74-e79d-7da2-8392-98bad13c9928\\exec-aa38a7a4-f4e3-41f1-93c7-1e783e6aa3a0.png",
+      "original": {
+        "path": "public/assets/category-art-v1/beauty.png",
+        "sha256": "0ef49932dfa8bc1c706b43b80e0e6b5d19df2fc61fce2b3ee4eeca8690c490f3",
+        "bytes": 1368477,
+        "width": 1254,
+        "height": 1254,
+        "mode": "RGBA",
+        "alphaExtrema": [
+          0,
+          255
+        ],
+        "transparentPercent": 54.93,
+        "cornerAlpha": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "visibleBounds": [
+          179,
+          21,
+          1092,
+          1232
+        ]
+      },
+      "runtime": {
+        "path": "public/assets/category-art-v1/beauty.webp",
+        "sha256": "3dc4ba4a482da68d4498937b7af1672074cd6614bcba3ba8563cdd4c1d12ca67",
+        "bytes": 7786,
+        "width": 160,
+        "height": 160,
+        "mode": "RGBA",
+        "alphaExtrema": [
+          0,
+          255
+        ],
+        "transparentPercent": 53.18,
+        "cornerAlpha": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "visibleBounds": [
+          23,
+          2,
+          140,
+          157
+        ]
+      },
+      "visualReview32px": "At 32px peach mirror and sage comb are distinct; very small decorative details naturally disappear.",
+      "status": "ready"
+    },
+    {
+      "name": "medical",
+      "prompt": "Use case: stylized-concept. Asset type: one production raster category icon for the for-pocket Japanese pocket journal app. Create exactly one isolated composition, not an icon sheet. A very simple, charming Japanese stationery cut-paper miniature with soft rounded silhouettes and subtle matte paper fibers, shallow layered paper depth, no gloss or bright highlights. Palette: warm ivory, pale sage, muted peach, powder blue, pale butter yellow. Keep a strong simple silhouette readable at 32 pixels. Centered square canvas, subject occupies 85 percent with safe padding. True alpha transparent background, no checkerboard, no ground plane, no rectangle, no background color, no ambient halo. No faces, no sparkles/stars, no words, letters, numerals, brands or watermarks. Lighting softly diffuse, tight tiny soft contact shadow within object only. Subject: a small cream and muted peach first-aid box with a simple sage plus cross, and one tiny butter-yellow adhesive bandage resting beside it. Friendly rounded paper objects.",
+      "source": "C:\\Users\\wangxr\\.codex\\generated_images\\01a15f74-e79d-7da2-8392-98bad13c9928\\exec-6a382800-1f45-41ef-adcf-0a77c838e5ce.png",
+      "original": {
+        "path": "public/assets/category-art-v1/medical.png",
+        "sha256": "febcba722f49a40df5b1461d8bdf27d2cdc700677fb99d8a4279ae47b542c78a",
+        "bytes": 1633459,
+        "width": 1254,
+        "height": 1254,
+        "mode": "RGBA",
+        "alphaExtrema": [
+          0,
+          255
+        ],
+        "transparentPercent": 46.69,
+        "cornerAlpha": [
+          0,
+          0,
+          1,
+          0
+        ],
+        "visibleBounds": [
+          113,
+          108,
+          1156,
+          1155
+        ]
+      },
+      "runtime": {
+        "path": "public/assets/category-art-v1/medical.webp",
+        "sha256": "247a5dbb90ff32c43c2c35e6493cb2abba8d9793f05b1d5fa6e8828b0a0a80f2",
+        "bytes": 6344,
+        "width": 160,
+        "height": 160,
+        "mode": "RGBA",
+        "alphaExtrema": [
+          0,
+          255
+        ],
+        "transparentPercent": 44.74,
+        "cornerAlpha": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "visibleBounds": [
+          14,
+          14,
+          148,
+          148
+        ]
+      },
+      "visualReview32px": "At 32px cream first-aid case, sage cross and yellow bandage are distinct. Original PNG has one corner alpha=1, visually transparent; encoded runtime corners are all alpha=0.",
+      "status": "ready"
+    },
+    {
+      "name": "subscription",
+      "prompt": "Use case: stylized-concept. Asset type: one production raster category icon for the for-pocket Japanese pocket journal app. Create exactly one isolated composition, not an icon sheet. A very simple, charming Japanese stationery cut-paper miniature with soft rounded silhouettes and subtle matte paper fibers, shallow layered paper depth, no gloss or bright highlights. Palette: warm ivory, pale sage, muted peach, powder blue, pale butter yellow. Keep a strong simple silhouette readable at 32 pixels. Centered square canvas, subject occupies 85 percent with safe padding. True alpha transparent background, no checkerboard, no ground plane, no rectangle, no background color, no ambient halo. No faces, no sparkles/stars, no words, letters, numerals, brands or watermarks. Lighting softly diffuse, tight tiny soft contact shadow within object only. Subject: two softly rounded ivory subscription cards with a folded corner and a large simple sage circular renewal arrow symbol on the front, one pale yellow card behind. No text or numbers.",
+      "source": "C:\\Users\\wangxr\\.codex\\generated_images\\01a15f74-e79d-7da2-8392-98bad13c9928\\exec-2b13501e-3796-4e02-a4d3-39de31127d24.png",
+      "original": {
+        "path": "public/assets/category-art-v1/subscription.png",
+        "sha256": "d4cee0d7e214a2cd022498358d53356e0ed7420fb2fe3ca2c53da3d4ecd28d6d",
+        "bytes": 1670319,
+        "width": 1254,
+        "height": 1254,
+        "mode": "RGBA",
+        "alphaExtrema": [
+          0,
+          255
+        ],
+        "transparentPercent": 41.12,
+        "cornerAlpha": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "visibleBounds": [
+          102,
+          70,
+          1163,
+          1218
+        ]
+      },
+      "runtime": {
+        "path": "public/assets/category-art-v1/subscription.webp",
+        "sha256": "4661067d219407781f90ec0ccabbffb5f0cbd8a3e24992fb4d72d62f759e894f",
+        "bytes": 5776,
+        "width": 160,
+        "height": 160,
+        "mode": "RGBA",
+        "alphaExtrema": [
+          0,
+          255
+        ],
+        "transparentPercent": 39.19,
+        "cornerAlpha": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "visibleBounds": [
+          13,
+          9,
+          149,
+          156
+        ]
+      },
+      "visualReview32px": "At 32px paired cards and circular renewal arrows remain clear.",
+      "status": "ready"
+    }
+  ],
+  "totals": {
+    "originalBytes": 19827982,
+    "runtimeBytes": 85276,
+    "count": 12
+  }
+}

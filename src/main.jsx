@@ -10,6 +10,7 @@ import './ui-polish.css';
 import './popup-materials.css';
 import './secondary-motion.css';
 import './journal-materials.css';
+import './type-system.css';
 import App from './App.jsx';
 
 createRoot(document.getElementById('root')).render(<App />);

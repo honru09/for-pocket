@@ -1,6 +1,6 @@
 # for-pocket 技能与组件交接
 
-导出于 2026-10-21T17:07:42.425Z。这次通过主任务的实际读取命令核对技能，正文和必要文本参考已放入仓库；不再仅依赖原电脑的绝对路径。
+导出于 2026-10-21T17:38:41.187Z。这次通过主任务的实际读取命令核对技能，正文和必要文本参考已放入仓库；不再仅依赖原电脑的绝对路径。
 
 ## 有读取证据的技能
 
@@ -22,7 +22,7 @@
 | frontend-design-system | [SKILL.md](skills/frontend-design-system/SKILL.md) | 2026-10-12 — 2026-10-12 | 4 |
 | frontend-design | [SKILL.md](skills/frontend-design/SKILL.md) | 2026-10-09 — 2026-10-14 | 1 |
 | gpt-image | [SKILL.md](skills/gpt-image/SKILL.md) | 2026-10-13 — 2026-10-13 | 37 |
-| impeccable | [SKILL.md](skills/impeccable/SKILL.md) | 2026-10-11 — 2026-10-13 | 156 |
+| impeccable | [SKILL.md](skills/impeccable/SKILL.md) | 2026-10-11 — 2026-10-21 | 156 |
 | interaction-design | [SKILL.md](skills/interaction-design/SKILL.md) | 2026-10-10 — 2026-10-21 | 4 |
 | interface-design (interface-design-codex) | [SKILL.md](skills/interface-design-codex/SKILL.md) | 2026-10-10 — 2026-10-10 | 2 |
 | motion-foundations | [SKILL.md](skills/motion-foundations/SKILL.md) | 2026-10-13 — 2026-10-14 | 1 |

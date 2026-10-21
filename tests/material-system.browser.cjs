@@ -158,6 +158,10 @@ async function assertButtonHit(button, label) {
 }
 
 async function capture(page, name) {
+  await page.evaluate(() => document.fonts.ready);
+  await page.locator('main').evaluateAll(nodes => Promise.all(nodes.flatMap(node => node.getAnimations()
+    .filter(animation => Number.isFinite(animation.effect?.getComputedTiming().endTime))
+    .map(animation => animation.finished.catch(() => {})))));
   await assertNoOverflow(page, name);
   await page.screenshot({path:path.join(OUTPUT, name + '.png'), fullPage:true});
 }
@@ -165,7 +169,7 @@ async function capture(page, name) {
 (async () => {
   const { createServer } = await import(pathToFileURL(path.join(ROOT, 'node_modules/vite/dist/node/index.js')));
   const server = await createServer({configFile:false, root:ROOT, publicDir:false, logLevel:'error',
-    server:{host:'127.0.0.1', port:0},
+    server:{host:'127.0.0.1', port:0, hmr:false, watch:null},
     plugins:[{name:'material-system-fixture',
       resolveId:id => id === '/__material-fixture.jsx' ? id : undefined,
       load:id => id === '/__material-fixture.jsx' ? fixture : undefined,

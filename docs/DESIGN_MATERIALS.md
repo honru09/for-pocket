@@ -1,8 +1,8 @@
-# 页面与组件材质 · 2026-10-22
+# 页面、组件与分类材质 · 2026-10-22
 
 本轮不是插画展示页：素材用于真实可操作的组件，金额、文字、图标按钮语义与输入框仍为 DOM。主页继续优先快速记账，云朵主形象不改；自由金只从设置进入。
 
-## 12 件新素材的实际去向
+## 12 件页面与组件素材的实际去向
 
 | 素材 | 应用位置 | 动作或作用 |
 | --- | --- | --- |
@@ -24,7 +24,7 @@
 ## 组件契约
 
 - `JournalMaterial.jsx` 统一为装饰 `img`，固定尺寸、空 alt、`aria-hidden`、`pointer-events:none`，不占用额外可点击层。不能把金额或文案烘焙进图片。
-- `journal-materials.css` 最后导入。它负责材质、有限退出、纸质附件动作；`secondary-motion.css` 负责分类、设置行、主题及右滑动作反馈。
+- `journal-materials.css` 负责材质、有限退出、纸质附件动作；`secondary-motion.css` 负责分类、设置行、主题及右滑动作反馈；其后的 `type-system.css` 统一文字层级和分类图尺寸。
 - `Sheet` 普通关闭为 160ms，退出期间 inert；从当前绘制帧开始，关闭锁只允许一次回调。外部切页/切账本可立即卸载，清除计时器和动画。
 - `NoteEntrySheet` 使用 `managedExit={false}`，继续独立 160ms 关闭，不能再叠加一个退出延迟，否则现金飞行会错位。
 - 自由金日额度由 `fixed-capital.mjs` 确定计算；网络分析可选，不阻止保存。输入保留、保存重试、关闭/换账本时的过期响应隔离由 `free-money-plan.mjs` 的请求 gate 管理。
@@ -38,6 +38,7 @@
 npm test
 npm run build
 node tests/material-system.browser.cjs
+node tests/category-materials.browser.cjs
 node tests/free-money.browser.cjs
 node tests/keypad-layout.browser.cjs
 node tests/keypad-interaction.browser.cjs
@@ -47,3 +48,19 @@ node tests/circle-reactions.browser.cjs
 ```
 
 测试使用独立本地数据或明确的服务 fixture，不会把测试账目写入线上。`outputs/` 是本机验收输出、没有纳入 Git。最终结果见 [本轮计划](../plans/2026-10-22-motion-refresh.md)；真实手机的 60/120Hz 帧率不能由桌面无头浏览器功能通过推断。
+
+## 36 件分类素材扩展
+
+新目录 `public/assets/category-art-v1/` 包含全部 30 个消费分类及 6 个收入分类。每件独立生成，PNG 为保留原件，160px WebP 用于界面；三份分组 manifest 保留完整提示词、来源、透明背景检查和 SHA。
+
+| 表面 | 接入方式 | 排版约束 |
+| --- | --- | --- |
+| 首页分类胶囊 | 28px 实图 + 原有标签 | 保持一行；最先可见的六项优先加载，其余懒加载 |
+| 账目列表 | 36px 实图替代预设线条图 | 同一行保留金额、成员、时间与更多按钮 |
+| 分类管理 | 32px 实图，编辑图标时可回到原自选图标 | 不修改存储结构及分类 ID |
+| 修改账目 | 28px 实图置于分类选择器内部 | 标签与选择器保留语义；输入字号 16px |
+| 导入预览 | 30px 实图辅助对应已解析分类 | 类别不明仍显示行号；文字及金额仍为真实 DOM |
+
+`CategoryArt` 的匹配依赖预设 ID、原图标及原色同时满足；改过的图标或颜色不替换，历史账目的图片依赖其历史分类快照。网络加载失败会恢复原线条图标，按钮仍可点。
+
+统一的尺寸、字体、间距、主题和操作约束见 [UI_SYSTEM](UI_SYSTEM.md)，本轮进度与最终验证见 [分类素材与排版计划](../plans/2026-10-22-category-materials.md)。

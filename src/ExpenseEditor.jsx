@@ -3,6 +3,7 @@ import { Button } from '@telegram-apps/telegram-ui';
 import { Sheet } from './AccountViews.jsx';
 import { CURRENCIES } from '../public/shared.mjs';
 import { categoryDisplayLabel } from '../public/i18n.mjs';
+import CategoryArt from './CategoryArt.jsx';
 
 export default function ExpenseEditor({ entry, settings, t, onClose, onSave }) {
   const [draft, setDraft] = useState({ amount: String(entry.amountMinor / 10 ** CURRENCIES[entry.currency].digits), currency:entry.currency, categoryId:entry.categoryId, consumer:entry.consumer, note:entry.note || '' });
@@ -22,7 +23,7 @@ export default function ExpenseEditor({ entry, settings, t, onClose, onSave }) {
   return <Sheet title={t('editEntry')} onClose={onClose}><form className="entry-editor" onSubmit={submit}>
     <label className="pocket-field"><span>{t('amountLabel')}</span><input id="edit-entry-amount" inputMode="decimal" autoComplete="off" value={draft.amount} onChange={e => change({ amount:e.target.value })} required/></label>
     <label className="pocket-field"><span>{t('currency')}</span><select value={draft.currency} onChange={e => change({ currency:e.target.value })}>{Object.keys(CURRENCIES).map(c => <option key={c}>{c}</option>)}</select></label>
-    <label className="pocket-field"><span>{t('categories')}</span><select value={draft.categoryId} onChange={e => change({ categoryId:e.target.value })}>{categories.filter(Boolean).map(c => <option key={c.id} value={c.id}>{categoryDisplayLabel(c,settings.language)}</option>)}</select></label>
+    <label className="pocket-field"><span>{t('categories')}</span><span className="category-select-wrap"><CategoryArt category={categories.find(c => c?.id === draft.categoryId)} eager/><select value={draft.categoryId} onChange={e => change({ categoryId:e.target.value })}>{categories.filter(Boolean).map(c => <option key={c.id} value={c.id}>{categoryDisplayLabel(c,settings.language)}</option>)}</select></span></label>
     <label className="pocket-field"><span>{t('aiImportConsumer')}</span><select value={draft.consumer} onChange={e => change({ consumer:e.target.value })}>{consumers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
     <label className="pocket-field entry-editor-note"><span>{t('note')}</span><input id="edit-entry-note" value={draft.note} maxLength={160} onChange={e => change({ note:e.target.value })}/></label>
     {error && <p className="field-error" role="alert">{error}</p>}

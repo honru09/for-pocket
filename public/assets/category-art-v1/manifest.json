@@ -1,0 +1,665 @@
+{
+  "version": 1,
+  "count": 36,
+  "generator": "builtin image_gen; one independent generated image per category",
+  "integration": [
+    "home category drawer",
+    "expense history",
+    "category editor",
+    "expense editor",
+    "import preview"
+  ],
+  "rule": "Only original preset id + icon + color use artwork. Custom choices and historical snapshots remain intact.",
+  "originalBytes": 57620032,
+  "runtimeBytes": 235340,
+  "assets": [
+    {
+      "id": "stomach",
+      "presetIcon": "bowl",
+      "presetColor": "peach",
+      "metadata": "manifest-food.json",
+      "original": {
+        "file": "stomach.png",
+        "bytes": 1617770,
+        "sha256": "44d3d159a4895e60a2b5cb133272f9118e41527a17e508eff336903c626f7679"
+      },
+      "runtime": {
+        "file": "stomach.webp",
+        "width": 160,
+        "height": 160,
+        "bytes": 7114,
+        "sha256": "cb54fa8f2745e405d3c4ef62b21e8a884cb80dcdd7d6c7c41bfd8026f5cdac71"
+      }
+    },
+    {
+      "id": "learning",
+      "presetIcon": "book",
+      "presetColor": "blue",
+      "metadata": "manifest-food.json",
+      "original": {
+        "file": "learning.png",
+        "bytes": 1647107,
+        "sha256": "b8c2ccd7a71d655cc20c61fc2c96769202a62ed543532f26d73ff45510a3811f"
+      },
+      "runtime": {
+        "file": "learning.webp",
+        "width": 160,
+        "height": 160,
+        "bytes": 6038,
+        "sha256": "c52a24334853bd01c388299e03a59e5f89d2ef2024ac8a0186d94ec3ea4ec5a6"
+      }
+    },
+    {
+      "id": "daily",
+      "presetIcon": "bag",
+      "presetColor": "mint",
+      "metadata": "manifest-food.json",
+      "original": {
+        "file": "daily.png",
+        "bytes": 2121207,
+        "sha256": "88dec5c9778a575afa4cbb82c266b07b089b7a4a7df67d7243f59a20787c784b"
+      },
+      "runtime": {
+        "file": "daily.webp",
+        "width": 160,
+        "height": 160,
+        "bytes": 7726,
+        "sha256": "2218b189f9205c6702915c9c0f0b55a303ed0ae29e03f8672332bff0b6da2cb9"
+      }
+    },
+    {
+      "id": "hobby",
+      "presetIcon": "game",
+      "presetColor": "pink",
+      "metadata": "manifest-food.json",
+      "original": {
+        "file": "hobby.png",
+        "bytes": 1617727,
+        "sha256": "76b01b9546baf576eb4a29bf9514afd81532d2b5057ac1e4e836a0180f91c960"
+      },
+      "runtime": {
+        "file": "hobby.webp",
+        "width": 160,
+        "height": 160,
+        "bytes": 5984,
+        "sha256": "cfa7b7ebf644638e315b43d54276e291d6a5cc599918503257cc689a8e1da813"
+      }
+    },
+    {
+      "id": "travel",
+      "presetIcon": "plane",
+      "presetColor": "yellow",
+      "metadata": "manifest-food.json",
+      "original": {
+        "file": "travel.png",
+        "bytes": 1510447,
+        "sha256": "92bf3b1bb184cbae597cdefd3b0897e9c28976f7040896f81c09ce9911bfa598"
+      },
+      "runtime": {
+        "file": "travel.webp",
+        "width": 160,
+        "height": 160,
+        "bytes": 5932,
+        "sha256": "aed19247749eec74a7eccf10871b7a57850b034f4acba65e509028d06ce72042"
+      }
+    },
+    {
+      "id": "convenience",
+      "presetIcon": "bag",
+      "presetColor": "mint",
+      "metadata": "manifest-food.json",
+      "original": {
+        "file": "convenience.png",
+        "bytes": 2115987,
+        "sha256": "9111512c068bd021a28982984c2da54965ae0e7b89f82dddf651be242ecd935f"
+      },
+      "runtime": {
+        "file": "convenience.webp",
+        "width": 160,
+        "height": 160,
+        "bytes": 5904,
+        "sha256": "13b9f7f24f6db9329a0d21930915b250c5b01ceab1d0146ec0bef393c0706a55"
+      }
+    },
+    {
+      "id": "coffee",
+      "presetIcon": "coffee",
+      "presetColor": "yellow",
+      "metadata": "manifest-food.json",
+      "original": {
+        "file": "coffee.png",
+        "bytes": 1801834,
+        "sha256": "abdeeed9f5ebd3b194918e94b0a90913027e70778bf47424393fb5f6cb4b4218"
+      },
+      "runtime": {
+        "file": "coffee.webp",
+        "width": 160,
+        "height": 160,
+        "bytes": 6710,
+        "sha256": "a6a2aaa36a442002e2f504a2241028ad3260d164875914e7482ec5b548fb759f"
+      }
+    },
+    {
+      "id": "groceries",
+      "presetIcon": "bag",
+      "presetColor": "mint",
+      "metadata": "manifest-food.json",
+      "original": {
+        "file": "groceries.png",
+        "bytes": 1815521,
+        "sha256": "ccb0195e23dd852ec59505ef38a2323f915a010c3b1c2732bf2f4ff60a0aeb6e"
+      },
+      "runtime": {
+        "file": "groceries.webp",
+        "width": 160,
+        "height": 160,
+        "bytes": 7286,
+        "sha256": "0a9461145465064970d43b5040b40b8126b388a5337ecaf2b0054b581fd34b83"
+      }
+    },
+    {
+      "id": "izakaya",
+      "presetIcon": "bowl",
+      "presetColor": "lavender",
+      "metadata": "manifest-food.json",
+      "original": {
+        "file": "izakaya.png",
+        "bytes": 1645042,
+        "sha256": "ec13f3fee432ec8eba04f6728c2fc85c1fb7b53d14a3c83bd286c200b4351e21"
+      },
+      "runtime": {
+        "file": "izakaya.webp",
+        "width": 160,
+        "height": 160,
+        "bytes": 9462,
+        "sha256": "f83ddc6ef3847c4483b41cfe0ad23c4f985e04079f4425c0f16da1ffd604748f"
+      }
+    },
+    {
+      "id": "takeaway",
+      "presetIcon": "receipt",
+      "presetColor": "peach",
+      "metadata": "manifest-food.json",
+      "original": {
+        "file": "takeaway.png",
+        "bytes": 1722387,
+        "sha256": "92af22941ba195846be8180edd40e7af93c0715fb161b68b255cfba7bee93c97"
+      },
+      "runtime": {
+        "file": "takeaway.webp",
+        "width": 160,
+        "height": 160,
+        "bytes": 5472,
+        "sha256": "3619e97a802987d321b98f7815d282b7451a82dcb3864edf96a4d4b56b53a888"
+      }
+    },
+    {
+      "id": "rent",
+      "presetIcon": "wallet",
+      "presetColor": "blue",
+      "metadata": "manifest-food.json",
+      "original": {
+        "file": "rent.png",
+        "bytes": 1695386,
+        "sha256": "babd3e2a5882b1b55d0adcb77d43108f3437d646aff2633a1f3313c42c342bd1"
+      },
+      "runtime": {
+        "file": "rent.webp",
+        "width": 160,
+        "height": 160,
+        "bytes": 6076,
+        "sha256": "9d3a6874b97f39b519b21df4568f77e2868c067ff3976c86c3b8cf429a7e2c6f"
+      }
+    },
+    {
+      "id": "utilities",
+      "presetIcon": "coins",
+      "presetColor": "yellow",
+      "metadata": "manifest-food.json",
+      "original": {
+        "file": "utilities.png",
+        "bytes": 1390507,
+        "sha256": "f2681b5abc70cc765c22bda85cb95d8de2d53207553d24962a95e05f7954ccce"
+      },
+      "runtime": {
+        "file": "utilities.webp",
+        "width": 160,
+        "height": 160,
+        "bytes": 5992,
+        "sha256": "37f06dc0ad8d8de167d6b8dcffa3b1de4400c984ac754356450618d32e433d19"
+      }
+    },
+    {
+      "id": "pet",
+      "presetIcon": "heart",
+      "presetColor": "pink",
+      "metadata": "manifest-life.json",
+      "original": {
+        "file": "pet.png",
+        "bytes": 1566017,
+        "sha256": "9b2d61f18e841f68b4fcc8d8582c0694bdebef01c7177914221fadeb1d2e9450"
+      },
+      "runtime": {
+        "file": "pet.webp",
+        "width": 160,
+        "height": 160,
+        "bytes": 5970,
+        "sha256": "f1c09b21825bb23c2d8997900036218c706ae5b0760e51472557d7bbc4d17882"
+      }
+    },
+    {
+      "id": "transport",
+      "presetIcon": "card",
+      "presetColor": "blue",
+      "metadata": "manifest-life.json",
+      "original": {
+        "file": "transport.png",
+        "bytes": 2268243,
+        "sha256": "bc4f1969fafdafad42e03dc4097f2ed3f2b208e49dcf531345c047556f50bc1d"
+      },
+      "runtime": {
+        "file": "transport.webp",
+        "width": 160,
+        "height": 160,
+        "bytes": 8900,
+        "sha256": "1733ecf36cada78d2f04b228322d4e64068f5a1741e7849efe72e49d062d062c"
+      }
+    },
+    {
+      "id": "taxi",
+      "presetIcon": "card",
+      "presetColor": "lavender",
+      "metadata": "manifest-life.json",
+      "original": {
+        "file": "taxi.png",
+        "bytes": 1449941,
+        "sha256": "10e50fba428010c155c8bf61780f71befe7d5e7df75f7d285a72665d220a4ccf"
+      },
+      "runtime": {
+        "file": "taxi.webp",
+        "width": 160,
+        "height": 160,
+        "bytes": 6628,
+        "sha256": "4a6cb8b6635fa89f6a7d0332e44e2b462e24f61bbc55654804a49a229b5741fa"
+      }
+    },
+    {
+      "id": "fuel",
+      "presetIcon": "card",
+      "presetColor": "yellow",
+      "metadata": "manifest-life.json",
+      "original": {
+        "file": "fuel.png",
+        "bytes": 1502698,
+        "sha256": "765be5224dbad5f692c2d6d1e293f595f5e2392ebdf4bbcbc72a576d6b496122"
+      },
+      "runtime": {
+        "file": "fuel.webp",
+        "width": 160,
+        "height": 160,
+        "bytes": 7876,
+        "sha256": "090aaf2f718b1a5a4b178fc7128822117f5d61e989c0619fc9e6f4cdff6e76c0"
+      }
+    },
+    {
+      "id": "long_trip",
+      "presetIcon": "plane",
+      "presetColor": "blue",
+      "metadata": "manifest-life.json",
+      "original": {
+        "file": "long_trip.png",
+        "bytes": 1506451,
+        "sha256": "36d5fef28ba059d940e518a39c4428f50c517a130abfa1218258c7f934565288"
+      },
+      "runtime": {
+        "file": "long_trip.webp",
+        "width": 160,
+        "height": 160,
+        "bytes": 8878,
+        "sha256": "5d0505d507176992784a842178c3fb38f023995a38b654bd707da4b62d6eb291"
+      }
+    },
+    {
+      "id": "movie",
+      "presetIcon": "spark",
+      "presetColor": "lavender",
+      "metadata": "manifest-life.json",
+      "original": {
+        "file": "movie.png",
+        "bytes": 1576161,
+        "sha256": "867d9bb6e0e015cb261bef8cefa4ad9bb7471018d15bde4663ced026bb92f9f8"
+      },
+      "runtime": {
+        "file": "movie.webp",
+        "width": 160,
+        "height": 160,
+        "bytes": 7012,
+        "sha256": "fa7ec719ed1f49eb31d2d4cdd3fb9b4c0779218c9462a6e94f952fc98948c1ae"
+      }
+    },
+    {
+      "id": "sports",
+      "presetIcon": "sprout",
+      "presetColor": "mint",
+      "metadata": "manifest-life.json",
+      "original": {
+        "file": "sports.png",
+        "bytes": 1625905,
+        "sha256": "b17caf17031bab4fa9ff2bfef744f0725cd88caea692d2dea694ac730a367466"
+      },
+      "runtime": {
+        "file": "sports.webp",
+        "width": 160,
+        "height": 160,
+        "bytes": 6732,
+        "sha256": "d8f8ef103f136a8396f73987883b9e310138d7f99ade35a3d7effab0ed6107a4"
+      }
+    },
+    {
+      "id": "fees",
+      "presetIcon": "coins",
+      "presetColor": "lavender",
+      "metadata": "manifest-life.json",
+      "original": {
+        "file": "fees.png",
+        "bytes": 1522516,
+        "sha256": "4f98957b2afcae74c67f602a77c9a5025630891db978d005b41681f4b688fa75"
+      },
+      "runtime": {
+        "file": "fees.webp",
+        "width": 160,
+        "height": 160,
+        "bytes": 6458,
+        "sha256": "4fbce49aee936f6076d6e92c0bbc7cb728641391a65418c9c46c55f48b7d34bb"
+      }
+    },
+    {
+      "id": "clothing",
+      "presetIcon": "bag",
+      "presetColor": "peach",
+      "metadata": "manifest-life.json",
+      "original": {
+        "file": "clothing.png",
+        "bytes": 2137795,
+        "sha256": "6d48e942da58f7a4e60951f74c296e5627804487fb00cac1510c72dab01331ab"
+      },
+      "runtime": {
+        "file": "clothing.webp",
+        "width": 160,
+        "height": 160,
+        "bytes": 6916,
+        "sha256": "4ea2937cfa8b535f38ff0e5dedbb77d8006e1fe795bba31617d8f802b69ac8c2"
+      }
+    },
+    {
+      "id": "beauty",
+      "presetIcon": "flower",
+      "presetColor": "pink",
+      "metadata": "manifest-life.json",
+      "original": {
+        "file": "beauty.png",
+        "bytes": 1368477,
+        "sha256": "0ef49932dfa8bc1c706b43b80e0e6b5d19df2fc61fce2b3ee4eeca8690c490f3"
+      },
+      "runtime": {
+        "file": "beauty.webp",
+        "width": 160,
+        "height": 160,
+        "bytes": 7786,
+        "sha256": "3dc4ba4a482da68d4498937b7af1672074cd6614bcba3ba8563cdd4c1d12ca67"
+      }
+    },
+    {
+      "id": "medical",
+      "presetIcon": "heart",
+      "presetColor": "lavender",
+      "metadata": "manifest-life.json",
+      "original": {
+        "file": "medical.png",
+        "bytes": 1633459,
+        "sha256": "febcba722f49a40df5b1461d8bdf27d2cdc700677fb99d8a4279ae47b542c78a"
+      },
+      "runtime": {
+        "file": "medical.webp",
+        "width": 160,
+        "height": 160,
+        "bytes": 6344,
+        "sha256": "247a5dbb90ff32c43c2c35e6493cb2abba8d9793f05b1d5fa6e8828b0a0a80f2"
+      }
+    },
+    {
+      "id": "subscription",
+      "presetIcon": "receipt",
+      "presetColor": "blue",
+      "metadata": "manifest-life.json",
+      "original": {
+        "file": "subscription.png",
+        "bytes": 1670319,
+        "sha256": "d4cee0d7e214a2cd022498358d53356e0ed7420fb2fe3ca2c53da3d4ecd28d6d"
+      },
+      "runtime": {
+        "file": "subscription.webp",
+        "width": 160,
+        "height": 160,
+        "bytes": 5776,
+        "sha256": "4661067d219407781f90ec0ccabbffb5f0cbd8a3e24992fb4d72d62f759e894f"
+      }
+    },
+    {
+      "id": "date",
+      "presetIcon": "heart",
+      "presetColor": "peach",
+      "metadata": "manifest-personal.json",
+      "original": {
+        "file": "date.png",
+        "bytes": 1082543,
+        "sha256": "afc4eeb040366ddb02294d44670f8e7667787ffed8ee24f8c108ad54a09bf6e2"
+      },
+      "runtime": {
+        "file": "date.webp",
+        "width": 160,
+        "height": 160,
+        "bytes": 5786,
+        "sha256": "50d86b5cc625dab219080b5161b99e8351f8205c781a5198051b4aa10205f1d5"
+      }
+    },
+    {
+      "id": "gift_expense",
+      "presetIcon": "gift",
+      "presetColor": "pink",
+      "metadata": "manifest-personal.json",
+      "original": {
+        "file": "gift_expense.png",
+        "bytes": 1497719,
+        "sha256": "301fe8c5d0ac1863b2f5d662a33c0cfa546801ca9db8abca949a90cf78dbc65f"
+      },
+      "runtime": {
+        "file": "gift_expense.webp",
+        "width": 160,
+        "height": 160,
+        "bytes": 6274,
+        "sha256": "66a34f76ddbdded258740dccaf208a048e95a163cca12368c6dae805229a7a31"
+      }
+    },
+    {
+      "id": "electronics",
+      "presetIcon": "card",
+      "presetColor": "lavender",
+      "metadata": "manifest-personal.json",
+      "original": {
+        "file": "electronics.png",
+        "bytes": 1544894,
+        "sha256": "e6f03471ee83291864a51bbc8e3a1cea94e2c1d3fdc150b700c0034b663dc2c9"
+      },
+      "runtime": {
+        "file": "electronics.webp",
+        "width": 160,
+        "height": 160,
+        "bytes": 8028,
+        "sha256": "30cd035508332a725af0e3185b991e695a890f0ecfc6fe79e288104939dd4e9a"
+      }
+    },
+    {
+      "id": "home",
+      "presetIcon": "sprout",
+      "presetColor": "mint",
+      "metadata": "manifest-personal.json",
+      "original": {
+        "file": "home.png",
+        "bytes": 1463345,
+        "sha256": "9059337ce5b3cdf44c53adc40a072a412023295d26a35db82f66777b81da800e"
+      },
+      "runtime": {
+        "file": "home.webp",
+        "width": 160,
+        "height": 160,
+        "bytes": 5334,
+        "sha256": "7684948a41b3679b5d43d94d6c950420456bcb8ebb1e5a6fdce82058fb335be0"
+      }
+    },
+    {
+      "id": "insurance",
+      "presetIcon": "wallet",
+      "presetColor": "yellow",
+      "metadata": "manifest-personal.json",
+      "original": {
+        "file": "insurance.png",
+        "bytes": 1253793,
+        "sha256": "3d6024ea76cb9136677c2c586acad8c02387df16b6d0eea4e7d15dfb77294a1f"
+      },
+      "runtime": {
+        "file": "insurance.webp",
+        "width": 160,
+        "height": 160,
+        "bytes": 6828,
+        "sha256": "08db51fe7d134d46205159482105a07ce83eabb9ed975269930013c1a248ce56"
+      }
+    },
+    {
+      "id": "other",
+      "presetIcon": "spark",
+      "presetColor": "lavender",
+      "metadata": "manifest-personal.json",
+      "original": {
+        "file": "other.png",
+        "bytes": 1619597,
+        "sha256": "b41845cc86c82b5dc0a3d9249eda89930b4c122faf4e5b0e6cf50f6ca6d131f4"
+      },
+      "runtime": {
+        "file": "other.webp",
+        "width": 160,
+        "height": 160,
+        "bytes": 5020,
+        "sha256": "1dcf33c67ab929ce2bd13da26ec31741b98e8e585e129115efb063d2d5b0ba1f"
+      }
+    },
+    {
+      "id": "wage",
+      "presetIcon": "wallet",
+      "presetColor": "mint",
+      "metadata": "manifest-personal.json",
+      "original": {
+        "file": "wage.png",
+        "bytes": 1610186,
+        "sha256": "abde227e60413ae0481d70f4203750f26ec1fc263d03fd90f2b6231d30ea6eb3"
+      },
+      "runtime": {
+        "file": "wage.webp",
+        "width": 160,
+        "height": 160,
+        "bytes": 4554,
+        "sha256": "7e12edc8d41b7c25e34316be77d7c038b5aec6ee64b8039411c917b8bb835180"
+      }
+    },
+    {
+      "id": "bonus",
+      "presetIcon": "coins",
+      "presetColor": "yellow",
+      "metadata": "manifest-personal.json",
+      "original": {
+        "file": "bonus.png",
+        "bytes": 1013953,
+        "sha256": "e31875358685c1733db2aafad80d40974497da52fd6140cfaa351223e973b0ce"
+      },
+      "runtime": {
+        "file": "bonus.webp",
+        "width": 160,
+        "height": 160,
+        "bytes": 4814,
+        "sha256": "5e6fff080bbaad20e5fee7f3d822f5f53bd2bf95ac834ddd8a7e6c4b4b9fd7bf"
+      }
+    },
+    {
+      "id": "redpacket",
+      "presetIcon": "gift",
+      "presetColor": "peach",
+      "metadata": "manifest-personal.json",
+      "original": {
+        "file": "redpacket.png",
+        "bytes": 1359158,
+        "sha256": "1037e5abe5d3c6ad309f72c6aa7506abf196a2b7098eba381989a0a927c7238d"
+      },
+      "runtime": {
+        "file": "redpacket.webp",
+        "width": 160,
+        "height": 160,
+        "bytes": 4680,
+        "sha256": "93b4cee573292dd26c5b27a3169f70097f4e5ade3634b981c0541105fb9730a6"
+      }
+    },
+    {
+      "id": "parttime",
+      "presetIcon": "sprout",
+      "presetColor": "blue",
+      "metadata": "manifest-personal.json",
+      "original": {
+        "file": "parttime.png",
+        "bytes": 1491083,
+        "sha256": "b8f6acfc95739c0ba95852e89db35a3d3d8aa6704b61f5d0bf43bb788fb8fdc5"
+      },
+      "runtime": {
+        "file": "parttime.webp",
+        "width": 160,
+        "height": 160,
+        "bytes": 5844,
+        "sha256": "d443a44c05ee607f5a66d5cc9d02008a934a19311b47338284062281aedb9dc3"
+      }
+    },
+    {
+      "id": "reimburse",
+      "presetIcon": "receipt",
+      "presetColor": "lavender",
+      "metadata": "manifest-personal.json",
+      "original": {
+        "file": "reimburse.png",
+        "bytes": 1517214,
+        "sha256": "0c63c6be6d7c5a9e3b100e295e10db7e6d85d6b20b63c209d2b78b9116d5d433"
+      },
+      "runtime": {
+        "file": "reimburse.webp",
+        "width": 160,
+        "height": 160,
+        "bytes": 6720,
+        "sha256": "c25fab2582e7ab8ef5f9793130679038e9f923c0e83ad7891d380912ced33e8e"
+      }
+    },
+    {
+      "id": "other_in",
+      "presetIcon": "spark",
+      "presetColor": "pink",
+      "metadata": "manifest-personal.json",
+      "original": {
+        "file": "other_in.png",
+        "bytes": 1637643,
+        "sha256": "6c5ad321d7551aa1cf3b22cfb304e8d93b01ed19303341b24cd79b67a999af9b"
+      },
+      "runtime": {
+        "file": "other_in.webp",
+        "width": 160,
+        "height": 160,
+        "bytes": 6486,
+        "sha256": "f66493cfc64860e177df0f5a724ec80cc1e3d68cb99b2f448d9011a387415f4b"
+      }
+    }
+  ]
+}

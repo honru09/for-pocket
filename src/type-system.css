@@ -1,0 +1,121 @@
+/* The existing Nunito voice is bundled locally, including Ukrainian glyphs.
+   No third-party font request or network-dependent typography on reopening. */
+@font-face { font-family:'Pocket Nunito'; font-style:normal; font-weight:400 900; font-display:swap; src:url('../public/fonts/nunito/latin.woff2') format('woff2'); unicode-range:U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD; }
+@font-face { font-family:'Pocket Nunito'; font-style:normal; font-weight:400 900; font-display:swap; src:url('../public/fonts/nunito/cyrillic.woff2') format('woff2'); unicode-range:U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116; }
+@font-face { font-family:'Pocket Nunito'; font-style:normal; font-weight:400 900; font-display:swap; src:url('../public/fonts/nunito/cyrillic-ext.woff2') format('woff2'); unicode-range:U+0460-052F,U+1C80-1C8A,U+20B4,U+2DE0-2DFF,U+A640-A69F,U+FE2E-FE2F; }
+@font-face { font-family:'Pocket Nunito'; font-style:normal; font-weight:400 900; font-display:swap; src:url('../public/fonts/nunito/latin-ext.woff2') format('woff2'); unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C4,U+2113,U+2C60-2C7F,U+A720-A7FF; }
+
+:root {
+  --pocket-font:'Pocket Nunito','PingFang SC','Microsoft YaHei',sans-serif;
+  --type-page:24px;
+  --type-sheet:20px;
+  --type-section:16px;
+  --type-control:14px;
+  --type-caption:12px;
+  --type-meta:11px;
+  --type-input:16px;
+}
+.for-root {
+  --tgui--font-family:var(--pocket-font);
+  --tgui--font_weight--accent2:700;
+  --tgui--font_weight--accent3:600;
+  --muted:#65705b;
+  font-family:var(--pocket-font);
+  font-size:var(--type-control);
+  font-weight:500;
+  line-height:1.5;
+}
+[data-theme='cheese'] .for-root { --muted:#78624a; }
+[data-theme='peach'] .for-root { --muted:#7c5f60; }
+[data-theme='sea'] .for-root { --muted:#4f7075; }
+.for-root { --tgui--hint_color:var(--muted); }
+.for-root :is(button,input,select,textarea) { font-family:var(--pocket-font); }
+.for-root :is(input,textarea) { caret-color:var(--ink); }
+.for-root ::selection { background:var(--yellow); color:var(--ink); }
+.for-root :is(input,textarea)::placeholder { color:var(--muted); opacity:.85; }
+.for-root h1 { font-size:var(--type-page); font-weight:750; letter-spacing:-.025em; line-height:1.2; }
+.for-root .pocket-sheet > header h2 { font-size:var(--type-sheet); font-weight:700; letter-spacing:-.02em; line-height:1.3; }
+.for-root .quiet-copy { font-size:var(--type-caption); font-weight:500; line-height:1.65; max-width:64ch; color:var(--muted); }
+.for-root :is(.pocket-field,.recurring-form label) > span:first-child { font-size:var(--type-caption); font-weight:600; line-height:1.4; color:var(--muted); }
+.for-root .pocket-field :is(input,select),.for-root .recurring-form :is(input,select),.for-root .editor-label input { font-size:var(--type-input); font-weight:500; }
+.for-root .sheet-actions { gap:12px; padding-top:4px; }
+.for-root .sheet-actions > button { min-height:44px; padding-inline:20px; border-radius:14px; }
+.for-root .sheet-actions > button > h6 { font-size:var(--type-control); font-weight:650; }
+
+/* Quiet settings: action labels lead; selected values are lighter and can
+   use the entire remaining row. The whole theme value opens its sheet. */
+.for-root .settings-organized { gap:12px; }
+.for-root .settings-group { padding-inline:14px; }
+.for-root .settings-group .settings-row { min-height:54px; }
+.for-root .settings-group .settings-row > h6 { font-size:var(--type-control)!important; font-weight:600; line-height:1.45; }
+.for-root .settings-profile strong { font-size:18px; font-weight:700; }
+.for-root .settings-profile small { font-size:var(--type-caption); font-weight:500; }
+.for-root .settings-row small { font-size:var(--type-meta); font-weight:500; color:var(--muted); }
+.for-root .settings-choice { gap:12px; min-height:54px; font-weight:600; }
+.for-root .settings-choice > span { flex:1 1 auto; font-size:var(--type-control)!important; }
+.for-root .settings-choice select { flex:0 1 auto; width:auto; max-width:60%; font-size:var(--type-control)!important; font-weight:500; color:var(--muted); }
+.for-root .theme-choice > span { flex:0 0 auto; }
+.for-root .theme-choice .theme-open.settings-theme-value {
+  display:flex; flex:1 1 auto; width:auto; max-width:none; min-width:44px; height:auto; min-height:44px;
+  justify-content:flex-end; gap:8px; padding:7px 0 7px 8px; background:transparent;
+  border:0; border-radius:10px; text-align:right; font-size:var(--type-control); font-weight:500; color:var(--muted);
+}
+.for-root .theme-open.settings-theme-value > span { white-space:normal; overflow:visible; text-overflow:clip; line-height:1.35; overflow-wrap:normal; }
+.for-root .theme-open.settings-theme-value > :is(i,svg) { flex:none; }
+.for-root .theme-open.settings-theme-value .for-icon { width:14px; height:14px; margin:0; }
+.for-root .settings-choice .theme-native-select { max-width:1px; }
+.for-root .theme-card-label { font-size:var(--type-caption); font-weight:600; line-height:1.45; }
+.for-root .member-row strong { font-size:var(--type-control); font-weight:650; }
+.for-root .member-row small { font-size:var(--type-meta); }
+
+/* Ledger: keep the one-row toolbar and one leading number. Names and notes
+   get readable line heights rather than a larger, taller summary card. */
+.for-root .history-summary-amount > span { font-size:var(--type-caption); font-weight:500; }
+.for-root .history-summary-amount strong { font-weight:750; font-variant-numeric:tabular-nums; letter-spacing:-.025em; }
+.for-root .history-summary .balance-details span { font-size:var(--type-meta); font-weight:500; color:var(--muted); }
+.for-root .history-summary .balance-details strong { font-size:var(--type-control); font-weight:650; font-variant-numeric:tabular-nums; }
+.for-root .history-summary-tools small { font-size:var(--type-meta); font-weight:500; }
+.for-root .history-day { font-size:var(--type-caption); font-weight:650; letter-spacing:0; color:var(--muted); }
+.for-root .expense-row strong { font-size:var(--type-control); font-weight:650; line-height:1.4; }
+.for-root .expense-row .expense-money { font-size:15px; font-weight:700; font-variant-numeric:tabular-nums; white-space:nowrap; }
+.for-root .expense-row :is(.consumer-badge,.entry-time,.expense-note) { font-size:var(--type-meta); font-weight:500; line-height:1.5; }
+.for-root .expense-description { max-width:42ch; line-height:1.5; }
+.for-root .expense-note { overflow-wrap:anywhere; }
+.for-root .entry-more { min-width:44px; width:44px; }
+.for-root .recurring-item strong { font-size:var(--type-control); font-weight:650; font-variant-numeric:tabular-nums; }
+.for-root .recurring-item small { font-size:var(--type-caption); line-height:1.5; }
+.for-root .recurring-date { font-size:18px; font-weight:700; font-variant-numeric:tabular-nums; }
+.for-root .ai-import-summary-copy strong { font-size:var(--type-control); line-height:1.5; font-weight:650; }
+.for-root .ai-import-summary-copy small { font-size:var(--type-caption); line-height:1.5; font-weight:500; }
+.for-root .ai-import-index:has(.category-art) { width:30px; height:30px; flex:none; background:transparent; }
+.for-root .ai-import-index .category-art { width:30px; height:30px; }
+.for-root .ai-import-text-label { font-size:var(--type-control); font-weight:600; }
+.for-root .ai-import-grid .settings-input input,.for-root .ai-import-grid .editor-select select,.for-root .ai-import-text textarea { font-size:var(--type-input); font-weight:500; }
+
+/* Raster objects share one optical size across all category surfaces. Their
+   parent carries the existing interruptible press/selection motion. */
+.category-art { display:block; width:32px; height:32px; object-fit:contain; flex:none; pointer-events:none; user-select:none; }
+.for-root .category-icon:has(.category-art) { background:transparent!important; }
+.for-root #record-view .category.category-pill { font-size:12px; font-weight:600; gap:6px; }
+.for-root #record-view .category.category-pill .category-art { width:28px; height:28px; }
+.for-root .expense-row .category-icon:has(.category-art) { width:36px; height:36px; }
+.for-root .expense-row .category-art { width:36px; height:36px; }
+.for-root .editor-icon-trigger .category-art { width:32px; height:32px; }
+.for-root .category-select-wrap { position:relative; display:flex; align-items:center; min-width:0; }
+.for-root .category-select-wrap > :is(img,svg) { position:absolute; left:8px; width:28px; height:28px; pointer-events:none; }
+.for-root .category-select-wrap select { padding-left:42px; padding-right:8px; }
+.for-root .editor-row { padding-block:10px; }
+.for-root .editor-label input { line-height:1.45; }
+.for-root #record-view .purposes .section-heading h2 { font-weight:600; }
+.for-root .type-toggle-pill,.for-root .bottom-nav .tab { font-weight:650; }
+
+@media(min-width:601px) {
+  .for-root .settings-organized { margin-inline:auto; }
+  .for-root .settings-form:not(.ai-import),.for-root .circles-form,.for-root .recurring-panel,.for-root #category-form { max-width:620px; margin-inline:auto; }
+}
+@media(max-width:360px) {
+  .for-root .history-summary .balance-details > div { gap:7px; }
+  .for-root .expense-row .expense-money { font-size:14px; }
+  .for-root .theme-choice { gap:8px; }
+  .for-root .entry-editor { column-gap:8px; }
+}

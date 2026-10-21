@@ -1,0 +1,479 @@
+{
+  "version": 1,
+  "generator": "builtin image_gen",
+  "assets": [
+    {
+      "id": "stomach",
+      "prompt": "Use case: stylized-concept. Generate ONE production UI category sticker for a refined Japanese paper-journal expense app: a small ramen bowl, front three-quarter view, a few clearly visible noodles, one egg half and a tiny sage leaf. Style: simple rounded matte paper-cut object with very subtle paper fiber and gentle dimensional folds, warm cream bowl with muted peach accent, pale butter-yellow noodles. No thick outlines, no gloss, no shine, no sparkles, no face, no text, no logos, no scenery. Very legible silhouette at 32px. Object centered, occupying about 85% of square canvas; clean genuinely transparent alpha background, no backdrop and no broad ground shadow. A calm, precise, cute stationery illustration matching a soft sage paper notebook. Single isolated object composition, not a sheet.",
+      "source": "C:\\Users\\wangxr\\.codex\\generated_images\\01a15f74-c474-7ef3-9c0b-b32cc7a47dad\\exec-73e5a2f0-4fa0-46c2-a872-e39130d4e1a6.png",
+      "original": {
+        "file": "stomach.png",
+        "sha256": "44d3d159a4895e60a2b5cb133272f9118e41527a17e508eff336903c626f7679",
+        "width": 1254,
+        "height": 1254,
+        "bytes": 1617770
+      },
+      "runtime": {
+        "file": "stomach.webp",
+        "sha256": "cb54fa8f2745e405d3c4ef62b21e8a884cb80dcdd7d6c7c41bfd8026f5cdac71",
+        "width": 160,
+        "height": 160,
+        "bytes": 7114
+      },
+      "alpha": {
+        "extrema": [
+          0,
+          255
+        ],
+        "transparentPixels": 743969
+      },
+      "review": {
+        "originalVisual": "passed: isolated matte paper object; no wording, face, gloss or scene backdrop",
+        "displaySizePx": 32,
+        "displayVisual": "Ramen bowl, egg and noodles remain distinct.",
+        "alphaCorners": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "originalKeptUnchanged": true,
+        "runtimeProcessing": "Pillow LANCZOS thumbnail 160x160, WebP quality85 method6; no compositing or retouching"
+      }
+    },
+    {
+      "id": "learning",
+      "prompt": "Use case: stylized-concept. Generate ONE production UI category sticker for a refined Japanese paper-journal expense app. SUBJECT: an open warm ivory book with simple blank pages, pale sage cover and a soft yellow ribbon bookmark. Style: simple rounded matte paper-cut object with subtle paper fiber and gentle dimensional folds, warm cream, muted sage, pale butter yellow, dusty peach and pale blue accents. No thick outlines, no gloss, no shine, no sparkles, no face, no text, no logos, no scenery. Very legible silhouette at 32px. Object centered, occupying about 85% of square canvas; clean genuinely transparent alpha background, no backdrop and no broad ground shadow. A calm, precise, cute stationery illustration matching a soft sage paper notebook. Single isolated object composition, not a sheet.",
+      "source": "C:\\Users\\wangxr\\.codex\\generated_images\\01a15f74-c474-7ef3-9c0b-b32cc7a47dad\\exec-fbdda8e0-7f5d-4adc-b39b-f9966a3be0a0.png",
+      "original": {
+        "file": "learning.png",
+        "sha256": "b8c2ccd7a71d655cc20c61fc2c96769202a62ed543532f26d73ff45510a3811f",
+        "width": 1254,
+        "height": 1254,
+        "bytes": 1647107
+      },
+      "runtime": {
+        "file": "learning.webp",
+        "sha256": "c52a24334853bd01c388299e03a59e5f89d2ef2024ac8a0186d94ec3ea4ec5a6",
+        "width": 160,
+        "height": 160,
+        "bytes": 6038
+      },
+      "alpha": {
+        "extrema": [
+          0,
+          255
+        ],
+        "transparentPixels": 622823
+      },
+      "review": {
+        "originalVisual": "passed: isolated matte paper object; no wording, face, gloss or scene backdrop",
+        "displaySizePx": 32,
+        "displayVisual": "Open pages and yellow bookmark remain recognizable.",
+        "alphaCorners": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "originalKeptUnchanged": true,
+        "runtimeProcessing": "Pillow LANCZOS thumbnail 160x160, WebP quality85 method6; no compositing or retouching"
+      }
+    },
+    {
+      "id": "daily",
+      "prompt": "Use case: stylized-concept. Generate ONE production UI category sticker for a refined Japanese paper-journal expense app. SUBJECT: a soft sage reusable cloth shopping tote, two rounded handles, a subtle cream stitched pocket. Style: simple rounded matte paper-cut object with subtle paper fiber and gentle dimensional folds, warm cream, muted sage, pale butter yellow, dusty peach and pale blue accents. No thick outlines, no gloss, no shine, no sparkles, no face, no text, no logos, no scenery. Very legible silhouette at 32px. Object centered, occupying about 85% of square canvas; clean genuinely transparent alpha background, no backdrop and no broad ground shadow. A calm, precise, cute stationery illustration matching a soft sage paper notebook. Single isolated object composition, not a sheet.",
+      "source": "C:\\Users\\wangxr\\.codex\\generated_images\\01a15f74-c474-7ef3-9c0b-b32cc7a47dad\\exec-9b6ced51-4192-4c62-8bb6-7a3b619d2a63.png",
+      "original": {
+        "file": "daily.png",
+        "sha256": "88dec5c9778a575afa4cbb82c266b07b089b7a4a7df67d7243f59a20787c784b",
+        "width": 1254,
+        "height": 1254,
+        "bytes": 2121207
+      },
+      "runtime": {
+        "file": "daily.webp",
+        "sha256": "2218b189f9205c6702915c9c0f0b55a303ed0ae29e03f8672332bff0b6da2cb9",
+        "width": 160,
+        "height": 160,
+        "bytes": 7726
+      },
+      "alpha": {
+        "extrema": [
+          0,
+          255
+        ],
+        "transparentPixels": 681443
+      },
+      "review": {
+        "originalVisual": "passed: isolated matte paper object; no wording, face, gloss or scene backdrop",
+        "displaySizePx": 32,
+        "displayVisual": "Tote handles and cream front pocket distinguish the cloth bag.",
+        "alphaCorners": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "originalKeptUnchanged": true,
+        "runtimeProcessing": "Pillow LANCZOS thumbnail 160x160, WebP quality85 method6; no compositing or retouching"
+      }
+    },
+    {
+      "id": "hobby",
+      "prompt": "Use case: stylized-concept. Generate ONE production UI category sticker for a refined Japanese paper-journal expense app. SUBJECT: a cute rounded pale blue video-game controller with simple cream direction pad and four muted peach and yellow buttons. Style: simple rounded matte paper-cut object with subtle paper fiber and gentle dimensional folds, warm cream, muted sage, pale butter yellow, dusty peach and pale blue accents. No thick outlines, no gloss, no shine, no sparkles, no face, no text, no logos, no scenery. Very legible silhouette at 32px. Object centered, occupying about 85% of square canvas; clean genuinely transparent alpha background, no backdrop and no broad ground shadow. A calm, precise, cute stationery illustration matching a soft sage paper notebook. Single isolated object composition, not a sheet.",
+      "source": "C:\\Users\\wangxr\\.codex\\generated_images\\01a15f74-c474-7ef3-9c0b-b32cc7a47dad\\exec-5407325f-4ce7-43b3-9e69-6f82c7a50255.png",
+      "original": {
+        "file": "hobby.png",
+        "sha256": "76b01b9546baf576eb4a29bf9514afd81532d2b5057ac1e4e836a0180f91c960",
+        "width": 1254,
+        "height": 1254,
+        "bytes": 1617727
+      },
+      "runtime": {
+        "file": "hobby.webp",
+        "sha256": "cfa7b7ebf644638e315b43d54276e291d6a5cc599918503257cc689a8e1da813",
+        "width": 160,
+        "height": 160,
+        "bytes": 5984
+      },
+      "alpha": {
+        "extrema": [
+          0,
+          255
+        ],
+        "transparentPixels": 794732
+      },
+      "review": {
+        "originalVisual": "passed: isolated matte paper object; no wording, face, gloss or scene backdrop",
+        "displaySizePx": 32,
+        "displayVisual": "Controller silhouette and direction pad remain recognizable.",
+        "alphaCorners": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "originalKeptUnchanged": true,
+        "runtimeProcessing": "Pillow LANCZOS thumbnail 160x160, WebP quality85 method6; no compositing or retouching"
+      }
+    },
+    {
+      "id": "travel",
+      "prompt": "Use case: stylized-concept. Generate ONE production UI category sticker for a refined Japanese paper-journal expense app. SUBJECT: a small rounded pale butter-yellow travel suitcase with peach handle, two tiny dark sage wheels and one small cream luggage tag without writing. Style: simple rounded matte paper-cut object with subtle paper fiber and gentle dimensional folds, warm cream, muted sage, pale butter yellow, dusty peach and pale blue accents. No thick outlines, no gloss, no shine, no sparkles, no face, no text, no logos, no scenery. Very legible silhouette at 32px. Object centered, occupying about 85% of square canvas; clean genuinely transparent alpha background, no backdrop and no broad ground shadow. A calm, precise, cute stationery illustration matching a soft sage paper notebook. Single isolated object composition, not a sheet.",
+      "source": "C:\\Users\\wangxr\\.codex\\generated_images\\01a15f74-c474-7ef3-9c0b-b32cc7a47dad\\exec-1ca5f094-89fc-4452-b65e-84ebcbd8ee6d.png",
+      "original": {
+        "file": "travel.png",
+        "sha256": "92bf3b1bb184cbae597cdefd3b0897e9c28976f7040896f81c09ce9911bfa598",
+        "width": 1254,
+        "height": 1254,
+        "bytes": 1510447
+      },
+      "runtime": {
+        "file": "travel.webp",
+        "sha256": "aed19247749eec74a7eccf10871b7a57850b034f4acba65e509028d06ce72042",
+        "width": 160,
+        "height": 160,
+        "bytes": 5932
+      },
+      "alpha": {
+        "extrema": [
+          0,
+          255
+        ],
+        "transparentPixels": 796375
+      },
+      "review": {
+        "originalVisual": "passed: isolated matte paper object; no wording, face, gloss or scene backdrop",
+        "displaySizePx": 32,
+        "displayVisual": "Suitcase handle and small wheels remain clear.",
+        "alphaCorners": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "originalKeptUnchanged": true,
+        "runtimeProcessing": "Pillow LANCZOS thumbnail 160x160, WebP quality85 method6; no compositing or retouching"
+      }
+    },
+    {
+      "id": "convenience",
+      "prompt": "Use case: stylized-concept. Generate ONE production UI category sticker for a refined Japanese paper-journal expense app. SUBJECT: a little convenience storefront with cream walls and alternating sage-and-cream striped awning, one peach door and one window, compact simple shape. Style: simple rounded matte paper-cut object with subtle paper fiber and gentle dimensional folds, warm cream, muted sage, pale butter yellow, dusty peach and pale blue accents. No thick outlines, no gloss, no shine, no sparkles, no face, no text, no logos, no scenery. Very legible silhouette at 32px. Object centered, occupying about 85% of square canvas; clean genuinely transparent alpha background, no backdrop and no broad ground shadow. A calm, precise, cute stationery illustration matching a soft sage paper notebook. Single isolated object composition, not a sheet.",
+      "source": "C:\\Users\\wangxr\\.codex\\generated_images\\01a15f74-c474-7ef3-9c0b-b32cc7a47dad\\exec-35427e5e-b9b8-41d2-a3af-bfe2a394431e.png",
+      "original": {
+        "file": "convenience.png",
+        "sha256": "9111512c068bd021a28982984c2da54965ae0e7b89f82dddf651be242ecd935f",
+        "width": 1254,
+        "height": 1254,
+        "bytes": 2115987
+      },
+      "runtime": {
+        "file": "convenience.webp",
+        "sha256": "13b9f7f24f6db9329a0d21930915b250c5b01ceab1d0146ec0bef393c0706a55",
+        "width": 160,
+        "height": 160,
+        "bytes": 5904
+      },
+      "alpha": {
+        "extrema": [
+          0,
+          255
+        ],
+        "transparentPixels": 544095
+      },
+      "review": {
+        "originalVisual": "passed: isolated matte paper object; no wording, face, gloss or scene backdrop",
+        "displaySizePx": 32,
+        "displayVisual": "Striped awning and shop frontage remain clear.",
+        "alphaCorners": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "originalKeptUnchanged": true,
+        "runtimeProcessing": "Pillow LANCZOS thumbnail 160x160, WebP quality85 method6; no compositing or retouching"
+      }
+    },
+    {
+      "id": "coffee",
+      "prompt": "Use case: stylized-concept. Generate ONE production UI category sticker for a refined Japanese paper-journal expense app. SUBJECT: a warm cream ceramic coffee cup on a small pale sage saucer, dark coffee visible from above, one small round butter biscuit alongside. Style: simple rounded matte paper-cut object with subtle paper fiber and gentle dimensional folds, warm cream, muted sage, pale butter yellow, dusty peach and pale blue accents. No thick outlines, no gloss, no shine, no sparkles, no face, no text, no logos, no scenery. Very legible silhouette at 32px. Object centered, occupying about 85% of square canvas; clean genuinely transparent alpha background, no backdrop and no broad ground shadow. A calm, precise, cute stationery illustration matching a soft sage paper notebook. Single isolated object composition, not a sheet.",
+      "source": "C:\\Users\\wangxr\\.codex\\generated_images\\01a15f74-c474-7ef3-9c0b-b32cc7a47dad\\exec-44c7da34-ec50-4ca1-b8e7-04df023ff49e.png",
+      "original": {
+        "file": "coffee.png",
+        "sha256": "abdeeed9f5ebd3b194918e94b0a90913027e70778bf47424393fb5f6cb4b4218",
+        "width": 1254,
+        "height": 1254,
+        "bytes": 1801834
+      },
+      "runtime": {
+        "file": "coffee.webp",
+        "sha256": "a6a2aaa36a442002e2f504a2241028ad3260d164875914e7482ec5b548fb759f",
+        "width": 160,
+        "height": 160,
+        "bytes": 6710
+      },
+      "alpha": {
+        "extrema": [
+          0,
+          255
+        ],
+        "transparentPixels": 675992
+      },
+      "review": {
+        "originalVisual": "passed: isolated matte paper object; no wording, face, gloss or scene backdrop",
+        "displaySizePx": 32,
+        "displayVisual": "Cup handle, coffee and biscuit distinguish the coffee category.",
+        "alphaCorners": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "originalKeptUnchanged": true,
+        "runtimeProcessing": "Pillow LANCZOS thumbnail 160x160, WebP quality85 method6; no compositing or retouching"
+      }
+    },
+    {
+      "id": "groceries",
+      "prompt": "Use case: stylized-concept. Generate ONE production UI category sticker for a refined Japanese paper-journal expense app. SUBJECT: a warm kraft cream paper grocery bag holding a rounded sage cabbage, one pale orange carrot with small green leaves, simple produce silhouettes. Style: simple rounded matte paper-cut object with subtle paper fiber and gentle dimensional folds, warm cream, muted sage, pale butter yellow, dusty peach and pale blue accents. No thick outlines, no gloss, no shine, no sparkles, no face, no text, no logos, no scenery. Very legible silhouette at 32px. Object centered, occupying about 85% of square canvas; clean genuinely transparent alpha background, no backdrop and no broad ground shadow. A calm, precise, cute stationery illustration matching a soft sage paper notebook. Single isolated object composition, not a sheet.",
+      "source": "C:\\Users\\wangxr\\.codex\\generated_images\\01a15f74-c474-7ef3-9c0b-b32cc7a47dad\\exec-afce88eb-1630-43d5-afce-855bb69b72c6.png",
+      "original": {
+        "file": "groceries.png",
+        "sha256": "ccb0195e23dd852ec59505ef38a2323f915a010c3b1c2732bf2f4ff60a0aeb6e",
+        "width": 1254,
+        "height": 1254,
+        "bytes": 1815521
+      },
+      "runtime": {
+        "file": "groceries.webp",
+        "sha256": "0a9461145465064970d43b5040b40b8126b388a5337ecaf2b0054b581fd34b83",
+        "width": 160,
+        "height": 160,
+        "bytes": 7286
+      },
+      "alpha": {
+        "extrema": [
+          0,
+          255
+        ],
+        "transparentPixels": 700430
+      },
+      "review": {
+        "originalVisual": "passed: isolated matte paper object; no wording, face, gloss or scene backdrop",
+        "displaySizePx": 32,
+        "displayVisual": "Produce extends above bag; carrot and cabbage silhouettes visible.",
+        "alphaCorners": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "originalKeptUnchanged": true,
+        "runtimeProcessing": "Pillow LANCZOS thumbnail 160x160, WebP quality85 method6; no compositing or retouching"
+      }
+    },
+    {
+      "id": "izakaya",
+      "prompt": "Use case: stylized-concept. Generate ONE production UI category sticker for a refined Japanese paper-journal expense app. SUBJECT: two warm golden yakitori skewers set diagonally, accompanied by one tiny cream sake cup, compact friendly composition. Style: simple rounded matte paper-cut object with subtle paper fiber and gentle dimensional folds, warm cream, muted sage, pale butter yellow, dusty peach and pale blue accents. No thick outlines, no gloss, no shine, no sparkles, no face, no text, no logos, no scenery. Very legible silhouette at 32px. Object centered, occupying about 85% of square canvas; clean genuinely transparent alpha background, no backdrop and no broad ground shadow. A calm, precise, cute stationery illustration matching a soft sage paper notebook. Single isolated object composition, not a sheet.",
+      "source": "C:\\Users\\wangxr\\.codex\\generated_images\\01a15f74-c474-7ef3-9c0b-b32cc7a47dad\\exec-ee9d4002-1bee-4d07-a807-7cf426000cb9.png",
+      "original": {
+        "file": "izakaya.png",
+        "sha256": "ec13f3fee432ec8eba04f6728c2fc85c1fb7b53d14a3c83bd286c200b4351e21",
+        "width": 1254,
+        "height": 1254,
+        "bytes": 1645042
+      },
+      "runtime": {
+        "file": "izakaya.webp",
+        "sha256": "f83ddc6ef3847c4483b41cfe0ad23c4f985e04079f4425c0f16da1ffd604748f",
+        "width": 160,
+        "height": 160,
+        "bytes": 9462
+      },
+      "alpha": {
+        "extrema": [
+          0,
+          255
+        ],
+        "transparentPixels": 874347
+      },
+      "review": {
+        "originalVisual": "passed: isolated matte paper object; no wording, face, gloss or scene backdrop",
+        "displaySizePx": 32,
+        "displayVisual": "Two diagonal skewers and small cup visible; textured food detail becomes quiet at 32px.",
+        "alphaCorners": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "originalKeptUnchanged": true,
+        "runtimeProcessing": "Pillow LANCZOS thumbnail 160x160, WebP quality85 method6; no compositing or retouching"
+      }
+    },
+    {
+      "id": "takeaway",
+      "prompt": "Use case: stylized-concept. Generate ONE production UI category sticker for a refined Japanese paper-journal expense app. SUBJECT: a closed cream paper takeaway meal box with rounded edges, pale sage folded lid and a muted peach paper belly-band with no writing. Style: simple rounded matte paper-cut object with subtle paper fiber and gentle dimensional folds, warm cream, muted sage, pale butter yellow, dusty peach and pale blue accents. No thick outlines, no gloss, no shine, no sparkles, no face, no text, no logos, no scenery. Very legible silhouette at 32px. Object centered, occupying about 85% of square canvas; clean genuinely transparent alpha background, no backdrop and no broad ground shadow. A calm, precise, cute stationery illustration matching a soft sage paper notebook. Single isolated object composition, not a sheet.",
+      "source": "C:\\Users\\wangxr\\.codex\\generated_images\\01a15f74-c474-7ef3-9c0b-b32cc7a47dad\\exec-943e3779-ee8d-48c7-8568-ea3b12d11d95.png",
+      "original": {
+        "file": "takeaway.png",
+        "sha256": "92af22941ba195846be8180edd40e7af93c0715fb161b68b255cfba7bee93c97",
+        "width": 1254,
+        "height": 1254,
+        "bytes": 1722387
+      },
+      "runtime": {
+        "file": "takeaway.webp",
+        "sha256": "3619e97a802987d321b98f7815d282b7451a82dcb3864edf96a4d4b56b53a888",
+        "width": 160,
+        "height": 160,
+        "bytes": 5472
+      },
+      "alpha": {
+        "extrema": [
+          0,
+          255
+        ],
+        "transparentPixels": 702233
+      },
+      "review": {
+        "originalVisual": "passed: isolated matte paper object; no wording, face, gloss or scene backdrop",
+        "displaySizePx": 32,
+        "displayVisual": "Folded meal box and peach wrap remain clear.",
+        "alphaCorners": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "originalKeptUnchanged": true,
+        "runtimeProcessing": "Pillow LANCZOS thumbnail 160x160, WebP quality85 method6; no compositing or retouching"
+      }
+    },
+    {
+      "id": "rent",
+      "prompt": "Use case: stylized-concept. Generate ONE production UI category sticker for a refined Japanese paper-journal expense app. SUBJECT: a small cream house with a muted peach pitched roof and sage doorway, a small simple butter-yellow key resting alongside. Style: simple rounded matte paper-cut object with subtle paper fiber and gentle dimensional folds, warm cream, muted sage, pale butter yellow, dusty peach and pale blue accents. No thick outlines, no gloss, no shine, no sparkles, no face, no text, no logos, no scenery. Very legible silhouette at 32px. Object centered, occupying about 85% of square canvas; clean genuinely transparent alpha background, no backdrop and no broad ground shadow. A calm, precise, cute stationery illustration matching a soft sage paper notebook. Single isolated object composition, not a sheet.",
+      "source": "C:\\Users\\wangxr\\.codex\\generated_images\\01a15f74-c474-7ef3-9c0b-b32cc7a47dad\\exec-9ea07748-5d97-4b9e-becf-3707491cb182.png",
+      "original": {
+        "file": "rent.png",
+        "sha256": "babd3e2a5882b1b55d0adcb77d43108f3437d646aff2633a1f3313c42c342bd1",
+        "width": 1254,
+        "height": 1254,
+        "bytes": 1695386
+      },
+      "runtime": {
+        "file": "rent.webp",
+        "sha256": "9d3a6874b97f39b519b21df4568f77e2868c067ff3976c86c3b8cf429a7e2c6f",
+        "width": 160,
+        "height": 160,
+        "bytes": 6076
+      },
+      "alpha": {
+        "extrema": [
+          0,
+          255
+        ],
+        "transparentPixels": 745105
+      },
+      "review": {
+        "originalVisual": "passed: isolated matte paper object; no wording, face, gloss or scene backdrop",
+        "displaySizePx": 32,
+        "displayVisual": "House and oversized key remain distinct.",
+        "alphaCorners": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "originalKeptUnchanged": true,
+        "runtimeProcessing": "Pillow LANCZOS thumbnail 160x160, WebP quality85 method6; no compositing or retouching"
+      }
+    },
+    {
+      "id": "utilities",
+      "prompt": "Use case: stylized-concept. Generate ONE production UI category sticker for a refined Japanese paper-journal expense app. SUBJECT: a rounded matte pale butter-yellow light bulb with a short cream base, beside one small pale-blue water droplet, coherent compact pair. Style: simple rounded matte paper-cut object with subtle paper fiber and gentle dimensional folds, warm cream, muted sage, pale butter yellow, dusty peach and pale blue accents. No thick outlines, no gloss, no shine, no sparkles, no face, no text, no logos, no scenery. Very legible silhouette at 32px. Object centered, occupying about 85% of square canvas; clean genuinely transparent alpha background, no backdrop and no broad ground shadow. A calm, precise, cute stationery illustration matching a soft sage paper notebook. Single isolated object composition, not a sheet.",
+      "source": "C:\\Users\\wangxr\\.codex\\generated_images\\01a15f74-c474-7ef3-9c0b-b32cc7a47dad\\exec-f172b8b9-9c90-4fc0-8219-b220dac337e3.png",
+      "original": {
+        "file": "utilities.png",
+        "sha256": "f2681b5abc70cc765c22bda85cb95d8de2d53207553d24962a95e05f7954ccce",
+        "width": 1254,
+        "height": 1254,
+        "bytes": 1390507
+      },
+      "runtime": {
+        "file": "utilities.webp",
+        "sha256": "37f06dc0ad8d8de167d6b8dcffa3b1de4400c984ac754356450618d32e433d19",
+        "width": 160,
+        "height": 160,
+        "bytes": 5992
+      },
+      "alpha": {
+        "extrema": [
+          0,
+          255
+        ],
+        "transparentPixels": 880246
+      },
+      "review": {
+        "originalVisual": "passed: isolated matte paper object; no wording, face, gloss or scene backdrop",
+        "displaySizePx": 32,
+        "displayVisual": "Bulb and blue water droplet remain distinct.",
+        "alphaCorners": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "originalKeptUnchanged": true,
+        "runtimeProcessing": "Pillow LANCZOS thumbnail 160x160, WebP quality85 method6; no compositing or retouching"
+      }
+    }
+  ],
+  "totals": {
+    "assetCount": 12,
+    "runtimeBytes": 79696,
+    "originalBytes": 20700922
+  }
+}

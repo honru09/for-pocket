@@ -1,6 +1,7 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import PocketIllustration from './PocketIllustration.jsx';
 import JournalMaterial, { ReceiptMaterial } from './JournalMaterial.jsx';
+import CategoryArt from './CategoryArt.jsx';
 import { Button, Input, Select, Tappable, Textarea } from '@telegram-apps/telegram-ui';
 import { CURRENCIES, validateExpense } from '../public/shared.mjs';
 import { categoryLabel, translateError } from '../public/i18n.mjs';
@@ -499,7 +500,7 @@ export default function AiImportPage({ t, profile, settings, busy = false, run, 
         return <article className={`ai-import-item ${expandedItem ? 'is-expanded' : ''}`} key={item.id}>
           <header className="ai-import-item-header">
             <Tappable Component="button" type="button" className="ai-import-summary" aria-expanded={expandedItem} onClick={() => toggleExpanded(item.id)} disabled={working || busy}>
-              <span className="ai-import-index">{index + 1}</span><span className="ai-import-summary-copy"><strong>{summary}</strong><small>{needsReview ? t('aiImportReview') : categoryName}</small></span><Icon name="chevronDown"/>
+              <span className="ai-import-index" aria-hidden="true">{category ? <CategoryArt category={category}/> : index + 1}</span><span className="ai-import-summary-copy"><strong>{summary}</strong><small>{needsReview ? t('aiImportReview') : categoryName}</small></span><Icon name="chevronDown"/>
             </Tappable>
             <Button type="button" mode="plain" className="ai-import-remove" aria-label={t('aiImportRemove')} onClick={() => removeItem(item.id)} disabled={working || busy}>×</Button>
           </header>

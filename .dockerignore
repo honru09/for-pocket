@@ -11,3 +11,6 @@ backups
 work
 outputs
 docs/handoff
+# Keep category source artwork in Git, not in the deployment context/image.
+# The frontend imports only the corresponding WebP derivatives.
+public/assets/category-art-v1/*.png

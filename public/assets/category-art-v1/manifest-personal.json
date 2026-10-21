@@ -1,0 +1,526 @@
+{
+  "version": 1,
+  "method": "Built-in image_gen.imagegen, one distinct prompt/call per asset",
+  "styleReferenceViewed": "public/assets/pocket-materials-v2/ledger-book.png",
+  "processing": "Original PNG copied unchanged; WebP <=160px Lanczos resize at quality85, alpha preserved, no repainting or manual retouching",
+  "assets": [
+    {
+      "name": "date",
+      "prompt": "One precise object correction to this already simple two-mug icon. Each mug must have EXACTLY ONE handle: cream mug retains its left outer handle, peach mug retains its right outer handle. REMOVE both small extra center handle-like loops and all string/cord. Their area becomes smooth uninterrupted cream or peach mug surface. Keep the large plain coral heart, but make it a flat paper heart sticker attached directly on the front of the peach mug, no string and no holes. Preserve two mugs, their diagonal overlapping placement, matte paper texture, plain surfaces, exact quiet palette and true transparent background. Keep entire shapes fully inside canvas with clean transparent margin. No flowers, text, face, eyes, stars, gloss or extra props. No other change.",
+      "source": "C:\\Users\\wangxr\\.codex\\generated_images\\01a15f1c-89a6-7873-9958-01b8443873e6\\exec-d64d6a7e-f2ca-4c29-8f14-2e1b85e3c6dc.png",
+      "originalFile": "date.png",
+      "runtimeFile": "date.webp",
+      "visualReview": "Simplified via two built-in edits after 32px review: removed floral clutter, made diagonal overlapping cups, enlarged heart, corrected accidental extra inner handles. Final plain cups each have one outer handle; no text/face/star/gloss.",
+      "original": {
+        "dimensions": [
+          1254,
+          1254
+        ],
+        "bytes": 1082543,
+        "sha256": "afc4eeb040366ddb02294d44670f8e7667787ffed8ee24f8c108ad54a09bf6e2"
+      },
+      "runtime": {
+        "dimensions": [
+          160,
+          160
+        ],
+        "bytes": 5786,
+        "sha256": "50d86b5cc625dab219080b5161b99e8351f8205c781a5198051b4aa10205f1d5"
+      },
+      "alphaValidation": {
+        "extrema": [
+          0,
+          255
+        ],
+        "transparentPixels": 954062,
+        "opaquePixels": 810,
+        "pixelCount": 1572516,
+        "bbox": [
+          0,
+          17,
+          1248,
+          1254
+        ]
+      },
+      "generationHistory": [
+        {
+          "step": "initial-generation",
+          "prompt": "Use case: stylized-concept. Create ONE production raster category icon for the for-pocket expense journal, a coherent minimalist Japanese paper stationery object. Matte softly tactile cut-paper / tiny handmade paper-object illustration with gently rounded contours and extremely subtle paper grain, restrained diffuse shading only. Palette warm pale cream, sage green, low-saturation peach pink, pale sky blue and butter yellow. Large clean readable silhouette for 32px display. Center the complete compact object in a square canvas, occupying about 85% of width and height, narrow equal transparent margin. True alpha transparency outside the object, absolutely no filled backdrop or checkerboard. No lettering, numbers, currency symbols, brands, faces, eyes, stars, sparkles, gloss, glints, beams, UI mockup or extra scene. No detached speckles. Soft front-facing three-quarter view with very shallow dimensionality. Subject: Two small rounded ceramic-style paper mugs leaning close together as one connected compact composition, one cream and one low-saturation peach, with one tiny heart-shaped paper tag hanging between them. No steam. The heart is a plain muted coral cutout, no symbol printed on it. The two simple cup handles remain clear.",
+          "source": "C:\\Users\\wangxr\\.codex\\generated_images\\01a15f1c-89a6-7873-9958-01b8443873e6\\exec-db075190-b8a6-4cbb-8146-d8554e6b136d.png",
+          "sourceSha256": "2feb5c934880293f79099dbf7e748e76ce490646bd44a8c100e5fd05d56d2713"
+        },
+        {
+          "step": "remove-pattern-and-recompose",
+          "prompt": "Edit this category icon for 32px use. Preserve the two matte paper mugs in cream and soft peach and the small coral heart tag, with true transparent alpha. Remove ALL floral patterns, leaves, flowers, specks and printed decoration from both cup bodies: completely plain unmarked surfaces. Recompose the two mugs as a compact diagonal overlapping pair, one slightly behind and higher, so the combined silhouette is closer to square instead of a flat horizontal strip. Make the single coral heart tag larger and clearly visible at the front center. Each mug must retain one simple handle, with no extra handles. Keep the entire icon centered within 7% clean transparent margins on every side. Flat gentle paper grain, shallow soft shading, same muted palette. No text, no eyes or faces, no stars, no gloss/highlights, no steam, no new props, no background, no detached speckle pixels. Deliver one production icon, never a sheet.",
+          "source": "C:\\Users\\wangxr\\.codex\\generated_images\\01a15f1c-89a6-7873-9958-01b8443873e6\\exec-32462180-bf02-430f-b0e9-fb9956e9264e.png",
+          "sourceSha256": "0144fbf0972aedea5606e38a758379207adc612f19e6edb4d32ec528700c0b6e"
+        },
+        {
+          "step": "correct-extra-handles",
+          "prompt": "One precise object correction to this already simple two-mug icon. Each mug must have EXACTLY ONE handle: cream mug retains its left outer handle, peach mug retains its right outer handle. REMOVE both small extra center handle-like loops and all string/cord. Their area becomes smooth uninterrupted cream or peach mug surface. Keep the large plain coral heart, but make it a flat paper heart sticker attached directly on the front of the peach mug, no string and no holes. Preserve two mugs, their diagonal overlapping placement, matte paper texture, plain surfaces, exact quiet palette and true transparent background. Keep entire shapes fully inside canvas with clean transparent margin. No flowers, text, face, eyes, stars, gloss or extra props. No other change.",
+          "source": "C:\\Users\\wangxr\\.codex\\generated_images\\01a15f1c-89a6-7873-9958-01b8443873e6\\exec-d64d6a7e-f2ca-4c29-8f14-2e1b85e3c6dc.png",
+          "sourceSha256": "afc4eeb040366ddb02294d44670f8e7667787ffed8ee24f8c108ad54a09bf6e2"
+        }
+      ]
+    },
+    {
+      "name": "gift_expense",
+      "prompt": "Use case: stylized-concept. Create ONE production raster category icon for the for-pocket expense journal, a coherent minimalist Japanese paper stationery object. Matte softly tactile cut-paper / tiny handmade paper-object illustration with gently rounded contours and extremely subtle paper grain, restrained diffuse shading only. Palette warm pale cream, sage green, low-saturation peach pink, pale sky blue and butter yellow. Large clean readable silhouette for 32px display. Center the complete compact object in a square canvas, occupying about 85% of width and height, narrow equal transparent margin. True alpha transparency outside the object, absolutely no filled backdrop or checkerboard. No lettering, numbers, currency symbols, brands, faces, eyes, stars, sparkles, gloss, glints, beams, UI mockup or extra scene. No detached speckles. Soft front-facing three-quarter view with very shallow dimensionality. Subject: One small butter-yellow paper gift box with a softly folded muted peach ribbon and one modest bow on top. Front and lid form one chunky simple silhouette. No patterned wrapping and no loose confetti.",
+      "source": "C:\\Users\\wangxr\\.codex\\generated_images\\01a15f1c-89a6-7873-9958-01b8443873e6\\exec-0d24146b-c729-433a-b260-7dcf109ec5a7.png",
+      "originalFile": "gift_expense.png",
+      "runtimeFile": "gift_expense.webp",
+      "visualReview": "Subject and palette visually checked; no text, face, star or gloss.",
+      "original": {
+        "dimensions": [
+          1254,
+          1254
+        ],
+        "bytes": 1497719,
+        "sha256": "301fe8c5d0ac1863b2f5d662a33c0cfa546801ca9db8abca949a90cf78dbc65f"
+      },
+      "runtime": {
+        "dimensions": [
+          160,
+          160
+        ],
+        "bytes": 6274,
+        "sha256": "66a34f76ddbdded258740dccaf208a048e95a163cca12368c6dae805229a7a31"
+      },
+      "alphaValidation": {
+        "extrema": [
+          0,
+          255
+        ],
+        "transparentPixels": 723529,
+        "opaquePixels": 823,
+        "pixelCount": 1572516,
+        "bbox": [
+          0,
+          17,
+          1234,
+          1238
+        ]
+      }
+    },
+    {
+      "name": "electronics",
+      "prompt": "Use case: stylized-concept. Create ONE production raster category icon for the for-pocket expense journal, a coherent minimalist Japanese paper stationery object. Matte softly tactile cut-paper / tiny handmade paper-object illustration with gently rounded contours and extremely subtle paper grain, restrained diffuse shading only. Palette warm pale cream, sage green, low-saturation peach pink, pale sky blue and butter yellow. Large clean readable silhouette for 32px display. Center the complete compact object in a square canvas, occupying about 85% of width and height, narrow equal transparent margin. True alpha transparency outside the object, absolutely no filled backdrop or checkerboard. No lettering, numbers, currency symbols, brands, faces, eyes, stars, sparkles, gloss, glints, beams, UI mockup or extra scene. No detached speckles. Soft front-facing three-quarter view with very shallow dimensionality. All object surfaces must be plain, without floral patterns, printed decoration or tiny ornamental marks. Subject: One pale sage over-ear headphone set curved neatly around a small cream smartphone with a plain muted sky-blue screen. The two objects overlap as a single compact icon. Blank screen, no buttons marked with text, no reflections, no decorative designs.",
+      "source": "C:\\Users\\wangxr\\.codex\\generated_images\\01a15f1c-89a6-7873-9958-01b8443873e6\\exec-0c2125a8-cae1-4226-bec5-3a9e7a2d1ad5.png",
+      "originalFile": "electronics.png",
+      "runtimeFile": "electronics.webp",
+      "visualReview": "Subject and palette visually checked; no text, face, star or gloss.",
+      "original": {
+        "dimensions": [
+          1254,
+          1254
+        ],
+        "bytes": 1544894,
+        "sha256": "e6f03471ee83291864a51bbc8e3a1cea94e2c1d3fdc150b700c0034b663dc2c9"
+      },
+      "runtime": {
+        "dimensions": [
+          160,
+          160
+        ],
+        "bytes": 8028,
+        "sha256": "30cd035508332a725af0e3185b991e695a890f0ecfc6fe79e288104939dd4e9a"
+      },
+      "alphaValidation": {
+        "extrema": [
+          0,
+          255
+        ],
+        "transparentPixels": 687622,
+        "opaquePixels": 1436,
+        "pixelCount": 1572516,
+        "bbox": [
+          0,
+          19,
+          1190,
+          1254
+        ]
+      }
+    },
+    {
+      "name": "home",
+      "prompt": "Use case: stylized-concept. Create ONE production raster category icon for the for-pocket expense journal, a coherent minimalist Japanese paper stationery object. Matte softly tactile cut-paper / tiny handmade paper-object illustration with gently rounded contours and extremely subtle paper grain, restrained diffuse shading only. Palette warm pale cream, sage green, low-saturation peach pink, pale sky blue and butter yellow. Large clean readable silhouette for 32px display. Center the complete compact object in a square canvas, occupying about 85% of width and height, narrow equal transparent margin. True alpha transparency outside the object, absolutely no filled backdrop or checkerboard. No lettering, numbers, currency symbols, brands, faces, eyes, stars, sparkles, gloss, glints, beams, UI mockup or extra scene. No detached speckles. Soft front-facing three-quarter view with very shallow dimensionality. All object surfaces must be plain, without floral patterns, printed decoration or tiny ornamental marks. Subject: One tiny cream house with a soft sage roof and a small muted peach handled wrench resting diagonally against its front. A clear chunky house-and-home-repair silhouette. One plain square window and door, no garden or base, no decoration.",
+      "source": "C:\\Users\\wangxr\\.codex\\generated_images\\01a15f1c-89a6-7873-9958-01b8443873e6\\exec-040d530d-e361-43d3-ab8f-32567dc7b80c.png",
+      "originalFile": "home.png",
+      "runtimeFile": "home.webp",
+      "visualReview": "Subject and palette visually checked; no text, face, star or gloss.",
+      "original": {
+        "dimensions": [
+          1254,
+          1254
+        ],
+        "bytes": 1463345,
+        "sha256": "9059337ce5b3cdf44c53adc40a072a412023295d26a35db82f66777b81da800e"
+      },
+      "runtime": {
+        "dimensions": [
+          160,
+          160
+        ],
+        "bytes": 5334,
+        "sha256": "7684948a41b3679b5d43d94d6c950420456bcb8ebb1e5a6fdce82058fb335be0"
+      },
+      "alphaValidation": {
+        "extrema": [
+          0,
+          255
+        ],
+        "transparentPixels": 775424,
+        "opaquePixels": 306,
+        "pixelCount": 1572516,
+        "bbox": [
+          0,
+          17,
+          1244,
+          1254
+        ]
+      }
+    },
+    {
+      "name": "insurance",
+      "prompt": "Use case: stylized-concept. Create ONE production raster category icon for the for-pocket expense journal, a coherent minimalist Japanese paper stationery object. Matte softly tactile cut-paper / tiny handmade paper-object illustration with gently rounded contours and extremely subtle paper grain, restrained diffuse shading only. Palette warm pale cream, sage green, low-saturation peach pink, pale sky blue and butter yellow. Large clean readable silhouette for 32px display. Center the complete compact object in a square canvas, occupying about 85% of width and height, narrow equal transparent margin. True alpha transparency outside the object, absolutely no filled backdrop or checkerboard. No lettering, numbers, currency symbols, brands, faces, eyes, stars, sparkles, gloss, glints, beams, UI mockup or extra scene. No detached speckles. Soft front-facing three-quarter view with very shallow dimensionality. All object surfaces must be plain, without floral patterns, printed decoration or tiny ornamental marks. Subject: One small open folded-paper umbrella in pale sky blue and cream with a muted sage shield-shaped paper patch attached on the lower front. The shield is completely blank, no checkmark. Simple short curved cream handle, no rain or clouds. A compact protection icon.",
+      "source": "C:\\Users\\wangxr\\.codex\\generated_images\\01a15f1c-89a6-7873-9958-01b8443873e6\\exec-acb10327-2d66-46c8-8191-f76b174772a7.png",
+      "originalFile": "insurance.png",
+      "runtimeFile": "insurance.webp",
+      "visualReview": "Subject and palette visually checked; no text, face, star or glossy highlight.",
+      "original": {
+        "dimensions": [
+          1254,
+          1254
+        ],
+        "bytes": 1253793,
+        "sha256": "3d6024ea76cb9136677c2c586acad8c02387df16b6d0eea4e7d15dfb77294a1f"
+      },
+      "runtime": {
+        "dimensions": [
+          160,
+          160
+        ],
+        "bytes": 6828,
+        "sha256": "08db51fe7d134d46205159482105a07ce83eabb9ed975269930013c1a248ce56"
+      },
+      "alphaValidation": {
+        "extrema": [
+          0,
+          255
+        ],
+        "transparentPixels": 908293,
+        "opaquePixels": 948,
+        "pixelCount": 1572516,
+        "bbox": [
+          0,
+          29,
+          1240,
+          1254
+        ]
+      }
+    },
+    {
+      "name": "other",
+      "prompt": "Use case: stylized-concept. Create ONE production raster category icon for the for-pocket expense journal, a coherent minimalist Japanese paper stationery object. Matte softly tactile cut-paper / tiny handmade paper-object illustration with gently rounded contours and extremely subtle paper grain, restrained diffuse shading only. Palette warm pale cream, sage green, low-saturation peach pink, pale sky blue and butter yellow. Large clean readable silhouette for 32px display. Center the complete compact object in a square canvas, occupying about 85% of width and height, narrow equal transparent margin. True alpha transparency outside the object, absolutely no filled backdrop or checkerboard. No lettering, numbers, currency symbols, brands, faces, eyes, stars, sparkles, gloss, glints, beams, UI mockup or extra scene. No detached speckles. Soft front-facing three-quarter view with very shallow dimensionality. All object surfaces must be plain, without floral patterns, printed decoration or tiny ornamental marks. Subject: One softly rounded cream paper document folder, slightly open, with exactly three broad visible index tabs at the top in sage green, pale sky blue and muted peach. A single paper sheet edge may peek out. Plain unmarked surfaces and no contents scattered outside.",
+      "source": "C:\\Users\\wangxr\\.codex\\generated_images\\01a15f1c-89a6-7873-9958-01b8443873e6\\exec-de6bec2f-2260-4a35-9445-df0176601f0c.png",
+      "originalFile": "other.png",
+      "runtimeFile": "other.webp",
+      "visualReview": "Subject and palette visually checked; no text, face, star or glossy highlight.",
+      "original": {
+        "dimensions": [
+          1254,
+          1254
+        ],
+        "bytes": 1619597,
+        "sha256": "b41845cc86c82b5dc0a3d9249eda89930b4c122faf4e5b0e6cf50f6ca6d131f4"
+      },
+      "runtime": {
+        "dimensions": [
+          160,
+          160
+        ],
+        "bytes": 5020,
+        "sha256": "1dcf33c67ab929ce2bd13da26ec31741b98e8e585e129115efb063d2d5b0ba1f"
+      },
+      "alphaValidation": {
+        "extrema": [
+          0,
+          255
+        ],
+        "transparentPixels": 638117,
+        "opaquePixels": 1192,
+        "pixelCount": 1572516,
+        "bbox": [
+          0,
+          0,
+          1240,
+          1254
+        ]
+      }
+    },
+    {
+      "name": "wage",
+      "prompt": "Use case: stylized-concept. Create ONE production raster category icon for the for-pocket expense journal, a coherent minimalist Japanese paper stationery object. Matte softly tactile cut-paper / tiny handmade paper-object illustration with gently rounded contours and extremely subtle paper grain, restrained diffuse shading only. Palette warm pale cream, sage green, low-saturation peach pink, pale sky blue and butter yellow. Large clean readable silhouette for 32px display. Center the complete compact object in a square canvas, occupying about 85% of width and height, narrow equal transparent margin. True alpha transparency outside the object, absolutely no filled backdrop or checkerboard. No lettering, numbers, currency symbols, brands, faces, eyes, stars, sparkles, gloss, glints, beams, UI mockup or extra scene. No detached speckles. Soft front-facing three-quarter view with very shallow dimensionality. All object surfaces must be plain, without floral patterns, printed decoration or tiny ornamental marks. Subject: One open horizontal pale cream salary envelope with a small neat stack of sage-green paper banknotes protruding from the top. The notes have only one faint oval shape, no written denomination or currency symbols. The envelope has one soft butter-yellow circular fastening tab. A clear simple compact payday silhouette.",
+      "source": "C:\\Users\\wangxr\\.codex\\generated_images\\01a15f1c-89a6-7873-9958-01b8443873e6\\exec-47fe51fb-4297-4c37-919e-3cfd69911ef4.png",
+      "originalFile": "wage.png",
+      "runtimeFile": "wage.webp",
+      "visualReview": "Subject and palette visually checked; no text, face, star or glossy highlight.",
+      "original": {
+        "dimensions": [
+          1254,
+          1254
+        ],
+        "bytes": 1610186,
+        "sha256": "abde227e60413ae0481d70f4203750f26ec1fc263d03fd90f2b6231d30ea6eb3"
+      },
+      "runtime": {
+        "dimensions": [
+          160,
+          160
+        ],
+        "bytes": 4554,
+        "sha256": "7e12edc8d41b7c25e34316be77d7c038b5aec6ee64b8039411c917b8bb835180"
+      },
+      "alphaValidation": {
+        "extrema": [
+          0,
+          255
+        ],
+        "transparentPixels": 645468,
+        "opaquePixels": 364,
+        "pixelCount": 1572516,
+        "bbox": [
+          0,
+          38,
+          1253,
+          1254
+        ]
+      }
+    },
+    {
+      "name": "bonus",
+      "prompt": "Use case: stylized-concept. Create ONE production raster category icon for the for-pocket expense journal, a coherent minimalist Japanese paper stationery object. Matte softly tactile cut-paper / tiny handmade paper-object illustration with gently rounded contours and extremely subtle paper grain, restrained diffuse shading only. Palette warm pale cream, sage green, low-saturation peach pink, pale sky blue and butter yellow. Large clean readable silhouette for 32px display. Center the complete compact object in a square canvas, occupying about 85% of width and height, narrow equal transparent margin. True alpha transparency outside the object, absolutely no filled backdrop or checkerboard. No lettering, numbers, currency symbols, brands, faces, eyes, stars, sparkles, gloss, glints, beams, UI mockup or extra scene. No detached speckles. Soft front-facing three-quarter view with very shallow dimensionality. All object surfaces must be plain, without floral patterns, printed decoration or tiny ornamental marks. Subject: Exactly three thick paper coins in muted butter yellow, stacked in a short slightly staggered pile, one tilted upright behind the others. Blank matte coin faces, no numbers, currency symbols, medals or stars. A restrained reward-income icon, simple broad silhouettes.",
+      "source": "C:\\Users\\wangxr\\.codex\\generated_images\\01a15f1c-89a6-7873-9958-01b8443873e6\\exec-99919f21-417e-4f1a-b4a3-8b01e1f9eb5b.png",
+      "originalFile": "bonus.png",
+      "runtimeFile": "bonus.webp",
+      "visualReview": "Subject and palette visually checked; no text, face, star or glossy highlight.",
+      "original": {
+        "dimensions": [
+          1254,
+          1254
+        ],
+        "bytes": 1013953,
+        "sha256": "e31875358685c1733db2aafad80d40974497da52fd6140cfaa351223e973b0ce"
+      },
+      "runtime": {
+        "dimensions": [
+          160,
+          160
+        ],
+        "bytes": 4814,
+        "sha256": "5e6fff080bbaad20e5fee7f3d822f5f53bd2bf95ac834ddd8a7e6c4b4b9fd7bf"
+      },
+      "alphaValidation": {
+        "extrema": [
+          0,
+          255
+        ],
+        "transparentPixels": 1025923,
+        "opaquePixels": 402,
+        "pixelCount": 1572516,
+        "bbox": [
+          0,
+          9,
+          1198,
+          1254
+        ]
+      }
+    },
+    {
+      "name": "redpacket",
+      "prompt": "Use case: stylized-concept. Create ONE production raster category icon for the for-pocket expense journal, a coherent minimalist Japanese paper stationery object. Matte softly tactile cut-paper / tiny handmade paper-object illustration with gently rounded contours and extremely subtle paper grain, restrained diffuse shading only. Palette warm pale cream, sage green, low-saturation peach pink, pale sky blue and butter yellow. Large clean readable silhouette for 32px display. Center the complete compact object in a square canvas, occupying about 85% of width and height, narrow equal transparent margin. True alpha transparency outside the object, absolutely no filled backdrop or checkerboard. No lettering, numbers, currency symbols, brands, faces, eyes, stars, sparkles, gloss, glints, beams, UI mockup or extra scene. No detached speckles. Soft front-facing three-quarter view with very shallow dimensionality. All object surfaces must be plain, without floral patterns, printed decoration or tiny ornamental marks. Subject: One upright softly rounded coral-red paper gift envelope, open at the top with two plain sage-green banknotes peeking out. A small butter-yellow circular seal near the lower center. This should clearly be a traditional red money envelope silhouette, without any calligraphy, lettering, printed symbols, tassels or decorations.",
+      "source": "C:\\Users\\wangxr\\.codex\\generated_images\\01a15f1c-89a6-7873-9958-01b8443873e6\\exec-74548fad-faca-4d62-9f3a-812e39901aa8.png",
+      "originalFile": "redpacket.png",
+      "runtimeFile": "redpacket.webp",
+      "visualReview": "Subject and palette visually checked; no text, face, star or glossy highlight.",
+      "original": {
+        "dimensions": [
+          1254,
+          1254
+        ],
+        "bytes": 1359158,
+        "sha256": "1037e5abe5d3c6ad309f72c6aa7506abf196a2b7098eba381989a0a927c7238d"
+      },
+      "runtime": {
+        "dimensions": [
+          160,
+          160
+        ],
+        "bytes": 4680,
+        "sha256": "93b4cee573292dd26c5b27a3169f70097f4e5ade3634b981c0541105fb9730a6"
+      },
+      "alphaValidation": {
+        "extrema": [
+          0,
+          255
+        ],
+        "transparentPixels": 882568,
+        "opaquePixels": 1335,
+        "pixelCount": 1572516,
+        "bbox": [
+          0,
+          37,
+          1218,
+          1199
+        ]
+      }
+    },
+    {
+      "name": "parttime",
+      "prompt": "Use case: stylized-concept. Create ONE production raster category icon for the for-pocket expense journal, a coherent minimalist Japanese paper stationery object. Matte softly tactile cut-paper / tiny handmade paper-object illustration with gently rounded contours and extremely subtle paper grain, restrained diffuse shading only. Palette warm pale cream, sage green, low-saturation peach pink, pale sky blue and butter yellow. Large clean readable silhouette for 32px display. Center the complete compact object in a square canvas, occupying about 85% of width and height, narrow equal transparent margin. True alpha transparency outside the object, absolutely no filled backdrop or checkerboard. No lettering, numbers, currency symbols, brands, faces, eyes, stars, sparkles, gloss, glints, beams, UI mockup or extra scene. No detached speckles. Soft front-facing three-quarter view with very shallow dimensionality. All object surfaces must be plain, without floral patterns, printed decoration or tiny ornamental marks. Subject: One small closed pale sky-blue work notebook and a short butter-yellow pencil resting diagonally across its front. The notebook has one tiny plain sage bookmark tab. Simple blank cover, no writing, no rulers or other tools. A compact casual work-income icon.",
+      "source": "C:\\Users\\wangxr\\.codex\\generated_images\\01a15f1c-89a6-7873-9958-01b8443873e6\\exec-fb1b44c6-b35b-4e0a-aca1-afad51d2b8f7.png",
+      "originalFile": "parttime.png",
+      "runtimeFile": "parttime.webp",
+      "visualReview": "Subject and palette visually checked; no text, face, star or glossy highlight.",
+      "original": {
+        "dimensions": [
+          1254,
+          1254
+        ],
+        "bytes": 1491083,
+        "sha256": "b8f6acfc95739c0ba95852e89db35a3d3d8aa6704b61f5d0bf43bb788fb8fdc5"
+      },
+      "runtime": {
+        "dimensions": [
+          160,
+          160
+        ],
+        "bytes": 5844,
+        "sha256": "d443a44c05ee607f5a66d5cc9d02008a934a19311b47338284062281aedb9dc3"
+      },
+      "alphaValidation": {
+        "extrema": [
+          0,
+          255
+        ],
+        "transparentPixels": 783801,
+        "opaquePixels": 811,
+        "pixelCount": 1572516,
+        "bbox": [
+          0,
+          32,
+          1178,
+          1254
+        ]
+      }
+    },
+    {
+      "name": "reimburse",
+      "prompt": "Use case: stylized-concept. Create ONE production raster category icon for the for-pocket expense journal, a coherent minimalist Japanese paper stationery object. Matte softly tactile cut-paper / tiny handmade paper-object illustration with gently rounded contours and extremely subtle paper grain, restrained diffuse shading only. Palette warm pale cream, sage green, low-saturation peach pink, pale sky blue and butter yellow. Large clean readable silhouette for 32px display. Center the complete compact object in a square canvas, occupying about 85% of width and height, narrow equal transparent margin. True alpha transparency outside the object, absolutely no filled backdrop or checkerboard. No lettering, numbers, currency symbols, brands, faces, eyes, stars, sparkles, gloss, glints, beams, UI mockup or extra scene. No detached speckles. Soft front-facing three-quarter view with very shallow dimensionality. All object surfaces must be plain, without floral patterns, printed decoration or tiny ornamental marks. Subject: One compact muted sage folding wallet open just enough for a short cream receipt slip to visibly tuck back into its central slot. The receipt is mostly blank, with exactly two thick faint sage horizontal strokes suggesting a receipt, no readable writing or digits. A tiny broad curved peach paper return arrow curves from the receipt back into the wallet, attached closely to the silhouette. A simple reimbursement-income icon.",
+      "source": "C:\\Users\\wangxr\\.codex\\generated_images\\01a15f1c-89a6-7873-9958-01b8443873e6\\exec-0be0db01-a0fe-4a2e-be91-10d522e98c72.png",
+      "originalFile": "reimburse.png",
+      "runtimeFile": "reimburse.webp",
+      "visualReview": "Subject and palette visually checked; no text, face, star or glossy highlight.",
+      "original": {
+        "dimensions": [
+          1254,
+          1254
+        ],
+        "bytes": 1517214,
+        "sha256": "0c63c6be6d7c5a9e3b100e295e10db7e6d85d6b20b63c209d2b78b9116d5d433"
+      },
+      "runtime": {
+        "dimensions": [
+          160,
+          160
+        ],
+        "bytes": 6720,
+        "sha256": "c25fab2582e7ab8ef5f9793130679038e9f923c0e83ad7891d380912ced33e8e"
+      },
+      "alphaValidation": {
+        "extrema": [
+          0,
+          255
+        ],
+        "transparentPixels": 773331,
+        "opaquePixels": 580,
+        "pixelCount": 1572516,
+        "bbox": [
+          55,
+          25,
+          1188,
+          1254
+        ]
+      }
+    },
+    {
+      "name": "other_in",
+      "prompt": "Use case: stylized-concept. Create ONE production raster category icon for the for-pocket expense journal, a coherent minimalist Japanese paper stationery object. Matte softly tactile cut-paper / tiny handmade paper-object illustration with gently rounded contours and extremely subtle paper grain, restrained diffuse shading only. Palette warm pale cream, sage green, low-saturation peach pink, pale sky blue and butter yellow. Large clean readable silhouette for 32px display. Center the complete compact object in a square canvas, occupying about 85% of width and height, narrow equal transparent margin. True alpha transparency outside the object, absolutely no filled backdrop or checkerboard. No lettering, numbers, currency symbols, brands, faces, eyes, stars, sparkles, gloss, glints, beams, UI mockup or extra scene. No detached speckles. Soft front-facing three-quarter view with very shallow dimensionality. All object surfaces must be plain, without floral patterns, printed decoration or tiny ornamental marks. Subject: One small open pale butter-yellow coin purse with softly rounded body, simple clasp and a cream lining, with one pale sage and one muted peach coin partially visible inside. The opening and clasp clearly show a coin purse. No money symbols, markings, patterns or detached coins. A single compact friendly silhouette.",
+      "source": "C:\\Users\\wangxr\\.codex\\generated_images\\01a15f1c-89a6-7873-9958-01b8443873e6\\exec-29de0427-a87a-4447-87f4-b07815c21148.png",
+      "originalFile": "other_in.png",
+      "runtimeFile": "other_in.webp",
+      "visualReview": "Subject and palette visually checked; no text, face, star or glossy highlight.",
+      "original": {
+        "dimensions": [
+          1254,
+          1254
+        ],
+        "bytes": 1637643,
+        "sha256": "6c5ad321d7551aa1cf3b22cfb304e8d93b01ed19303341b24cd79b67a999af9b"
+      },
+      "runtime": {
+        "dimensions": [
+          160,
+          160
+        ],
+        "bytes": 6486,
+        "sha256": "f66493cfc64860e177df0f5a724ec80cc1e3d68cb99b2f448d9011a387415f4b"
+      },
+      "alphaValidation": {
+        "extrema": [
+          0,
+          255
+        ],
+        "transparentPixels": 684455,
+        "opaquePixels": 835,
+        "pixelCount": 1572516,
+        "bbox": [
+          0,
+          24,
+          1224,
+          1254
+        ]
+      }
+    }
+  ],
+  "review32px": {
+    "method": "Each generated image inspected at original resolution and each runtime derivative separately downsampled in memory to 32x32 using Lanczos for visual review; no contact sheet or manual retouching used.",
+    "results": {
+      "date": "Final 32px review passed: two plain overlapping cups and prominent coral heart are recognizable; no extra inner handles or floral clutter.",
+      "gift_expense": "Box and bow recognizable",
+      "electronics": "Headphones around phone recognizable",
+      "home": "House and wrench recognizable",
+      "insurance": "Umbrella and shield recognizable",
+      "other": "Folder and colored tabs recognizable",
+      "wage": "Envelope and notes recognizable",
+      "bonus": "Three coins recognizable",
+      "redpacket": "Coral envelope distinct from wage",
+      "parttime": "Pencil and notebook recognizable",
+      "reimburse": "Receipt, return arrow and wallet recognizable",
+      "other_in": "Open coin purse recognizable"
+    }
+  },
+  "validation": {
+    "assetCount": 12,
+    "runtimeBytes": 70368,
+    "allPngOriginalsUnmodified": true,
+    "allRuntimeMaxDimension": 160,
+    "allOriginalAndRuntimeAlphaRange": [
+      0,
+      255
+    ],
+    "allHashesVerified": true,
+    "originalPixelEdits": "None. Date changes were generated through built-in image edits, never code repainting.",
+    "externalServicesUsed": "Built-in image_gen only; no CLI fallback"
+  }
+}
