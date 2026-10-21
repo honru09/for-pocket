@@ -170,7 +170,7 @@ test('account merge remaps legacy member-only ownership, archived snapshots, pre
   db.circles.B.locations={a:{location:{name:'older'},updatedAt:1},b:{location:{name:'newer'},updatedAt:2}};
   db.circles.B.reactions=[{id:'reaction-link-01',from:'b',to:'a'}];
   db.circles.B.reactionBursts=[{id:'burst-link-001',from:'b',to:'a',count:2}];
-  db.telegram={preferences:{b:{chatId:'101',language:'uk',seenAt:domainOptions.now}}};
+  db.telegram={preferences:{b:{chatId:'101',language:'uk',seenAt:domainOptions.now}},expenseMessages:{'B:legacy-member-001':[{uid:'b',chatId:'101',messageId:9}]}};
   db.cron={missingEntryReminders:{'b:2026-10-13':{uid:'b',localDate:'2026-10-13',status:'sent',messageId:4}}};
   const code=domain(db,'a','/auth/link-code','POST').code;
   domain(db,'b','/auth/link-verify','POST',{code,confirm:true});
@@ -186,6 +186,7 @@ test('account merge remaps legacy member-only ownership, archived snapshots, pre
   assert.equal(db.circles.B.reactionBursts[0].to,'a');
   assert.equal(db.telegram.preferences.a.language,'uk');
   assert.equal(db.telegram.preferences.b,undefined);
+  assert.equal(db.telegram.expenseMessages['B:legacy-member-001'][0].uid,'a');
   assert.equal(db.cron.missingEntryReminders['a:2026-10-13'].status,'sent');
   assert.equal(db.cron.missingEntryReminders['b:2026-10-13'],undefined);
 });

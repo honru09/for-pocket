@@ -47,7 +47,9 @@ function knownChats(db, ledgerId) {
     const preference = db.telegram?.preferences?.[uid];
     if (preference?.chatType && preference.chatType !== 'private') continue;
     const chatId = safeChat(preference?.chatId);
-    if (chatId) result.set(chatId, { chatId, uid, language: resolveLanguage(preference?.language || db.users?.[uid]?.settings?.language, 'zh') });
+    // A stored preference alone is not proof that this private chat still
+    // belongs to the member (linking/unlinking can change the identity map).
+    if (chatId && db.identities?.[`telegram:${chatId}`] === uid) result.set(chatId, { chatId, uid, language: resolveLanguage(preference?.language || db.users?.[uid]?.settings?.language, 'zh') });
   }
   return [...result.values()];
 }
@@ -84,9 +86,32 @@ export function expenseNotificationText(entry, language = 'zh') {
  * Sends quiet companion messages and keeps only Telegram message references in
  * db.telegram, so the web ledger never exposes chat IDs to the browser.
  */
-export function createTelegramExpenseSync({ store, token = '', callTelegram, now = () => Date.now() } = {}) {
+export function createTelegramExpenseSync({ store, token = '', callTelegram, beforeDeliver, now = () => Date.now() } = {}) {
   if (!store || typeof store.run !== 'function') throw new TypeError('Expense sync requires a store');
   const telegram = callTelegramFactory(token, callTelegram);
+  const skippedDelivery = Symbol('revoked recipient');
+  const deliver = async (method, parameters, authorized) => {
+    // The server's initial flush can precede another request's mutation.
+    // Persist the exact snapshot/claim used here before any external effect.
+    if (beforeDeliver) await beforeDeliver();
+    if (authorized && !await authorized()) return skippedDelivery;
+    return telegram(method, parameters);
+  };
+  async function deliveryRecipient(key, ledgerId, binding) {
+    return store.run(db => {
+      const state = ensureSyncState(db), list = state.expenseMessages[key] || [];
+      const current = list.find(item => String(item?.chatId) === String(binding.chatId) && (!binding.messageId || Number(item?.messageId) === Number(binding.messageId)));
+      if (!current) return null;
+      const allowed = knownChats(db, ledgerId).find(item => item.chatId === String(binding.chatId) && (!current.uid || current.uid === item.uid) && (!binding.uid || binding.uid === item.uid));
+      if (!allowed) {
+        list.splice(list.indexOf(current), 1);
+        if (!list.length) delete state.expenseMessages[key];
+        return null;
+      }
+      current.uid = allowed.uid;
+      return allowed;
+    });
+  }
   // Telegram has no idempotency key for sendMessage.  Serialize a recipient
   // locally and persist a short claim before sending so two web requests (or a
   // Telegram retry and a web request) cannot create duplicate companion cards.
@@ -140,6 +165,7 @@ export function createTelegramExpenseSync({ store, token = '', callTelegram, now
       const state = ensureSyncState(db);
       const currentEntry = db.ledgers?.[snapshot.actual.ledgerId]?.expenses?.find(item => item.id === snapshot.actual.id);
       if (!currentEntry || currentEntry.deletedAt) return false;
+      if (!knownChats(db, snapshot.actual.ledgerId).some(item => item.uid === recipient.uid && item.chatId === recipient.chatId)) return false;
       const list = state.expenseMessages[snapshot.key] ||= [];
       const current = list.find(item => String(item?.chatId) === String(recipient.chatId));
       const timestamp = Number(typeof now === 'function' ? now() : now) || Date.now();
@@ -148,13 +174,15 @@ export function createTelegramExpenseSync({ store, token = '', callTelegram, now
       if (current && Number(current.messageId) > 0 && !['failed', 'sending'].includes(current.status)) return false;
       if (current?.status === 'sending' && Number(current.claimUntil) > timestamp) return false;
       const binding = current || { chatId: String(recipient.chatId) };
-      Object.assign(binding, { status: 'sending', claimUntil: timestamp + CLAIM_TTL, attempts: Number(binding.attempts || 0) + 1, lastError: '' });
+      Object.assign(binding, { uid: recipient.uid, status: 'sending', claimUntil: timestamp + CLAIM_TTL, attempts: Number(binding.attempts || 0) + 1, lastError: '' });
       if (!current) list.push(binding);
       return true;
     });
     if (!claimed) return false;
     try {
-      const result = await telegram('sendMessage', { chat_id: recipient.chatId, text: expenseNotificationText(snapshot.actual, recipient.language), disable_notification: true });
+      const result = await deliver('sendMessage', { chat_id: recipient.chatId, text: expenseNotificationText(snapshot.actual, recipient.language), disable_notification: true },
+        () => deliveryRecipient(snapshot.key, snapshot.actual.ledgerId, recipient));
+      if (result === skippedDelivery) return false;
       const messageId = Number(result?.message_id);
       if (!Number.isSafeInteger(messageId) || messageId <= 0) throw new Error('Telegram returned no message id');
       await store.run(db => {
@@ -182,21 +210,24 @@ export function createTelegramExpenseSync({ store, token = '', callTelegram, now
     let synced = 0;
     for (const binding of bindings) {
       if (!Number.isSafeInteger(Number(binding?.messageId)) || Number(binding.messageId) <= 0) continue;
+      // Reauthorize each binding immediately before dispatch. Membership can
+      // change while an earlier recipient's Telegram request is in flight.
+      const recipient = await deliveryRecipient(key, entry.ledgerId, binding);
+      if (!recipient) continue;
       let editText = '';
       if (action !== 'delete') {
-        const language = await store.run(db => {
-          const uid = db.identities?.[`telegram:${binding.chatId}`];
-          return resolveLanguage(db.telegram?.preferences?.[uid]?.language || db.users?.[uid]?.settings?.language, 'zh');
-        });
-        editText = expenseNotificationText(entry, language);
+        editText = expenseNotificationText(entry, recipient.language);
         // A retry of the same edit only needs to revisit bindings whose prior
         // call failed.  A genuinely changed record produces a different text
         // and updates every recipient once.
         if (binding.status === 'sent' && binding.lastText === editText) continue;
       }
       try {
-        if (action === 'delete') await telegram('deleteMessage', { chat_id: binding.chatId, message_id: binding.messageId });
-        else await telegram('editMessageText', { chat_id: binding.chatId, message_id: binding.messageId, text: editText });
+        const authorized = () => deliveryRecipient(key, entry.ledgerId, { ...binding, uid: recipient.uid });
+        const result = action === 'delete'
+          ? await deliver('deleteMessage', { chat_id: binding.chatId, message_id: binding.messageId }, authorized)
+          : await deliver('editMessageText', { chat_id: binding.chatId, message_id: binding.messageId, text: editText }, authorized);
+        if (result === skippedDelivery) continue;
         synced++;
         await store.run(db => {
           const state = ensureSyncState(db), list = state.expenseMessages[key] || [];

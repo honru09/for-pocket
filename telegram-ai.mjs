@@ -319,7 +319,7 @@ function periodForText(text) {
 }
 
 function chatLedgerContext(profile, now, timezone) {
-  const zone = validTimezone(profile?.settings?.timezone || timezone);
+  const zone = validTimezone(profile?.settings?.timezone, timezone);
   const today = dateKey(new Date(now), zone);
   const entries = (profile?.expenses || []).filter(entry => !entry.deletedAt && entry.type !== 'income' && isBudgetEntry(entry) && entry.dayKey === today);
   const byCurrency = new Map();
@@ -739,8 +739,8 @@ export function createTelegramHandler({
     return lines.join('\n');
   }
 
-  async function saveDraft(context, chatId, parsed, { retryId = null, replaceDraftId = null, inputTruncated = false, locationContext } = {}) {
-    const sourceTimezone = validTimezone(parsed?.timezone, timezone);
+  async function saveDraft(context, chatId, parsed, { retryId = null, replaceDraftId = null, inputTruncated = false, locationContext, inputTimezone } = {}) {
+    const sourceTimezone = validTimezone(parsed?.timezone, inputTimezone || validTimezone(context.profile?.settings?.timezone, timezone));
     const raw = normaliseItems(parsed);
     if (!raw.length || raw.length > MAX_PREVIEW_ITEMS) return null;
     const items = raw.map(item => toDraftItem(item, context.profile, context.uid, sourceTimezone, context.language, locationContext));
@@ -802,7 +802,7 @@ export function createTelegramHandler({
     return { ok: true, kind: 'draft', draftId: draft.id, count: draft.items.length };
   }
 
-  async function parseMessage(context, message, attachment, { enhanced = false, replaceDraftId = null, previousRecords = null, locationEntry = null, locationContext = null } = {}) {
+  async function parseMessage(context, message, attachment, { enhanced = false, replaceDraftId = null, previousRecords = null, locationEntry = null, locationContext = null, originalInput = null } = {}) {
     if (!aiParser || typeof aiParser.parse !== 'function') {
       return reply(context, message.chat.id, 'unavailable', { ok: false, reason: 'unavailable' });
     }
@@ -816,14 +816,17 @@ export function createTelegramHandler({
       return reply(context, message.chat.id, 'noInput', { ok: false, reason: 'no-input' });
     }
     invokeLimit(`telegram-ai:${context.telegramId}`, 12);
-    const input = { text, image, file, timezone: validTimezone(timezone), telegramUserId: context.telegramId, enhanced, now: messageAnchor(message, context.at),
+    // Use the same synced ledger zone as the web editor. Retrying an attachment
+    // retains its original clock context even across midnight or a later trip.
+    const inputTimezone = validTimezone(originalInput?.timezone, validTimezone(context.profile?.settings?.timezone, timezone));
+    const input = { text, image, file, timezone: inputTimezone, telegramUserId: context.telegramId, enhanced, now: originalInput?.now ?? messageAnchor(message, context.at),
       language: context.language, defaultConsumer: defaultConsumer(context.profile, context.uid),
       ...(previousRecords ? { previousRecords } : {}), ...(defaultCurrency ? { defaultCurrency } : {}),
       ...(location ? { locationContext: location } : {}) };
     const retryId = (image || file) && !isAudio && !enhanced ? cacheImage(context, message.chat.id, input) : null;
     let parsed;
     try {
-      parsed = await aiParser.parse(input, { ...context.profile.settings, language: context.language,
+      parsed = await aiParser.parse(input, { ...context.profile.settings, timezone: inputTimezone, language: context.language,
         ...(defaultCurrency ? { currency: defaultCurrency } : {}), currentConsumer: context.profile.user.id });
       if (!locationEntry) context.language = parsedLanguage(parsed, context.language);
     } catch (error) {
@@ -833,13 +836,14 @@ export function createTelegramHandler({
     if (locationEntry && normaliseItems(parsed).length) {
       // A numeric reply contains one exact amount. The model supplies category
       // and merchant suggestions, never a replacement amount, date or currency.
-      parsed = { timezone: validTimezone(timezone), items: [{ ...normaliseItems(parsed)[0],
+      parsed = { timezone: inputTimezone, items: [{ ...normaliseItems(parsed)[0],
         amountMinor: locationEntry.amountMinor, currency: locationEntry.currency, type: 'expense',
         occurredAt: new Date(messageAnchor(message, context.at)).toISOString(),
+        timezone: inputTimezone,
         merchant: location.name || normaliseItems(parsed)[0]?.merchant || '',
       }] };
     }
-    const draft = await saveDraft(context, message.chat.id, parsed, { retryId, replaceDraftId, inputTruncated: attachment?.truncated === true, locationContext: location });
+    const draft = await saveDraft(context, message.chat.id, parsed, { retryId, replaceDraftId, inputTruncated: attachment?.truncated === true, locationContext: location, inputTimezone });
     if (!draft) {
       return reply(context, message.chat.id, enhanced ? 'enhanceFailed' : AUDIO_MIME_TYPES.has(file?.mimeType) ? 'audioNoResult' : 'noResult', { ok: false, reason: 'no-result' }, retryMarkup(retryId, context.language));
     }
@@ -966,13 +970,13 @@ export function createTelegramHandler({
 
   async function summaryFor(context, message, text) {
     const period = periodForText(text);
-    const currentTimezone = validTimezone(timezone);
+    const currentTimezone = validTimezone(context.profile?.settings?.timezone, timezone);
     invokeLimit(`telegram-summary:${context.telegramId}`, 6);
     let output = null;
     try {
       if (typeof aiParser?.summarize === 'function') {
         const result = await aiParser.summarize({ question: firstText(text), period, timezone: currentTimezone }, {
-          ...context.profile, settings: { ...context.profile.settings, language: context.language },
+          ...context.profile, settings: { ...context.profile.settings, timezone: currentTimezone, language: context.language },
         });
         output = typeof result === 'string' ? result : result?.text;
       }
@@ -1025,7 +1029,7 @@ export function createTelegramHandler({
     let output = '';
     try {
       if (typeof aiParser?.chat === 'function') {
-        const value = await aiParser.chat({ text: firstText(text), language: context.language, timezone: validTimezone(context.profile?.settings?.timezone || timezone), context: chatLedgerContext(context.profile, atMillis(now), timezone) }, context.profile);
+        const value = await aiParser.chat({ text: firstText(text), language: context.language, timezone: validTimezone(context.profile?.settings?.timezone, timezone), context: chatLedgerContext(context.profile, atMillis(now), timezone) }, context.profile);
         output = typeof value === 'string' ? value : value?.text || '';
       }
     } catch {}
@@ -1079,7 +1083,7 @@ export function createTelegramHandler({
         text: cached.input.text,
         image: cached.input.image || null,
         file: cached.input.file || null,
-      }, { enhanced: true, replaceDraftId: cached.draftId });
+      }, { enhanced: true, replaceDraftId: cached.draftId, originalInput: cached.input });
     } finally {
       if (cached.draftId) await store.run(db => {
         const draft = ensureTelegramState(db).drafts[cached.draftId];

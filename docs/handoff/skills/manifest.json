@@ -1,0 +1,4723 @@
+{
+  "generatedAt": "2026-10-21T16:11:26.972Z",
+  "sourceThreadId": "01a12068-b0ee-7db3-b081-20531fa637b8",
+  "mode": "read-command evidence; installed text snapshot",
+  "formattingPolicy": "All archived text uses LF with text eol=lf Git attributes so committed bytes match SHA256. Markdown prose has trailing whitespace removed, hard breaks expressed with a backslash and one final newline. Fenced/indented/preformatted code and non-Markdown source text retain meaningful line whitespace; exact-file Git whitespace exceptions record retained source whitespace.",
+  "preservedWhitespace": [
+    {
+      "path": "gpt-image/references/openai-cookbook.md",
+      "trailingLineWhitespace": true,
+      "blankLineAtEof": false
+    },
+    {
+      "path": "impeccable/reference/harden.md",
+      "trailingLineWhitespace": true,
+      "blankLineAtEof": false
+    },
+    {
+      "path": "impeccable/reference/optimize.md",
+      "trailingLineWhitespace": true,
+      "blankLineAtEof": false
+    },
+    {
+      "path": "impeccable/scripts/lib/concept-catalog.mjs",
+      "trailingLineWhitespace": false,
+      "blankLineAtEof": true
+    }
+  ],
+  "skills": [
+    {
+      "name": "animate",
+      "slug": "animate",
+      "sourceFile": "C:/Users/wangxr/.agents/skills/animate/SKILL.md",
+      "observedReads": [
+        {
+          "timestamp": "2026-10-09T11:27:56.879Z",
+          "source": "rollout-2026-10-09T20-24-54-01a12068-b0ee-7db3-b081-20531fa637b8.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-09T11:28:48.238Z",
+          "source": "rollout-2026-10-09T20-24-54-01a12068-b0ee-7db3-b081-20531fa637b8.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-09T12:18:13.557Z",
+          "source": "rollout-2026-10-09T20-24-54-01a12068-b0ee-7db3-b081-20531fa637b8.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-10T09:06:02.352Z",
+          "source": "rollout-2026-10-09T20-24-54-01a12068-b0ee-7db3-b081-20531fa637b8.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-10T10:21:43.820Z",
+          "source": "rollout-2026-10-09T20-24-54-01a12068-b0ee-7db3-b081-20531fa637b8.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-10T11:51:14.435Z",
+          "source": "rollout-2026-10-09T20-24-54-01a12068-b0ee-7db3-b081-20531fa637b8.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-10T12:28:25.810Z",
+          "source": "rollout-2026-10-09T20-24-54-01a12068-b0ee-7db3-b081-20531fa637b8.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-10T13:07:16.913Z",
+          "source": "rollout-2026-10-10T21-51-05-01a12068-b0ee-7db3-b081-20531fa637b8_01a125dd-f478-7770-aa45-03585a12442f.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-11T04:32:09.643Z",
+          "source": "rollout-2026-10-10T21-51-05-01a12068-b0ee-7db3-b081-20531fa637b8_01a125dd-f478-7770-aa45-03585a12442f.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-12T16:15:34.080Z",
+          "source": "rollout-2026-10-12T21-51-41-01a12068-b0ee-7db3-b081-20531fa637b8_01a1302b-39f7-7053-b0a5-f2a995759d5c.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-13T00:11:10.449Z",
+          "source": "rollout-2026-10-12T21-51-41-01a12068-b0ee-7db3-b081-20531fa637b8_01a1302b-39f7-7053-b0a5-f2a995759d5c.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-13T01:25:26.762Z",
+          "source": "rollout-2026-10-12T21-51-41-01a12068-b0ee-7db3-b081-20531fa637b8_01a1302b-39f7-7053-b0a5-f2a995759d5c.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-13T02:03:37.606Z",
+          "source": "rollout-2026-10-12T21-51-41-01a12068-b0ee-7db3-b081-20531fa637b8_01a1302b-39f7-7053-b0a5-f2a995759d5c.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-13T02:05:24.813Z",
+          "source": "rollout-2026-10-12T21-51-41-01a12068-b0ee-7db3-b081-20531fa637b8_01a1302b-39f7-7053-b0a5-f2a995759d5c.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-13T05:01:13.733Z",
+          "source": "rollout-2026-10-12T21-51-41-01a12068-b0ee-7db3-b081-20531fa637b8_01a1302b-39f7-7053-b0a5-f2a995759d5c.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-13T10:36:20.527Z",
+          "source": "rollout-2026-10-12T21-51-41-01a12068-b0ee-7db3-b081-20531fa637b8_01a1302b-39f7-7053-b0a5-f2a995759d5c.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-13T11:39:15.028Z",
+          "source": "rollout-2026-10-12T21-51-41-01a12068-b0ee-7db3-b081-20531fa637b8_01a1302b-39f7-7053-b0a5-f2a995759d5c.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-13T16:53:28.478Z",
+          "source": "rollout-2026-10-13T21-32-33-01a12068-b0ee-7db3-b081-20531fa637b8_01a13540-1275-7a60-944f-cd52a9bccb8f.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-13T18:32:25.673Z",
+          "source": "rollout-2026-10-13T21-32-33-01a12068-b0ee-7db3-b081-20531fa637b8_01a13540-1275-7a60-944f-cd52a9bccb8f.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-14T00:25:43.747Z",
+          "source": "rollout-2026-10-13T21-32-33-01a12068-b0ee-7db3-b081-20531fa637b8_01a13540-1275-7a60-944f-cd52a9bccb8f.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-14T12:50:23.846Z",
+          "source": "rollout-2026-10-14T21-49-47-01a12068-b0ee-7db3-b081-20531fa637b8_01a13a76-3505-7032-becf-6a0d80df196b.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-14T12:52:32.216Z",
+          "source": "rollout-2026-10-14T21-49-47-01a12068-b0ee-7db3-b081-20531fa637b8_01a13a76-3505-7032-becf-6a0d80df196b.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-14T13:08:52.927Z",
+          "source": "rollout-2026-10-14T21-49-47-01a12068-b0ee-7db3-b081-20531fa637b8_01a13a76-3505-7032-becf-6a0d80df196b.jsonl",
+          "evidence": "skill-read-command"
+        }
+      ],
+      "archive": "animate/SKILL.md",
+      "files": [
+        {
+          "path": "RECIPES.md",
+          "sha256": "21ff63d84391db8d96ecdf9170095f55a42c836ccc36fd3269c4772bab031ba2",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "SKILL.md",
+          "sha256": "f6317335da2662e92270dc0a6128bea95d7216cd751f86628e3ac6b72804e805",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        }
+      ]
+    },
+    {
+      "name": "emil-design-eng",
+      "slug": "emil-design-eng",
+      "sourceFile": "C:/Users/wangxr/.agents/skills/emil-design-eng/SKILL.md",
+      "observedReads": [
+        {
+          "timestamp": "2026-10-21T13:03:02.412Z",
+          "source": "rollout-2026-10-18T13-58-34-01a12068-b0ee-7db3-b081-20531fa637b8_01a14d60-3a66-70f3-8db7-e409bf9ca7ee.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-21T13:03:48.965Z",
+          "source": "rollout-2026-10-18T13-58-34-01a12068-b0ee-7db3-b081-20531fa637b8_01a14d60-3a66-70f3-8db7-e409bf9ca7ee.jsonl",
+          "evidence": "skill-read-command"
+        }
+      ],
+      "archive": "emil-design-eng/SKILL.md",
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "e71de849347050c2c573c1cf24d742d5a13459557ecffa6e562f08006f46b5b7",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        }
+      ]
+    },
+    {
+      "name": "improve-animations",
+      "slug": "improve-animations",
+      "sourceFile": "C:/Users/wangxr/.agents/skills/improve-animations/SKILL.md",
+      "observedReads": [
+        {
+          "timestamp": "2026-10-14T11:22:07.321Z",
+          "source": "rollout-2026-10-14T19-35-37-01a12068-b0ee-7db3-b081-20531fa637b8_01a139fb-5f7d-72e1-bca9-859204684883.jsonl",
+          "evidence": "skill-read-command"
+        }
+      ],
+      "archive": "improve-animations/SKILL.md",
+      "files": [
+        {
+          "path": "AUDIT.md",
+          "sha256": "551c8473e20e5f4774680bc24d45e1c68e50992582720905c6b077756b7b5a55",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "PLAN-TEMPLATE.md",
+          "sha256": "0a08ac8e23fd2082d7ffb86aeed7b789de77328c3cf874b16f1a755f2ef0a6ad",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "SKILL.md",
+          "sha256": "68f17bbc4671593d2f43dba26a679243e2153ba5f26965fb7d59df52842534ff",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        }
+      ]
+    },
+    {
+      "name": "interface-design",
+      "slug": "interface-design",
+      "sourceFile": "C:/Users/wangxr/.agents/skills/interface-design/SKILL.md",
+      "observedReads": [
+        {
+          "timestamp": "2026-10-10T02:55:13.093Z",
+          "source": "rollout-2026-10-09T20-24-54-01a12068-b0ee-7db3-b081-20531fa637b8.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-10T08:37:54.992Z",
+          "source": "rollout-2026-10-09T20-24-54-01a12068-b0ee-7db3-b081-20531fa637b8.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-11T07:27:33.163Z",
+          "source": "rollout-2026-10-10T21-51-05-01a12068-b0ee-7db3-b081-20531fa637b8_01a125dd-f478-7770-aa45-03585a12442f.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-11T07:29:13.051Z",
+          "source": "rollout-2026-10-10T21-51-05-01a12068-b0ee-7db3-b081-20531fa637b8_01a125dd-f478-7770-aa45-03585a12442f.jsonl",
+          "evidence": "skill-read-command"
+        }
+      ],
+      "archive": "interface-design/SKILL.md",
+      "files": [
+        {
+          "path": "agents/openai.yaml",
+          "sha256": "752d0810d593b5cc88b34ea8e0c101b50d0ec1c4c8091be369544f73f3a2ea2e",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "SKILL.md",
+          "sha256": "720b31a31276e899fbe3006a33cbfeaceb77a73ba4c27b80d29afd38c8b7b208",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        }
+      ]
+    },
+    {
+      "name": "pick-ui-library",
+      "slug": "pick-ui-library",
+      "sourceFile": "C:/Users/wangxr/.agents/skills/pick-ui-library/SKILL.md",
+      "observedReads": [
+        {
+          "timestamp": "2026-10-09T12:18:13.557Z",
+          "source": "rollout-2026-10-09T20-24-54-01a12068-b0ee-7db3-b081-20531fa637b8.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-13T05:03:06.123Z",
+          "source": "rollout-2026-10-12T21-51-41-01a12068-b0ee-7db3-b081-20531fa637b8_01a1302b-39f7-7053-b0a5-f2a995759d5c.jsonl",
+          "evidence": "skill-read-command"
+        }
+      ],
+      "archive": "pick-ui-library/SKILL.md",
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "4b889bd6c08358499ac4a7202b8af71ffbd3485d2468f7b09d0613bbe7b24bf4",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        }
+      ]
+    },
+    {
+      "name": "responsive-design",
+      "slug": "responsive-design",
+      "sourceFile": "C:/Users/wangxr/.agents/skills/responsive-design/SKILL.md",
+      "observedReads": [
+        {
+          "timestamp": "2026-10-14T00:50:23.904Z",
+          "source": "rollout-2026-10-13T21-32-33-01a12068-b0ee-7db3-b081-20531fa637b8_01a13540-1275-7a60-944f-cd52a9bccb8f.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-14T00:52:00.045Z",
+          "source": "rollout-2026-10-13T21-32-33-01a12068-b0ee-7db3-b081-20531fa637b8_01a13540-1275-7a60-944f-cd52a9bccb8f.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-14T00:52:53.166Z",
+          "source": "rollout-2026-10-13T21-32-33-01a12068-b0ee-7db3-b081-20531fa637b8_01a13540-1275-7a60-944f-cd52a9bccb8f.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-16T04:24:50.649Z",
+          "source": "rollout-2026-10-14T21-49-47-01a12068-b0ee-7db3-b081-20531fa637b8_01a13a76-3505-7032-becf-6a0d80df196b.jsonl",
+          "evidence": "skill-read-command"
+        }
+      ],
+      "archive": "responsive-design/SKILL.md",
+      "files": [
+        {
+          "path": "references/breakpoint-strategies.md",
+          "sha256": "d086c14641856aacdd38fd8aebf2988fb0055b7ed1b8773feb3104e69c7d1506",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "references/container-queries.md",
+          "sha256": "67b1697186a531751ec2aa364506919b9ae44680744603613c511d5132eb5a24",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "references/details.md",
+          "sha256": "6b8d84250249319719fc5d4a545628267edd16b8763c107536cf7341d37740b4",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "references/fluid-layouts.md",
+          "sha256": "d67ad19e57b015101da5d4c4a9208015909f60b89db5b7922d0bf9ca17673860",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "SKILL.md",
+          "sha256": "c8bd56f8fc0f122c4ff392b02617f0e6bb4a353b2d0189235c6ee77cdcfe8690",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        }
+      ]
+    },
+    {
+      "name": "review-animations",
+      "slug": "review-animations",
+      "sourceFile": "C:/Users/wangxr/.agents/skills/review-animations/SKILL.md",
+      "observedReads": [
+        {
+          "timestamp": "2026-10-14T00:50:23.904Z",
+          "source": "rollout-2026-10-13T21-32-33-01a12068-b0ee-7db3-b081-20531fa637b8_01a13540-1275-7a60-944f-cd52a9bccb8f.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-14T00:52:00.045Z",
+          "source": "rollout-2026-10-13T21-32-33-01a12068-b0ee-7db3-b081-20531fa637b8_01a13540-1275-7a60-944f-cd52a9bccb8f.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-14T00:52:53.166Z",
+          "source": "rollout-2026-10-13T21-32-33-01a12068-b0ee-7db3-b081-20531fa637b8_01a13540-1275-7a60-944f-cd52a9bccb8f.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-14T15:52:46.185Z",
+          "source": "rollout-2026-10-14T21-49-47-01a12068-b0ee-7db3-b081-20531fa637b8_01a13a76-3505-7032-becf-6a0d80df196b.jsonl",
+          "evidence": "skill-read-command"
+        }
+      ],
+      "archive": "review-animations/SKILL.md",
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "61cf8ac0c4c8e1f63385298c546b16c65ca9aec34abddcd04e821c16712d671d",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "STANDARDS.md",
+          "sha256": "e7d3605034acda54ca13e43aec9e64d65b53de20f75b11b8d694e373012fbe07",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        }
+      ]
+    },
+    {
+      "name": "computer-use",
+      "slug": "computer-use",
+      "sourceFile": "C:/Users/wangxr/.codex/plugins/cache/openai-bundled/computer-use/26.903.61454/skills/computer-use/SKILL.md",
+      "observedReads": [
+        {
+          "timestamp": "2026-10-09T11:28:48.238Z",
+          "source": "rollout-2026-10-09T20-24-54-01a12068-b0ee-7db3-b081-20531fa637b8.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-10T03:56:09.686Z",
+          "source": "rollout-2026-10-09T20-24-54-01a12068-b0ee-7db3-b081-20531fa637b8.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-10T09:27:58.665Z",
+          "source": "rollout-2026-10-09T20-24-54-01a12068-b0ee-7db3-b081-20531fa637b8.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-10T15:48:35.782Z",
+          "source": "rollout-2026-10-10T21-51-05-01a12068-b0ee-7db3-b081-20531fa637b8_01a125dd-f478-7770-aa45-03585a12442f.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-10T17:08:33.571Z",
+          "source": "rollout-2026-10-10T21-51-05-01a12068-b0ee-7db3-b081-20531fa637b8_01a125dd-f478-7770-aa45-03585a12442f.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-11T04:33:17.460Z",
+          "source": "rollout-2026-10-10T21-51-05-01a12068-b0ee-7db3-b081-20531fa637b8_01a125dd-f478-7770-aa45-03585a12442f.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-11T17:03:07.453Z",
+          "source": "rollout-2026-10-10T21-51-05-01a12068-b0ee-7db3-b081-20531fa637b8_01a125dd-f478-7770-aa45-03585a12442f.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-14T00:45:22.335Z",
+          "source": "rollout-2026-10-13T21-32-33-01a12068-b0ee-7db3-b081-20531fa637b8_01a13540-1275-7a60-944f-cd52a9bccb8f.jsonl",
+          "evidence": "skill-read-command"
+        }
+      ],
+      "archive": "computer-use/SKILL.md",
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "6fe86dbdd25a85dfe9fa20537554f06830c09385116f8ecf2d23dc9e952482de",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        }
+      ]
+    },
+    {
+      "name": "imagegen",
+      "slug": "imagegen",
+      "sourceFile": "C:/Users/wangxr/.codex/skills/.system/imagegen/SKILL.md",
+      "observedReads": [
+        {
+          "timestamp": "2026-10-12T12:34:18.370Z",
+          "source": "rollout-2026-10-10T21-51-05-01a12068-b0ee-7db3-b081-20531fa637b8_01a125dd-f478-7770-aa45-03585a12442f.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-13T01:05:00.706Z",
+          "source": "rollout-2026-10-12T21-51-41-01a12068-b0ee-7db3-b081-20531fa637b8_01a1302b-39f7-7053-b0a5-f2a995759d5c.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-13T01:08:40.315Z",
+          "source": "rollout-2026-10-12T21-51-41-01a12068-b0ee-7db3-b081-20531fa637b8_01a1302b-39f7-7053-b0a5-f2a995759d5c.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-13T11:26:16.039Z",
+          "source": "rollout-2026-10-12T21-51-41-01a12068-b0ee-7db3-b081-20531fa637b8_01a1302b-39f7-7053-b0a5-f2a995759d5c.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-13T13:19:05.297Z",
+          "source": "rollout-2026-10-13T21-32-33-01a12068-b0ee-7db3-b081-20531fa637b8_01a13540-1275-7a60-944f-cd52a9bccb8f.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-13T16:05:45.016Z",
+          "source": "rollout-2026-10-13T21-32-33-01a12068-b0ee-7db3-b081-20531fa637b8_01a13540-1275-7a60-944f-cd52a9bccb8f.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-13T16:09:12.131Z",
+          "source": "rollout-2026-10-13T21-32-33-01a12068-b0ee-7db3-b081-20531fa637b8_01a13540-1275-7a60-944f-cd52a9bccb8f.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-13T18:32:33.505Z",
+          "source": "rollout-2026-10-13T21-32-33-01a12068-b0ee-7db3-b081-20531fa637b8_01a13540-1275-7a60-944f-cd52a9bccb8f.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-14T00:00:53.677Z",
+          "source": "rollout-2026-10-13T21-32-33-01a12068-b0ee-7db3-b081-20531fa637b8_01a13540-1275-7a60-944f-cd52a9bccb8f.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-14T00:54:31.516Z",
+          "source": "rollout-2026-10-13T21-32-33-01a12068-b0ee-7db3-b081-20531fa637b8_01a13540-1275-7a60-944f-cd52a9bccb8f.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-14T00:55:26.404Z",
+          "source": "rollout-2026-10-13T21-32-33-01a12068-b0ee-7db3-b081-20531fa637b8_01a13540-1275-7a60-944f-cd52a9bccb8f.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-14T12:50:03.514Z",
+          "source": "rollout-2026-10-14T21-49-47-01a12068-b0ee-7db3-b081-20531fa637b8_01a13a76-3505-7032-becf-6a0d80df196b.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-14T12:52:32.216Z",
+          "source": "rollout-2026-10-14T21-49-47-01a12068-b0ee-7db3-b081-20531fa637b8_01a13a76-3505-7032-becf-6a0d80df196b.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-15T13:50:17.021Z",
+          "source": "rollout-2026-10-14T21-49-47-01a12068-b0ee-7db3-b081-20531fa637b8_01a13a76-3505-7032-becf-6a0d80df196b.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-21T15:40:34.667Z",
+          "source": "rollout-2026-10-18T13-58-34-01a12068-b0ee-7db3-b081-20531fa637b8_01a14d60-3a66-70f3-8db7-e409bf9ca7ee.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-21T16:02:06.620Z",
+          "source": "rollout-2026-10-18T13-58-34-01a12068-b0ee-7db3-b081-20531fa637b8_01a14d60-3a66-70f3-8db7-e409bf9ca7ee.jsonl",
+          "evidence": "skill-read-command"
+        }
+      ],
+      "archive": "imagegen/SKILL.md",
+      "files": [
+        {
+          "path": "agents/openai.yaml",
+          "sha256": "9ca574af14580dc7a2a3dc37a1796d17f93cb8850be66501f0799ef8603e9dc0",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "LICENSE.txt",
+          "sha256": "4dd13869245e356246a5b770723247bbb80a8f07a181d1d3d873a1734297cdb9",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "references/cli.md",
+          "sha256": "ecfc2e09261a0feb3482517a5fa0ff410cb7d1958e3cbd2ac6b61586f5b81405",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "references/codex-network.md",
+          "sha256": "c88298ca4481f6116a16fa7987434fc977f8b311c1bbc0c3d862ffd0c5981148",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "references/image-api.md",
+          "sha256": "dc975d7af8a4888967251a0276014b4a71ea30455294944b762256373ce3e569",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "references/prompting.md",
+          "sha256": "b210b051c775860267080941eba968212bf0ac7fce581d75c5dcc217d8293f8b",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "references/sample-prompts.md",
+          "sha256": "70474177d151855b175c6133de2aae1d90b7f146b0dab50ec830972c47d72183",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/image_gen.py",
+          "sha256": "b4345cf835e5b593b97df6bb2b70bda493b8a97eee4cabbc99b2fa57dba9b448",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/remove_chroma_key.py",
+          "sha256": "a5893c4bd04b21abced33731ea89d2ac428e81d92a0368eb18ffbe4fda5253e2",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "SKILL.md",
+          "sha256": "681ddb4ad6d06a2acc78a3535b583f8d0c1ea800ecda3d56370d3310fd2cd4ba",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        }
+      ]
+    },
+    {
+      "name": "code-review",
+      "slug": "code-review",
+      "sourceFile": "C:/Users/wangxr/.codex/skills/code-review/SKILL.md",
+      "observedReads": [
+        {
+          "timestamp": "2026-10-11T17:02:44.855Z",
+          "source": "rollout-2026-10-10T21-51-05-01a12068-b0ee-7db3-b081-20531fa637b8_01a125dd-f478-7770-aa45-03585a12442f.jsonl",
+          "evidence": "skill-read-command"
+        }
+      ],
+      "archive": "code-review/SKILL.md",
+      "files": [
+        {
+          "path": "agents/openai.yaml",
+          "sha256": "8229ca854e11dc8e6aef2131ee03f31fb1561cf905fab9ccc325180cf3331352",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "SKILL.md",
+          "sha256": "9cf46653dd9c710ea1e6c22423caf31a794c88773bc94bdaa23140277f470442",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        }
+      ]
+    },
+    {
+      "name": "diagnosing-bugs",
+      "slug": "diagnosing-bugs",
+      "sourceFile": "C:/Users/wangxr/.codex/skills/diagnosing-bugs/SKILL.md",
+      "observedReads": [
+        {
+          "timestamp": "2026-10-10T12:28:25.810Z",
+          "source": "rollout-2026-10-09T20-24-54-01a12068-b0ee-7db3-b081-20531fa637b8.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-10T16:36:33.322Z",
+          "source": "rollout-2026-10-10T21-51-05-01a12068-b0ee-7db3-b081-20531fa637b8_01a125dd-f478-7770-aa45-03585a12442f.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-11T05:22:00.507Z",
+          "source": "rollout-2026-10-10T21-51-05-01a12068-b0ee-7db3-b081-20531fa637b8_01a125dd-f478-7770-aa45-03585a12442f.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-11T05:24:32.853Z",
+          "source": "rollout-2026-10-10T21-51-05-01a12068-b0ee-7db3-b081-20531fa637b8_01a125dd-f478-7770-aa45-03585a12442f.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-11T05:49:21.473Z",
+          "source": "rollout-2026-10-10T21-51-05-01a12068-b0ee-7db3-b081-20531fa637b8_01a125dd-f478-7770-aa45-03585a12442f.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-11T06:10:59.951Z",
+          "source": "rollout-2026-10-10T21-51-05-01a12068-b0ee-7db3-b081-20531fa637b8_01a125dd-f478-7770-aa45-03585a12442f.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-12T12:34:18.370Z",
+          "source": "rollout-2026-10-10T21-51-05-01a12068-b0ee-7db3-b081-20531fa637b8_01a125dd-f478-7770-aa45-03585a12442f.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-13T02:03:37.606Z",
+          "source": "rollout-2026-10-12T21-51-41-01a12068-b0ee-7db3-b081-20531fa637b8_01a1302b-39f7-7053-b0a5-f2a995759d5c.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-13T05:01:13.733Z",
+          "source": "rollout-2026-10-12T21-51-41-01a12068-b0ee-7db3-b081-20531fa637b8_01a1302b-39f7-7053-b0a5-f2a995759d5c.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-13T10:36:20.527Z",
+          "source": "rollout-2026-10-12T21-51-41-01a12068-b0ee-7db3-b081-20531fa637b8_01a1302b-39f7-7053-b0a5-f2a995759d5c.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-13T11:10:57.543Z",
+          "source": "rollout-2026-10-12T21-51-41-01a12068-b0ee-7db3-b081-20531fa637b8_01a1302b-39f7-7053-b0a5-f2a995759d5c.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-14T04:03:17.625Z",
+          "source": "rollout-2026-10-13T21-32-33-01a12068-b0ee-7db3-b081-20531fa637b8_01a13540-1275-7a60-944f-cd52a9bccb8f.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-14T04:33:00.787Z",
+          "source": "rollout-2026-10-13T21-32-33-01a12068-b0ee-7db3-b081-20531fa637b8_01a13540-1275-7a60-944f-cd52a9bccb8f.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-14T22:55:39.456Z",
+          "source": "rollout-2026-10-14T21-49-47-01a12068-b0ee-7db3-b081-20531fa637b8_01a13a76-3505-7032-becf-6a0d80df196b.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-15T11:21:58.518Z",
+          "source": "rollout-2026-10-14T21-49-47-01a12068-b0ee-7db3-b081-20531fa637b8_01a13a76-3505-7032-becf-6a0d80df196b.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-15T14:41:23.725Z",
+          "source": "rollout-2026-10-14T21-49-47-01a12068-b0ee-7db3-b081-20531fa637b8_01a13a76-3505-7032-becf-6a0d80df196b.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-21T15:37:54.251Z",
+          "source": "rollout-2026-10-18T13-58-34-01a12068-b0ee-7db3-b081-20531fa637b8_01a14d60-3a66-70f3-8db7-e409bf9ca7ee.jsonl",
+          "evidence": "skill-read-command"
+        }
+      ],
+      "archive": "diagnosing-bugs/SKILL.md",
+      "files": [
+        {
+          "path": "agents/openai.yaml",
+          "sha256": "3e430dbe4334a87597488c060cb3dc3786bb00c9182877d6f5ec41f62490e90b",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/hitl-loop.template.sh",
+          "sha256": "18ae07e1cc49b32c71767e241a6e8de4be74ef21d5e3b7e39034d9c7335f2d80",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "SKILL.md",
+          "sha256": "b9339b09ee3980808d8c5a35c7251b891b8b1e0036ec4ca37812b976ebddf6b6",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        }
+      ]
+    },
+    {
+      "name": "ffmpeg-skill",
+      "slug": "ffmpeg-skill",
+      "sourceFile": "C:/Users/wangxr/.codex/skills/ffmpeg-skill/SKILL.md",
+      "observedReads": [
+        {
+          "timestamp": "2026-10-14T12:09:42.599Z",
+          "source": "rollout-2026-10-14T19-35-37-01a12068-b0ee-7db3-b081-20531fa637b8_01a139fb-5f7d-72e1-bca9-859204684883.jsonl",
+          "evidence": "skill-read-command"
+        }
+      ],
+      "archive": "ffmpeg-skill/SKILL.md",
+      "files": [
+        {
+          "path": "bin/install.js",
+          "sha256": "15c1274a5322f03e1ee49dd76ce22576ce27a6a23e4c89321830342fec10826d",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "CHANGELOG.md",
+          "sha256": "d57f742ae7bf9779c3d78f0221bcce7c153446d09bc6fa9de42e0412cc7785d8",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "CODE_OF_CONDUCT.md",
+          "sha256": "f77f3912ac802a2e9176ae819de7bb89ccf42a23a0a192db646b31a3c4b47fee",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "CONTRIBUTING.md",
+          "sha256": "c8c2a7af5d831757fd977de11b0170d83c4b65b29761e1d0e9e3f48177a8d519",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "docs/contract.md",
+          "sha256": "7e6ce5b8a9d0335e7bcfce5118d0c5d7a9367475b697951477046ac981a06063",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "docs/demos.md",
+          "sha256": "fe2ab8d984d6485ea9dc268b7fa58ad9e3a9a44f7d0a8266e1bed8247188a81c",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "docs/design-decisions.md",
+          "sha256": "9cbb9ade9e9292feb08441eba5d44969dacae8084b9802525011c525544e2329",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "docs/roadmap.md",
+          "sha256": "95346e121c35be2f3aff989b7474c5514fcb01564cdb4545d346bdd002dca34e",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "examples/brand.json",
+          "sha256": "a6752ccd1b5317673cce628260907272a7a1a80c2dc91fc03066c7b06dd3bfd5",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "examples/make_demo.sh",
+          "sha256": "fe824c06a8706b3060591219b9b0bd59ba9fa330a485fef50c49ad91fb0f5c0f",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "examples/README.md",
+          "sha256": "d98759f19f02597937018c0e1eb552fcc0d99ec3e32a9a8706bfde26d6f6e032",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "LICENSE",
+          "sha256": "7522b29e4d6e90f2a8fab15f07d224b1064c70692a872be9996ac1a88cf474e9",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "mcp/server.py",
+          "sha256": "499322209d72f3b1d61baca25a76298e22134ece95d48e3a839d329f1c077391",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "package.json",
+          "sha256": "55a9692ce7029930025c473fe126d9e3bf911ff56f20ebaac59c897b29fe7157",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "README.md",
+          "sha256": "fab9ce9759f677ceb2143f7160dda3d6590d4f47067311642f7549a23b4c6d31",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "references/ci-platform-pitfalls.md",
+          "sha256": "0bc318f80ce82e410ad67d4ba678ab70c80a5576ecad95d63d6f355c9a4d2b22",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "references/devices.md",
+          "sha256": "7c2133aa6b6c0067b71c7634cd2663c6015c9a2343d1032bad4888e232588c05",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "references/gotchas.md",
+          "sha256": "ff3bf8bc26bb186dd60c6bb8fab9f50e3cbf69347ad99add417d4b95f6da29a9",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "references/process-pitfalls.md",
+          "sha256": "431c3f7bd34f416be9848a4b5033bbc15f309874bd19bb3b5c3c4d2b7dfc9b2a",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "references/scripts.md",
+          "sha256": "d4f8e505ea9ae83f5964a43ca8dbac1e651ee1d96f2a305a12a0fcd400a99a7e",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/audio.py",
+          "sha256": "5b0fa95be3a9135ffa0b24464f398bcdfaf1b6a68886f8a55b5b7c04f6943ccd",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/background.py",
+          "sha256": "77e7d57a1459a75ebfb20b93d26952dc8d7ee42dd4ebd9e039a2c07ca980fa5b",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/batch.py",
+          "sha256": "573ce95fbd5715d3b662e7c3891da0ef531fe589ba9b2068f84b5da7e4abf663",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/broll.py",
+          "sha256": "1ff00b8522f3542ec30e5d6b172964289fed0bbe572f504c3ae75f005c031082",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/caption.py",
+          "sha256": "9e8634a030e7076c0566d8d5a5cb4eb10b44f207596fc148911d13fd3383212a",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/check.py",
+          "sha256": "6af16c15d7d76f0b5a9c1c328612378b9def8b86207a7f3ab0806adf426f1353",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/color.py",
+          "sha256": "e26e5a5f34ab8dfff0f3a8c6cbffb2e4d9cf753b911ae75c0899136d2c0167bb",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/crop.py",
+          "sha256": "b209f617da1af72b0fa213c2bafe361838a48826cb963f12c23609a52f4ea55e",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/cropdetect.py",
+          "sha256": "859a86d92dad9b8f538b1a75b1ebb8116fde3b8a1894e2e79d489b096960a027",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/cut.py",
+          "sha256": "ce57ee35e36ba97147e1a16a7c5282371d6559b3d31398cd2ba4bc5609dc83af",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/deinterlace.py",
+          "sha256": "e7f49973222570ef285abc37c3e485492714e5efc47e6b4672fd3fe20e2b0cff",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/denoise.py",
+          "sha256": "ca27a98d9a18ad4b6b1ad823e0f944c329d8095c09d866839eff48f9833b904e",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/export.py",
+          "sha256": "151bea9cd385d34cac988fe722437e3de5dd2e1ddc692310422d253a2212cfeb",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/fit.py",
+          "sha256": "e5e217dbeb37d6c5abc9ce41da12b4d4bcfc2fd3bd910474cb71f174202af87d",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/freeze.py",
+          "sha256": "be3613f5a952c5d0a4b4512c482818e875cc0e130f66841ba864ad37d619dea7",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/graphics.py",
+          "sha256": "adbb7c5c5cc57e03870970e8b7fd26427dd37b60cfa288ca4738cb3f5a856ece",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/grid.py",
+          "sha256": "9e9e3fb3774efd210e4c404cc9ce74a5505b51b9ff3a8f32f427c627278b4ad4",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/insert.py",
+          "sha256": "2bba81f0833538df5ae306f2af47791b555a50aeae8c74209b6928d1643f7b14",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/join.py",
+          "sha256": "46a16eb9c38fd9b4d6270faa6891fe57c747276ae4e46acac7335d79a4f9a1ba",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/look.py",
+          "sha256": "5fc523eca18e4182283cc950c9adbc009aaf1593b105b1c470283893a838ec19",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/loop.py",
+          "sha256": "78b9a4a381656f4d8608cc901c96051d3d5757c7f3dcb4529486558a22a375b5",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/loudness.py",
+          "sha256": "f669f8b7c38c2e106fb93706191ab6b02f3efc1ec1fe20064f11f901821e3930",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/metadata.py",
+          "sha256": "36e6e5fd200e771d8b550e98e6be926b3b6b4eb75d1418f5e8905ffa212c4eeb",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/multicam.py",
+          "sha256": "1b56a1281826034eec052625b91a491e8976bb7f68d890491ade2e30dbe02b91",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/overlay.py",
+          "sha256": "760ea6f51f14aa722004508379b2d6ebb9889eceb05acad80ab36544a4f4ce3c",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/pad.py",
+          "sha256": "2cd5cd5a54d59fd0d2e4a0d604ad773ea3b0ef304a4a390617970d051015c4d3",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/probe.py",
+          "sha256": "e2fd1390bc9976d5086e06e0a9ea64bd966638273339709ee7c2a0fa53210063",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/proxy.py",
+          "sha256": "1323a89caf31d68c27008b51fc636895e465b14ba6b69ea2442273257a15303e",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/redact.py",
+          "sha256": "98892c7951bd91af4499c850270af55f56f55cf52addc485e586ed6784698ea1",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/render.py",
+          "sha256": "5ae125486ef9a9f69077fdff138777950faac74e59251b9ee52ba0d2994767b1",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/report.py",
+          "sha256": "de3dd35419304a5c65e38f7086240bba7ed3e597ca9cdb5db2caf585cbc68dad",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/reverse.py",
+          "sha256": "750fdb11d50c8ab706a50da37f6975a9956d18fbb5164bdda5bbebd1b544570b",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/scenes.py",
+          "sha256": "44d1ec1e79fa715ddd707664848ab6d0ddba15d2738df17d61e3e38cebec833a",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/sequence.py",
+          "sha256": "7c4bc83b0d0abd6976a949b5110d4eea9c18ea254ba426ae7fec821c5971b5e3",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/silence.py",
+          "sha256": "70be0f45f335428a1c153ca9b97b3b0dcb13c8860107b4ff77a6026261b8c648",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/speedramp.py",
+          "sha256": "0fe109a1d175bb2da6f7239f24d487c708f07d176667838a51cf95cbc4986a14",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/sphere.py",
+          "sha256": "a69aa312e978ee8677b51e178164635f78c36f9c3bf1ee6078dca33d7b31f862",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/stabilize.py",
+          "sha256": "4971a6dc90d2dab35fd19662529450c8f2a32d1bd9c3aa4d7df6f4a1443887e5",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/straighten.py",
+          "sha256": "9b67e8b2a6763b5256198a073b4ffea1991493f33a283b40cc162a2e02595910",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/sync.py",
+          "sha256": "c79620860d44e7597bf66b960ea42ca5d992fca00ca65ed1185a15db20998356",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/verify.py",
+          "sha256": "2769967409e75ba56368068be38716b3022da94703971f1fa6816622acd652a8",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/waveform.py",
+          "sha256": "689f4108bd7bacc26aa1c57b4bf6ca00f7532fdd5a036e30b19c561ce9ada405",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/_ass_overlay.py",
+          "sha256": "eca5bbe97ce74c65f073b72a651452230afc51a6dd1d9691bc3e9fd46185d4aa",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/_common/asr.py",
+          "sha256": "cb8c99196066d4befb3e9d1a5cafbbb7ada57046254c5f85b51e3f27212d97eb",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/_common/color.py",
+          "sha256": "e5d18fb93b081bc6b3b0961eb8d9f5d577401e5f2335480485f1d9e31353e2d8",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/_common/decision.py",
+          "sha256": "8023b1cfc299f97152be5d0399111815958dfc6dda15abda3ab7bb91766f7278",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/_common/drawtext.py",
+          "sha256": "82b719f7836fb428463ea04067ca9e0e627bd428175180c784c02cedcf088093",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/_common/emit.py",
+          "sha256": "29e0566554235f282e0205b4fe41a81289ee8a29b74b3df2d332b76e773ae201",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/_common/emoji.py",
+          "sha256": "8db4f6f4eca49990b879f127606ba2795048a7bac9ac86637127cdf6087fd726",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/_common/fonts.py",
+          "sha256": "98fa5b367438c5c95dd2ad30ae7b81980582acad050d6702b890930f675a0aa1",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/_common/probe.py",
+          "sha256": "d25963c24d36716c08138c052086513e7195e6fa3dd84d9febb15d71ca9d0862",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/_common/runner.py",
+          "sha256": "4e95b004d9a7675a1641d2c44b060261780fb2949d4c25d0fa6614208fdc97ff",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/_common/text.py",
+          "sha256": "aae381f89cac2c510abec8f2fd82d88412a3a659dbddba175a81d15edc0c7ebf",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/_common/timeline.py",
+          "sha256": "527c002e1e591ece73e47c8db7be95c4446d4f67dd34ab8f89b5b5a5833b23e9",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/_common/wrap.py",
+          "sha256": "49259773eee98c6276c455ead8e5db10da48bd39e29cb687601010a084132aff",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/_common/__init__.py",
+          "sha256": "49104dd5e2d2149fab5664ad7a7a7f559161954db335b0da243cbaee4729db96",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/_contract.py",
+          "sha256": "cf5bfbf6a6194dd00949d3eccb405619557c02ea3a80ebd330483d1bd18fd84a",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/_platforms.py",
+          "sha256": "3b06a2c1cda1f106e9ae7699e9e6b4b0d490352655f8eebeb9336b4f4b524ae8",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "SECURITY.md",
+          "sha256": "f8b4192a2735a4e8df1d5d97aeb868fee38282c92f982b8447b529e41a47a4d9",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "SKILL.md",
+          "sha256": "0c55c511da002038b5f49941f53ee1b395e1eb9ccdd528659c6b68dff495c8b2",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "templates/audiogram.json",
+          "sha256": "62b861085141ac92774378460c4eaac553802a47068db4774ce3fac583a35dc5",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "templates/facebook.json",
+          "sha256": "19b6f7d63a101773905db4a2eae89cfc4e08e6473513ef8600fbdbf61c3ee73e",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "templates/linkedin.json",
+          "sha256": "e743f911b9a81d6dbd67e04755307d6ee0f0526e9962521fd0b250875a1a114e",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "templates/podcast.json",
+          "sha256": "52ac44d93104e3403248f4855279e23857b9810e50e857d5b9ac1a80b125b4c1",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "templates/reels.json",
+          "sha256": "4babffa264c53f637a10c844713d88db09941663baa72de2a2b61a925a73137c",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "templates/shorts.json",
+          "sha256": "00e25cac9bb574ac74089c985f3c2ed34db09963add32d308bbdc21b3f60f312",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "templates/tiktok.json",
+          "sha256": "c346c9e4c6f82c4b40b009ceb3e4ddb0df21ef5083ab6d301dc22906c8170e12",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "templates/x.json",
+          "sha256": "f8d7936f365aea4a9a63e4b0ad419b1effc4836b47b0d491a82e436fac4379a9",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "templates/youtube-shorts.json",
+          "sha256": "abf2c39ce09f5fc100730351b0340498e07f6e21c9d1bf7e3283c07f86b64951",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "templates/youtube.json",
+          "sha256": "0221caab867bb9a0b28766af35cb9c9761e3d1dd7d0c080a105ae167daf5506a",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        }
+      ]
+    },
+    {
+      "name": "frontend-design-system",
+      "slug": "frontend-design-system",
+      "sourceFile": "C:/Users/wangxr/.codex/skills/frontend-design-system/SKILL.md",
+      "observedReads": [
+        {
+          "timestamp": "2026-10-12T12:34:18.370Z",
+          "source": "rollout-2026-10-10T21-51-05-01a12068-b0ee-7db3-b081-20531fa637b8_01a125dd-f478-7770-aa45-03585a12442f.jsonl",
+          "evidence": "skill-read-command"
+        }
+      ],
+      "archive": "frontend-design-system/SKILL.md",
+      "files": [
+        {
+          "path": "references/design-system-packet-template.md",
+          "sha256": "a0933c2c435dc14e4b169d3c9a4a90446cf86e117eb2eeb902e76753032d0fc3",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "references/scope-boundaries.md",
+          "sha256": "9f5f5ee0fa9c474a301ad2d292e345a16163c996a14e546be8fdcc45f43deca3",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "references/system-modes.md",
+          "sha256": "6f1a00876dc5be9304a263bd08e55bee23f9e68762cb563f4814d1487a88f57e",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "SKILL.md",
+          "sha256": "cfaf13c78c8bd60d11bbf70539aa1d3730d6cd33d501e1293f689233866b35d0",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        }
+      ]
+    },
+    {
+      "name": "frontend-design",
+      "slug": "frontend-design",
+      "sourceFile": "C:/Users/wangxr/.codex/skills/frontend-design/SKILL.md",
+      "observedReads": [
+        {
+          "timestamp": "2026-10-09T11:27:56.879Z",
+          "source": "rollout-2026-10-09T20-24-54-01a12068-b0ee-7db3-b081-20531fa637b8.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-09T12:18:13.557Z",
+          "source": "rollout-2026-10-09T20-24-54-01a12068-b0ee-7db3-b081-20531fa637b8.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-10T17:42:06.830Z",
+          "source": "rollout-2026-10-10T21-51-05-01a12068-b0ee-7db3-b081-20531fa637b8_01a125dd-f478-7770-aa45-03585a12442f.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-12T17:58:04.082Z",
+          "source": "rollout-2026-10-12T21-51-41-01a12068-b0ee-7db3-b081-20531fa637b8_01a1302b-39f7-7053-b0a5-f2a995759d5c.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-12T17:58:16.155Z",
+          "source": "rollout-2026-10-12T21-51-41-01a12068-b0ee-7db3-b081-20531fa637b8_01a1302b-39f7-7053-b0a5-f2a995759d5c.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-14T15:04:29.253Z",
+          "source": "rollout-2026-10-14T21-49-47-01a12068-b0ee-7db3-b081-20531fa637b8_01a13a76-3505-7032-becf-6a0d80df196b.jsonl",
+          "evidence": "skill-read-command"
+        }
+      ],
+      "archive": "frontend-design/SKILL.md",
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "1fc5c3dfb0dd488e29fdb3d42a4c3267f7f21c81ea1d8cf2a67061060c79d29b",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        }
+      ]
+    },
+    {
+      "name": "gpt-image",
+      "slug": "gpt-image",
+      "sourceFile": "C:/Users/wangxr/.codex/skills/gpt-image/SKILL.md",
+      "observedReads": [
+        {
+          "timestamp": "2026-10-13T17:32:59.837Z",
+          "source": "rollout-2026-10-13T21-32-33-01a12068-b0ee-7db3-b081-20531fa637b8_01a13540-1275-7a60-944f-cd52a9bccb8f.jsonl",
+          "evidence": "skill-read-command"
+        }
+      ],
+      "archive": "gpt-image/SKILL.md",
+      "files": [
+        {
+          "path": "agents/openai.yaml",
+          "sha256": "238afd006414d6047f923fbccad2c205c16fde261396634a2e6d6027a49921ed",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "references/craft.md",
+          "sha256": "7f16f1d41aef5c5b185296afe37c09765b5656ddb4c7831ec604494b551fb6a2",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "references/gallery-anime-and-manga.md",
+          "sha256": "3e746a7184fe8182587fd94db9708111d727e3d959a02b57c6251c4a9b10c461",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "references/gallery-architecture-and-interior.md",
+          "sha256": "de0ee80e5ba20f6d90ffc8987293d2dfc7542d74be6308c8aae72894e2c75310",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "references/gallery-beauty-and-lifestyle.md",
+          "sha256": "09e44906fb2e735d8d8a3b2d977ff537fd5ab4aa91637fdeb26d371fdd95b283",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "references/gallery-brand-systems-and-identity.md",
+          "sha256": "13f678aaabe478a8a6096440eb221bd0f8ff9551ffca5cdc40a85b996eece0a9",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "references/gallery-character-design.md",
+          "sha256": "606d492547312b9524bff2800ef7e8fd92efd7ff4b5feb326b3faf487c2842f2",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "references/gallery-cinematic-and-animation.md",
+          "sha256": "21f0c37bf8704535f714534a1004186d8b6b3edbdc773a3779eb8229f2f01e11",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "references/gallery-cinematic-film-references.md",
+          "sha256": "f8a1cf034f09e63997d313ed8417d0eacb7c94947f6747c42fba2379291d22a8",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "references/gallery-data-visualization.md",
+          "sha256": "681651bef093db41bc9d0ae3432f3ca6e6b95f6dd280c922897c4ed068d1f85b",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "references/gallery-edit-endpoint-showcase.md",
+          "sha256": "317c8b6f0164da904f5056cf81292537e3f19793cf2872598aa1d4fdeaf92a53",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "references/gallery-events-and-experience.md",
+          "sha256": "3d686861d2c517c0a1d32eef9180fbb7fcf3fbd37f0f60f3b0ab142ea057a5d6",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "references/gallery-fashion-editorial.md",
+          "sha256": "80b9f5c77a7a46430d8f357a87f992669ae5fd564cee93aa4093e32b06fdf6b3",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "references/gallery-fine-art-painting.md",
+          "sha256": "e9487ef81eca19ef236f2cb0b35e9f8cd53ffc8f7c50e04cf30985f68d71af70",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "references/gallery-gaming.md",
+          "sha256": "6d42e61a4d0fca765d3442844ab29d011208d05913cd9001719453b9825a1735",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "references/gallery-illustration.md",
+          "sha256": "b88a80363ee4951eff0ed83387e459100f8fc21e0534eca5f269457face6614a",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "references/gallery-infographics-and-field-guides.md",
+          "sha256": "dbcf918cd5c10597611f442f9d594ce6c2df3ce6c2e78ff4e9ba4458a165497b",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "references/gallery-ink-and-chinese.md",
+          "sha256": "b89e73f8f7a15c81568dfc36bac5ade467cd2db5f9c46b7e215e1efa74ffa891",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "references/gallery-isometric.md",
+          "sha256": "437574ec82debfd9747900775fadd33f0e18b8126a6a04795f2ade5f63ddac2f",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "references/gallery-more-illustration-styles.md",
+          "sha256": "d79b38a4e1040514fb9d893685fda8bd98326182f423514d8ac9e7d8d5d27d8d",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "references/gallery-official-openai-cookbook-examples.md",
+          "sha256": "a18e43a9cb109bfffd1a5ad1808bb81a5a558eb0fc35db5880613f60def32c77",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "references/gallery-photography.md",
+          "sha256": "6911f2a7d4fe0a5bec727189656d2b49a32aa5dcca983eb661d9765171369ec9",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "references/gallery-pixel-art.md",
+          "sha256": "54aab0dbcabf1625d4d9d4ba9adb2a0f1e3bdb209b1f528f7058a6be4d02372e",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "references/gallery-product-and-food.md",
+          "sha256": "aa6d40cd3b3de0e6666e415ba37f9b28758fdd20c9bafa1003b0c681c1456bc1",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "references/gallery-research-paper-figures.md",
+          "sha256": "7b833761422c9e5aa0fa5add086f97cf1764ff4fb20846837aa5fd170edd8bed",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "references/gallery-retro-and-cyberpunk.md",
+          "sha256": "da1bee5f7eb9230e4ea0f42bc9476f2e5ca53fa499be8f37231fbb5f8ce22da4",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "references/gallery-scientific-and-educational.md",
+          "sha256": "661222da58bd25a45d309373d29501256b63d2b8c582bc64a36e022368ba23d6",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "references/gallery-screen-photography.md",
+          "sha256": "12c35d13494d9499f4bb5ade8298ba49363956bd49ed8fbaa6ae69fdc4150b5d",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "references/gallery-tattoo-design.md",
+          "sha256": "587ffe99b1b10489d594d10940a6d65e754c4ef2a63cb1be21bef2d4345fc76a",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "references/gallery-technical-illustration.md",
+          "sha256": "022ed0ddb2acad1c7c55df1d5cd9270200243c3f386254f01ba6fffd14857bc6",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "references/gallery-typography-and-posters.md",
+          "sha256": "e08eae1c1fe9284df623248db7da0140ae55b75ca7550d6ca742d73a7ec33776",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "references/gallery-ui-ux-mockups.md",
+          "sha256": "c9d986afaec14610c0eb330b178742fdbf08da18231e347f1aa63982abc78b90",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "references/gallery-watercolor.md",
+          "sha256": "2daef080b7903481590cffdf93c66d0b11d98d708b16bb8493306dcb9c10faa2",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "references/gallery.md",
+          "sha256": "dbe005e051883fba3921e2ffc9962f0a23e0d069d457493f31d6362f94aabea0",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "references/openai-cookbook.md",
+          "sha256": "4eb52d004fe317d2b6e9aaa59c308ba0459fced481a67ed4eac190d64705091a",
+          "whitespace": {
+            "trailingLineWhitespace": true,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/generate.py",
+          "sha256": "1bb987cfd10f7c627249ce6f91c79aad41700dd183f8e8f98714e22975af3b9b",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "SKILL.md",
+          "sha256": "28336b6a46ff30e5ecc6cabe3f5e1220e396c61826f3717a73f1677f45274f5d",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        }
+      ]
+    },
+    {
+      "name": "impeccable",
+      "slug": "impeccable",
+      "sourceFile": "C:/Users/wangxr/.codex/skills/impeccable/SKILL.md",
+      "observedReads": [
+        {
+          "timestamp": "2026-10-11T17:37:30.965Z",
+          "source": "rollout-2026-10-10T21-51-05-01a12068-b0ee-7db3-b081-20531fa637b8_01a125dd-f478-7770-aa45-03585a12442f.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-12T18:06:14.145Z",
+          "source": "rollout-2026-10-12T21-51-41-01a12068-b0ee-7db3-b081-20531fa637b8_01a1302b-39f7-7053-b0a5-f2a995759d5c.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-13T00:11:10.449Z",
+          "source": "rollout-2026-10-12T21-51-41-01a12068-b0ee-7db3-b081-20531fa637b8_01a1302b-39f7-7053-b0a5-f2a995759d5c.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-13T18:27:13.169Z",
+          "source": "rollout-2026-10-13T21-32-33-01a12068-b0ee-7db3-b081-20531fa637b8_01a13540-1275-7a60-944f-cd52a9bccb8f.jsonl",
+          "evidence": "skill-read-command"
+        }
+      ],
+      "archive": "impeccable/SKILL.md",
+      "files": [
+        {
+          "path": "agents/impeccable_asset_producer.toml",
+          "sha256": "d2be0f7b066b1af4f52a9c61539e4c50deaf4b0673e2bf2b7ea429e4c02c830f",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "agents/impeccable_documenter.toml",
+          "sha256": "d5922228b571900e21a47855d7de9e081c2246fc9cec6c6235b1a6da31098896",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "agents/impeccable_finish_reviewer.toml",
+          "sha256": "59efadb3b5a0209e052fb0d3671a633aed6c6be3cbb61db034b9a7fc12bae692",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "agents/impeccable_manual_edit_applier.toml",
+          "sha256": "7c519ed4a94aa01677b741afa9ae56c71d3b9bc19f48f4166d87b1e4579613ed",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "agents/openai.yaml",
+          "sha256": "cbd8bd68fa00935dd0f179adb169252629cf7ee443ea9dc7db77e7ef2cf77446",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "reference/adapt.md",
+          "sha256": "bead87679caad7c537dd7c04c3bb78be56ac7eec279ad6aad7322f48ff2df2d9",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "reference/adapt.native.md",
+          "sha256": "6acc0bf221a4ddc6e5c6438348920b2ca2393b29c4314dbde2cdc23f2b1a9639",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "reference/android.md",
+          "sha256": "058f81f256134841875fd3183e06b37a023de0c877fd2b9eecd97011640791fe",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "reference/animate.md",
+          "sha256": "d658c48ffbe0031e8e3b318996cad6ceafe29e40aa50d5bb25e4bf1d6839dc7c",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "reference/audit.md",
+          "sha256": "910461b1c1f8216155165955c860a884a1e2f557cb38f21ef512ea90ef6503c2",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "reference/audit.native.md",
+          "sha256": "1b10f9ad3d3a1494ee1bbdf35bb6aa453e98defa6e1ae99177b167795054a4f1",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "reference/bolder.md",
+          "sha256": "f964506c0fae87b3c2c1db7016ddc9be9ef970bbcf5548d684b997b5d5991586",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "reference/clarify.md",
+          "sha256": "173dd66abe65633910dcb04a51f40d6ff2a793f87088f022a02fc4cad24dd133",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "reference/colorize.md",
+          "sha256": "bc5f71f1129d0f2c310d913d07c8dc609a1d25644121bd78c308f42d52a0b9e9",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "reference/craft-floor.md",
+          "sha256": "e802e4f7bdc89050a9c0f2ca506e1d493a2316e6e810c0336c57aa073717ef3e",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "reference/craft.md",
+          "sha256": "9205e222bc6565b37fb504ceec93233c2d2a456802b69d16e6b1c44723907c4c",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "reference/critique.md",
+          "sha256": "869932e7b8d22e251b5af97bfba8c1c01c41ddfaeff66ee0151e9ddcef91bd9c",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "reference/degraded/asset-producer.md",
+          "sha256": "2ab85bd77b93eedbac1109392b0028a5213a43861566ec8b943f21b5421a6bbd",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "reference/degraded/documenter.md",
+          "sha256": "25369b09ea2ca6ade5a27d97280439b0d8bd77e822f91ad10605568a5a3e98fa",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "reference/degraded/finish-reviewer.md",
+          "sha256": "30508562244d4902f44d2b6b8b602a1f6d2240899791caa99e2e54d0e791daf1",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "reference/degraded/manual-edit-applier.md",
+          "sha256": "6396b943e1036aed56d40e999ba319ce7133cd62fde09454dfa0a55f34c2de96",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "reference/delight.md",
+          "sha256": "098a891028ce59c212b747d3c70468dd750aff7053a703d1336045ed31e0da7c",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "reference/distill.md",
+          "sha256": "ea8432c90c30ecb0426662a681ead5c0941113079704e1a766cda09e85b15b4f",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "reference/doctor.md",
+          "sha256": "c7a439efd70bdc232da970d0695c60502525e5b7e882ad9d5b1f4794b00dd260",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "reference/document.md",
+          "sha256": "3673248740bcdd1122ccc610093ba2fe52f3943a61ce0b7170b74dc49e5b6098",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "reference/extract.md",
+          "sha256": "3fbdbed81a26435d6eb346b47725b42383077f90d0f43f2f8cacc5b4ee5e9e7e",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "reference/harden.md",
+          "sha256": "b31ff29c7a1ea979c6d039f7e8d17007410697ab49536690dca109f0af3f20f8",
+          "whitespace": {
+            "trailingLineWhitespace": true,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "reference/hooks.md",
+          "sha256": "03503fad7c3232fe149793e444f9c161c0c245218c1619f51e45317704c6c657",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "reference/init.md",
+          "sha256": "09edecac88d50cd6046c8a43e741685c0f845cf59254116bc85f543a6aa81384",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "reference/ios.md",
+          "sha256": "40c87038b5f75147a5952a96237acf312a327bf70c1bcd8e0a5f064625ae9668",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "reference/layout.md",
+          "sha256": "2d5eba1b9493f85c149a197fe6c4e9d015f5e68c49f24f5210a237cee4e44348",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "reference/live-setup.md",
+          "sha256": "d649665aaead9e8ac4ccba57bbc7726d276c5bcb464130eb914f6c08cd79d711",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "reference/live.md",
+          "sha256": "2b4b05cae6d54fe0f9633e79cfc5bc58262548de89c25225b7a7728221ca64be",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "reference/new-work.md",
+          "sha256": "2bf2cfa38c7adb35d4be1e1aa4da60673013b4deaf6ffd5a03d6a56a955495b8",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "reference/onboard.md",
+          "sha256": "ef2dde00030580ed2765cbf7be9b2ea4a6f64cb915b804fd6f6abcf38051c7b9",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "reference/operate.md",
+          "sha256": "a9d2203acd45ca33a13d5c68b02b23ed512425ac15f0e8438318ed124b43729d",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "reference/optimize.md",
+          "sha256": "f672ef8251a3ed4051a053d30819664951b17540b2899acd27d20e500c234abc",
+          "whitespace": {
+            "trailingLineWhitespace": true,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "reference/overdrive.md",
+          "sha256": "fce6688138d2ceb1e3d2cde5231f54b1d8dc8748b4c95a7919aa83b6f924cf96",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "reference/polish.md",
+          "sha256": "e6bbc05a9e1f905811d19401c1e6c7b97588375454e1462dbd811f803d239b07",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "reference/quieter.md",
+          "sha256": "190a4e642ca362d7499f3c3ab123e21f18f75457d11f072b545a183f296e6495",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "reference/routing.md",
+          "sha256": "b2fda1126e4a05d127f656d878d9baa593860bd8bc7f70186f8e13c5474c14cc",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "reference/shape.md",
+          "sha256": "a55f016c046cb6a27c55bd7f346375aeb506a755c4fbca19a5f92dbd42309c23",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "reference/typeset.md",
+          "sha256": "6d803447fb419ee718012f6263d2685ad462a14dc08c338392e28b79823a0553",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "reference/visualize.md",
+          "sha256": "1a0a68caa14cb16fbcabba663e3603ffd3337aaec4f2679f72b279bad8ce4a08",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/command-metadata.json",
+          "sha256": "6bdbc3f745ceee15e10b050f109ce42bbeb53ab3c3b5239257de1d596654dee7",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/concept-seed.mjs",
+          "sha256": "8ea706b9aedaa2a5c8cac88cf5cf5a2252bd90ff9430f0e7c1e79bddfa50fa17",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/context-signals.mjs",
+          "sha256": "c7c70735fae0834576636fb9b9c32504a7f08efc95fdc4db97a469f6ca4dd2c4",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/context.mjs",
+          "sha256": "7c747b6f5bba3ca860a22075b765ea4b0e7688fdcaa97e1dfc5b01a536303a89",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/critique-storage.mjs",
+          "sha256": "17c14fc03d9c53f7f48dfe6e8ef2a15d2a35c9b8f341ddb25720e01cc1ca68e9",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/detect-csp.mjs",
+          "sha256": "2d80520bef13cb93107699714bc0d2be5a2787a9aa079ecec91b94508a8125a4",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/detect.mjs",
+          "sha256": "f5dfd05ca1e314acd8ed79c6301a20a1b844f2eb6691bd63e04116a8e7efb187",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/detector/browser/injected/index.mjs",
+          "sha256": "30d70ec4d1804b333be05f2448a0cc5a39b517fc8fc860d650215457dfd93402",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/detector/cli/main.mjs",
+          "sha256": "a319e56a41da58b1f6cccff8ca77dbc1f090fadce693fbc057276a315f53891f",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/detector/design-system.mjs",
+          "sha256": "cacf7ae83b4ccfff84ceb6ab06549b399e0ec88750f053249db65371dd302de1",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/detector/detect-antipatterns-browser.js",
+          "sha256": "ebdf645ee38f69c5a1b4133eaa57dd66910c0208831651361f74abab7f73da37",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/detector/detect-antipatterns.mjs",
+          "sha256": "c48465e64d390d97e7a3891fbe443e2abe45c3c6da58b5df26cb847bb88018cc",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/detector/engines/browser/detect-url.mjs",
+          "sha256": "4d717104ec4631d000ff07bad20d3e4331f59d3d7c162177c412931931a3c747",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/detector/engines/regex/detect-text.mjs",
+          "sha256": "8e0ecc091bcecc24eb34d34dab9bcabb1057af6a6dcf34f186fb370b26e61157",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/detector/engines/static-html/css-cascade.mjs",
+          "sha256": "6809969a6e2c58992d863c23d6f2c6fb6b8ddacc503dac2ad0e5452bf2725c54",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/detector/engines/static-html/detect-html.mjs",
+          "sha256": "481b584ccdf3ac28065dbab11f65d638e3e7a35e14c7e62bc5da3d59d2a7efd7",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/detector/engines/visual/screenshot-contrast.mjs",
+          "sha256": "b4520b3f001079bd175bf20d46c5197b1b8ec5fb98fdf72c50a24c0b6598ee99",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/detector/findings.mjs",
+          "sha256": "8b8af7212c8515d6791a8af1375d0619a9f9a707a881e6fbd850e4216b3f8eca",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/detector/node/file-system.mjs",
+          "sha256": "a6369b2573cf8af096a5f38f85a9cf4ee3af68817846a0ec9047534cbe05d05e",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/detector/profile/profiler.mjs",
+          "sha256": "5e201f3557360bd368a3977fecf925f376fd95f8a4dd6c4cc63fbd62848cda43",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/detector/registry/antipatterns.mjs",
+          "sha256": "4544ccca3d7c341d878b941fbe20620750dbf9d29dd6d15e063128a1e390b345",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/detector/rules/checks.mjs",
+          "sha256": "e63f6adbd0893d75105e825b1656a268c512a9bc7e5f3d17d4ac70ef412d6e57",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/detector/shared/color.mjs",
+          "sha256": "c9664cdfcb5cc964a6c78fba82c51640bf20258601572ea0bb413c00446489f5",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/detector/shared/constants.mjs",
+          "sha256": "606f50159d56b5e972724c13933e63220696636215292e5316846426f3e12896",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/detector/shared/fonts.mjs",
+          "sha256": "869c297295a10082d87988f31c136c5df9ddad84da0c2bbba2e85e1261e320a6",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/detector/shared/inline-ignores.mjs",
+          "sha256": "74c80303e25f017b4671ae299b9fca424a5f7714203d19207a8d8896dfd2eecc",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/detector/shared/page.mjs",
+          "sha256": "b4cef5548d84fa90d15e6b42b20be9ef74ed05e4e6e46076ec5acc61b343315c",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/doctor.mjs",
+          "sha256": "4d68dc2884516c2ab17090020154417dc644075acf7c4657f60e6cf12df0a2d9",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/embed-prompt.mjs",
+          "sha256": "4614260ccaa091bea10a6096027d2aca306160e1764765ce155aadcbe674dbc5",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/generate-image.mjs",
+          "sha256": "0994c7ab8bc280b9b09676bc0296ca9eea8609b00b1a48eb783486f145c0f338",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/hook-admin.mjs",
+          "sha256": "2f3de124a1b4be3f2660c7a3cc028355cac3ac75ad3cca87712b8d85e0bda32e",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/hook-before-edit.mjs",
+          "sha256": "49224a98a9addbeaca554b648c3973cb0250ba4cf9dfb56a1b4469c56d98dccc",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/hook-lib.mjs",
+          "sha256": "d6d65ecfd069c632b162b23b6bf4a46e8fe0014f0caddd32725a38dbf0e80206",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/hook.mjs",
+          "sha256": "c10d8b31213c5179cde45277eae517d4ef6fcd621b14261b7de54c64faac22a3",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/lib/artifact-schema.mjs",
+          "sha256": "ad0a72e96c74be09490b1aea095478e307f45d707b15021c922cbd4466619359",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/lib/composition-catalog.mjs",
+          "sha256": "a733122589e5bf6dbfcfbc2f9d016d6f54db0e4cebf278ac7f6a9cea374c9916",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/lib/concept-catalog.mjs",
+          "sha256": "43fa911f54d6f36384c727a62b4bfead8a7b282d0d7ad56230fdd59d1be2ac01",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": true
+          }
+        },
+        {
+          "path": "scripts/lib/design-parser.mjs",
+          "sha256": "42d37e97db82ca8082033f582bcdbd341373d0cc1c6927605d1a4385f8f34131",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/lib/impeccable-config.mjs",
+          "sha256": "7297e323a700ef8f819641169ebb1c1ae09e7f730d947eaf77a83dd415c2e3fd",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/lib/impeccable-paths.mjs",
+          "sha256": "276ec7ac47e3c250e76616755d83cca4846f0f951b51c29f985ec84b51282aa2",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/lib/is-generated.mjs",
+          "sha256": "2d6c37f821cb42161264068b81c4c97629a653b661403cedadb5eb23099d0acc",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/lib/live-path-globs.mjs",
+          "sha256": "f2657a25351ae5bc4d503e7257f84e014815fc562225ebf8fe15d3e277ca6f53",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/lib/open-system-browser.mjs",
+          "sha256": "3785ef4ba47bbbe176469e2536e8ef29e885f955970404f46ff34763f831bf11",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/lib/provider.mjs",
+          "sha256": "998c57324fdab98a0bfbd01a6099eadac7276038da961697d6069bbdeb0e5856",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/lib/roll-selection.mjs",
+          "sha256": "769cf0d4f8ea8aaee78ae29c7ee9ec27a18070b2137e0ee18adff862c84634e5",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/lib/staleness-deep.mjs",
+          "sha256": "c6ea09855e346a3b3bdb9601bbe843db07cbd25e9ebac67d93bc75e14a372725",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/lib/staleness-notice.mjs",
+          "sha256": "2770f3360119836822a5823d08248976e327d49adbb06caee1492493e257c8c4",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/lib/staleness.mjs",
+          "sha256": "f900a3ce0cd836194859c575dd32f8802d6a078bb8af27e1b8b6bb49485ad7d6",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/lib/surface-briefs.mjs",
+          "sha256": "33b35099b95d40e034b6a65657a1fd90fd011cdcb752f1c7a51e8470df37e668",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/lib/target-args.mjs",
+          "sha256": "8f8b902d9ec7dbad0431226bb8aea935cd67d68878d19d95a605be0585056f31",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/lib/target-slug.mjs",
+          "sha256": "dbc2670ad1461658d1b43fe15778ac220bc0db57af1f3fd8ccb6251b5ca5a2a4",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/lib/template-extensions.mjs",
+          "sha256": "1a3808237835998f3fea600424c64ab1775beac7e0c344d6b23f472ffc2a3e64",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/live/accept-css.mjs",
+          "sha256": "b72ea8f2cfc445598e8948f55e1625f5045ff1c5b968c246b92dbc839d4b6f1e",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/live/accept-verify.mjs",
+          "sha256": "fcb04462d65b664f6d663a4fe993acd41921dea7d3c387b7755332290f951580",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/live/browser-script-parts.mjs",
+          "sha256": "2ceb3083de7fe80160f40379c0ed47220bade5e4a1964cde4ae8e745049061c5",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/live/completion.mjs",
+          "sha256": "d7821979aec5fbc2028a6d98aa3d0abe34b88b0e2527f6df4e4f71e5782430bd",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/live/event-validation.mjs",
+          "sha256": "ef06987cfc2c8d8cde0e292fafec4a1aeba9fb43d84dffe2526fac803668c598",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/live/frameworks/astro.mjs",
+          "sha256": "9bc679fd9e2f2800e97519bd16f36af7afb696d61391a08f7c9bbc687f03e87d",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/live/frameworks/detect-utils.mjs",
+          "sha256": "c69d859d73574784c33e6ac81e537022d619dbaf7f6f2d3637317a3df41b30f8",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/live/frameworks/index.mjs",
+          "sha256": "54936fa60f0abb9483fbaac59ba9797c4173e9a77f504ff3df9a32b208ae1bab",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/live/frameworks/journal.mjs",
+          "sha256": "536535b977a063fe220447a78cdd351fbc224ac1bfb1bdd1f0827577ad4a5954",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/live/frameworks/nextjs.mjs",
+          "sha256": "a724f8fd9be4ef0c58c268c81e0ff651da4ee6c5a7a7a96258932aaab0d3842e",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/live/frameworks/nuxt.mjs",
+          "sha256": "8f243e1e91f59b1a61036c0adf45ba4ea49e78983ee56d4634a6d567dfa7d263",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/live/frameworks/script-src.mjs",
+          "sha256": "3594a9941214bcea837f2807bd1e77aca33aeb5cea5f4212f5c03f802e6d7f26",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/live/frameworks/static-html.mjs",
+          "sha256": "4521a21f9b2d171d78a923d4e2c000b729549055f1f82ca1f1725be9455c10f1",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/live/frameworks/sveltekit.mjs",
+          "sha256": "4f4cb04e6c584f7f179933c79f75514f2c7086a29205527667ba214a60022c2b",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/live/frameworks/tag-strategy.mjs",
+          "sha256": "deb03caaaaef15da569c7453d7a6839dc9a47cf504d5c6c74f1127a84d23c4eb",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/live/frameworks/tanstack-start.mjs",
+          "sha256": "be7b9135a7b934f29f119c301cf3572b622045120d65ec47444ee58ca51acd62",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/live/frameworks/vite-generic.mjs",
+          "sha256": "63fadafbecf340f037e9d52912483774aa9a41761b1680b9c8cf9c2e5bba30b3",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/live/generation-preflight.mjs",
+          "sha256": "d98806a798bc0425c204e3dcbbf40071fe9ab46a95bcfb3624f36740b6a0f1da",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/live/insert-ui.mjs",
+          "sha256": "c86839fc9be98eadc0ff6afaa6ab010a7539e9af77e8deeba898cb93f7f311f4",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/live/instructions.mjs",
+          "sha256": "9bebb2689fbf4f454b3c3afb2b58e1bcb70705113b05041f959f67caa5c802e1",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/live/manual-apply.mjs",
+          "sha256": "c0e7fc5c3d4a7d6e1d6a8e6f85cbe005e5dc01d77b16fd0735605f287c4c8b66",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/live/manual-edit-routes.mjs",
+          "sha256": "5517c40db7c91a5b24b134f79cb0f87c90e307b2f7831b1de670d60e529557c0",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/live/manual-edits-buffer.mjs",
+          "sha256": "bbd1aba1b9bc891cba771ee8b891d344542119967ae4666e7147da59de5485fd",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/live/poll-lanes.mjs",
+          "sha256": "a516bc942c55b66be915619794f4ec79aadf94d6966c6fc7aee24f1fbaa60ab3",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/live/project-ignores.mjs",
+          "sha256": "b4088c6fbc231bc13b11804bea90a223d077d3762f3d93990c6044c7ea10d9e1",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/live/roots.mjs",
+          "sha256": "715e9658cb28746c126faf24bbd3cd949e1ebc5dd189eb455887544ae4efbf12",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/live/session-store.mjs",
+          "sha256": "03217be8aad575f3ce44c1a634c40a013ca18edeefa81894450637af2603c411",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/live/source-lock.mjs",
+          "sha256": "2919dd7641a5ff2320a01a1bf9f9adcff6e7e2f2b3ccb1b48cdf0b5c091b3803",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/live/source-search.mjs",
+          "sha256": "429dcbcf21785df225fa97a24906dec11b5170e76df6ed0a2b098fa2c2057de2",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/live/svelte-ast.mjs",
+          "sha256": "11feee00b0637e5960c2045f3dca290eb00ceef00f9a09e3fbf3458abfa8779d",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/live/svelte-component.mjs",
+          "sha256": "234dae2735aae9385716416a4e958d6890ec7cb42dec2e158fe128e8856eaf97",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/live/sveltekit-adapter.mjs",
+          "sha256": "a17e39a2dc0cad436fc00aebeab64dcb2ec1b408e0fdba1a6a8a37844a3b46c3",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/live/tanstack-adapter.mjs",
+          "sha256": "5f59be858d71e40a8b70ce114a892511072547608a9e69858a8a66d6c782968c",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/live/ui-surfaces.mjs",
+          "sha256": "eccf5853861fd2df44a094037b9fa9302f7de8035e53c956bf8cbac7cd6c4baa",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/live/vocabulary.mjs",
+          "sha256": "f1765c853a8894074f511f7b34bda815552e45ea6458babee0ace97416c652ed",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/live-accept.mjs",
+          "sha256": "f823b4f71a6ae21ffb8b52aa3a78768f0bee551329cf76ad4144e4680a05c154",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/live-browser-dom.js",
+          "sha256": "bcfa4022e741f8034b841aed76b9ea3f6a64a8e08e4dfa43ba99f8be65a73393",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/live-browser-ignores.js",
+          "sha256": "c1cb6877ca99a0c1b38ba0c7d59f32702d3022f6821d8045f7133f7c40b6362f",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/live-browser-session.js",
+          "sha256": "dddcb8b941f7460aa6a134f7d456b1820747172c12e01de36dab3265b1065cff",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/live-browser.js",
+          "sha256": "f0d2200a2b8878e2b68f0cca623759a9bc7e5ee0ffa620c93a76f0de42246330",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/live-commit-manual-edits.mjs",
+          "sha256": "dfdc9a128e26a293a12bbf2a21ad34f64ba9b8da73cf0d3d0a24603cca13c051",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/live-complete.mjs",
+          "sha256": "28db300c3a5b42ee01d4250a664020523d2b85158fa987d92c403cab19ae030c",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/live-copy-edit-agent.mjs",
+          "sha256": "e33514592d56b8e8416f3e7c58ee11a2416047ad559c096c3f16c4e9fc57c41c",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/live-discard-manual-edits.mjs",
+          "sha256": "fa967fe27e442dd6c9b467713dd4a05c5d2189af03ad76b98bae9f6642cda545",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/live-inject.mjs",
+          "sha256": "bb3a120472b757e96dbc2f5e24b37f39f31dee3c54d785c571baf686cf71096d",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/live-insert.mjs",
+          "sha256": "057c81807b2f02d565edd41456fb10a43fb01209cb60a541b58f653e480f8991",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/live-manual-edit-evidence.mjs",
+          "sha256": "c5a36c361c435fc023e17be16a78aaf672adb48a6a74e8177cfa775592502638",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/live-poll.mjs",
+          "sha256": "1999e61dbf7f3708c9a7944b26004f4a294e4c7129a23db417b200cb1c09a7b5",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/live-resume.mjs",
+          "sha256": "b5c9e4b1c27ea2dbbf95b563df7314ddb77c6aa75ce2c760cde15f7082ccbec0",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/live-server.mjs",
+          "sha256": "0e2def4cdea1f59d70403f9606723b0391018e31a522f6b639135c8d1b320b7f",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/live-status.mjs",
+          "sha256": "12ce152c6aec4ea2c938bd629b8406de0ee9926586e5af9fe550ab06bba88639",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/live-target.mjs",
+          "sha256": "7f18323b89167804c2d9005d4766b159c81268c9f21daab9fdec24f513f25eb0",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/live-wrap.mjs",
+          "sha256": "f0c5845155c76cd01422a5de92e15e1bb81bb531a2c2985edb21965c5ad38c0a",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/live.mjs",
+          "sha256": "9188f42a93e02ec341335c3441af5de16391196efdf78710e87dd7ef0fb6cb7e",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/modern-screenshot.umd.js",
+          "sha256": "bb36665889124a0b6e15f16045265737449c3bdcf2712cdb08af3cfa01563e2b",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/palette.mjs",
+          "sha256": "6e09e15188033bfb8fe1f8de66f667c2b8b13d48cb55b1f50808330856e5fe16",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/pin.mjs",
+          "sha256": "82c50a1bcabc9dda6487b1dd61bf74a8c2d67befd387aba6a0e283a2dd5ab144",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/serve-question.mjs",
+          "sha256": "48999dd4d8e68797da20ece68618008e395f73ace6f3b8e029303153ca097785",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "scripts/surface-brief.mjs",
+          "sha256": "acd03bf38f6aef2b5d5287cefccacac018063b5b5356c99d191b3bd012f28ed3",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "SKILL.md",
+          "sha256": "d798b45f959e045afc0d363d342a332dd84c4dd0b3abf0e880ddef3b28481545",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        }
+      ]
+    },
+    {
+      "name": "interaction-design",
+      "slug": "interaction-design",
+      "sourceFile": "C:/Users/wangxr/.codex/skills/interaction-design/SKILL.md",
+      "observedReads": [
+        {
+          "timestamp": "2026-10-10T09:06:02.352Z",
+          "source": "rollout-2026-10-09T20-24-54-01a12068-b0ee-7db3-b081-20531fa637b8.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-10T14:37:33.036Z",
+          "source": "rollout-2026-10-10T21-51-05-01a12068-b0ee-7db3-b081-20531fa637b8_01a125dd-f478-7770-aa45-03585a12442f.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-10T15:40:32.575Z",
+          "source": "rollout-2026-10-10T21-51-05-01a12068-b0ee-7db3-b081-20531fa637b8_01a125dd-f478-7770-aa45-03585a12442f.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-11T18:10:10.469Z",
+          "source": "rollout-2026-10-10T21-51-05-01a12068-b0ee-7db3-b081-20531fa637b8_01a125dd-f478-7770-aa45-03585a12442f.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-12T17:58:04.082Z",
+          "source": "rollout-2026-10-12T21-51-41-01a12068-b0ee-7db3-b081-20531fa637b8_01a1302b-39f7-7053-b0a5-f2a995759d5c.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-12T17:58:28.458Z",
+          "source": "rollout-2026-10-12T21-51-41-01a12068-b0ee-7db3-b081-20531fa637b8_01a1302b-39f7-7053-b0a5-f2a995759d5c.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-13T05:01:13.733Z",
+          "source": "rollout-2026-10-12T21-51-41-01a12068-b0ee-7db3-b081-20531fa637b8_01a1302b-39f7-7053-b0a5-f2a995759d5c.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-13T05:01:34.764Z",
+          "source": "rollout-2026-10-12T21-51-41-01a12068-b0ee-7db3-b081-20531fa637b8_01a1302b-39f7-7053-b0a5-f2a995759d5c.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-13T13:04:49.067Z",
+          "source": "rollout-2026-10-13T21-32-33-01a12068-b0ee-7db3-b081-20531fa637b8_01a13540-1275-7a60-944f-cd52a9bccb8f.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-14T15:04:29.253Z",
+          "source": "rollout-2026-10-14T21-49-47-01a12068-b0ee-7db3-b081-20531fa637b8_01a13a76-3505-7032-becf-6a0d80df196b.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-14T17:07:27.015Z",
+          "source": "rollout-2026-10-14T21-49-47-01a12068-b0ee-7db3-b081-20531fa637b8_01a13a76-3505-7032-becf-6a0d80df196b.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-15T16:29:17.756Z",
+          "source": "rollout-2026-10-14T21-49-47-01a12068-b0ee-7db3-b081-20531fa637b8_01a13a76-3505-7032-becf-6a0d80df196b.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-21T13:51:24.219Z",
+          "source": "rollout-2026-10-18T13-58-34-01a12068-b0ee-7db3-b081-20531fa637b8_01a14d60-3a66-70f3-8db7-e409bf9ca7ee.jsonl",
+          "evidence": "skill-read-command"
+        }
+      ],
+      "archive": "interaction-design/SKILL.md",
+      "files": [
+        {
+          "path": "references/animation-libraries.md",
+          "sha256": "92da251d881a6a0647f09b83c9cf8cbdfb5d408d54e1098097bb0eda336e6d0f",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "references/microinteraction-patterns.md",
+          "sha256": "c276b03468bacacf7a7d8d95c70114d9724854ac2e084ad63f0b6e1ef00a948a",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "references/scroll-animations.md",
+          "sha256": "34f32ef74c4f44bf57a721f95cd523b63dd1d02711f16ccb8472d1d7a4f78a35",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "SKILL.md",
+          "sha256": "87f2765ed1deeef3f1c06f9e4338ff103c391c6c4adcdffc885f3516b7c34ff2",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        }
+      ]
+    },
+    {
+      "name": "interface-design",
+      "slug": "interface-design-codex",
+      "sourceFile": "C:/Users/wangxr/.codex/skills/interface-design/SKILL.md",
+      "observedReads": [
+        {
+          "timestamp": "2026-10-10T05:34:44.599Z",
+          "source": "rollout-2026-10-09T20-24-54-01a12068-b0ee-7db3-b081-20531fa637b8.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-10T05:34:59.432Z",
+          "source": "rollout-2026-10-09T20-24-54-01a12068-b0ee-7db3-b081-20531fa637b8.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-10T05:36:13.187Z",
+          "source": "rollout-2026-10-09T20-24-54-01a12068-b0ee-7db3-b081-20531fa637b8.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-10T05:36:25.158Z",
+          "source": "rollout-2026-10-09T20-24-54-01a12068-b0ee-7db3-b081-20531fa637b8.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-10T05:38:01.893Z",
+          "source": "rollout-2026-10-09T20-24-54-01a12068-b0ee-7db3-b081-20531fa637b8.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-10T08:27:12.631Z",
+          "source": "rollout-2026-10-09T20-24-54-01a12068-b0ee-7db3-b081-20531fa637b8.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-10T10:21:43.820Z",
+          "source": "rollout-2026-10-09T20-24-54-01a12068-b0ee-7db3-b081-20531fa637b8.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-10T11:51:14.435Z",
+          "source": "rollout-2026-10-09T20-24-54-01a12068-b0ee-7db3-b081-20531fa637b8.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-10T12:28:25.810Z",
+          "source": "rollout-2026-10-09T20-24-54-01a12068-b0ee-7db3-b081-20531fa637b8.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-10T13:07:16.913Z",
+          "source": "rollout-2026-10-10T21-51-05-01a12068-b0ee-7db3-b081-20531fa637b8_01a125dd-f478-7770-aa45-03585a12442f.jsonl",
+          "evidence": "skill-read-command"
+        }
+      ],
+      "archive": "interface-design-codex/SKILL.md",
+      "files": [
+        {
+          "path": "agents/openai.yaml",
+          "sha256": "752d0810d593b5cc88b34ea8e0c101b50d0ec1c4c8091be369544f73f3a2ea2e",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "SKILL.md",
+          "sha256": "720b31a31276e899fbe3006a33cbfeaceb77a73ba4c27b80d29afd38c8b7b208",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        }
+      ]
+    },
+    {
+      "name": "motion-foundations",
+      "slug": "motion-foundations",
+      "sourceFile": "C:/Users/wangxr/.codex/skills/motion-foundations/SKILL.md",
+      "observedReads": [
+        {
+          "timestamp": "2026-10-13T13:04:49.067Z",
+          "source": "rollout-2026-10-13T21-32-33-01a12068-b0ee-7db3-b081-20531fa637b8_01a13540-1275-7a60-944f-cd52a9bccb8f.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-14T11:24:35.042Z",
+          "source": "rollout-2026-10-14T19-35-37-01a12068-b0ee-7db3-b081-20531fa637b8_01a139fb-5f7d-72e1-bca9-859204684883.jsonl",
+          "evidence": "skill-read-command"
+        }
+      ],
+      "archive": "motion-foundations/SKILL.md",
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "ac0dd6de088e8cf2bff57230b365469e893c5f3a9578815a7f113689d0401972",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        }
+      ]
+    },
+    {
+      "name": "playwright-skill",
+      "slug": "playwright-skill",
+      "sourceFile": "C:/Users/wangxr/.codex/skills/playwright-skill/SKILL.md",
+      "observedReads": [
+        {
+          "timestamp": "2026-10-09T11:29:28.177Z",
+          "source": "rollout-2026-10-09T20-24-54-01a12068-b0ee-7db3-b081-20531fa637b8.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-09T12:38:09.438Z",
+          "source": "rollout-2026-10-09T20-24-54-01a12068-b0ee-7db3-b081-20531fa637b8.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-10T03:11:07.515Z",
+          "source": "rollout-2026-10-09T20-24-54-01a12068-b0ee-7db3-b081-20531fa637b8.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-10T03:15:56.241Z",
+          "source": "rollout-2026-10-09T20-24-54-01a12068-b0ee-7db3-b081-20531fa637b8.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-10T05:34:44.599Z",
+          "source": "rollout-2026-10-09T20-24-54-01a12068-b0ee-7db3-b081-20531fa637b8.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-10T05:34:59.432Z",
+          "source": "rollout-2026-10-09T20-24-54-01a12068-b0ee-7db3-b081-20531fa637b8.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-10T05:36:13.187Z",
+          "source": "rollout-2026-10-09T20-24-54-01a12068-b0ee-7db3-b081-20531fa637b8.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-10T05:38:01.893Z",
+          "source": "rollout-2026-10-09T20-24-54-01a12068-b0ee-7db3-b081-20531fa637b8.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-10T06:30:48.437Z",
+          "source": "rollout-2026-10-09T20-24-54-01a12068-b0ee-7db3-b081-20531fa637b8.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-10T08:37:35.565Z",
+          "source": "rollout-2026-10-09T20-24-54-01a12068-b0ee-7db3-b081-20531fa637b8.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-10T10:56:04.971Z",
+          "source": "rollout-2026-10-09T20-24-54-01a12068-b0ee-7db3-b081-20531fa637b8.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-10T13:06:49.104Z",
+          "source": "rollout-2026-10-10T21-51-05-01a12068-b0ee-7db3-b081-20531fa637b8_01a125dd-f478-7770-aa45-03585a12442f.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-10T13:28:29.504Z",
+          "source": "rollout-2026-10-10T21-51-05-01a12068-b0ee-7db3-b081-20531fa637b8_01a125dd-f478-7770-aa45-03585a12442f.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-10T15:34:13.013Z",
+          "source": "rollout-2026-10-10T21-51-05-01a12068-b0ee-7db3-b081-20531fa637b8_01a125dd-f478-7770-aa45-03585a12442f.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-11T04:40:26.376Z",
+          "source": "rollout-2026-10-10T21-51-05-01a12068-b0ee-7db3-b081-20531fa637b8_01a125dd-f478-7770-aa45-03585a12442f.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-11T07:27:33.163Z",
+          "source": "rollout-2026-10-10T21-51-05-01a12068-b0ee-7db3-b081-20531fa637b8_01a125dd-f478-7770-aa45-03585a12442f.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-11T07:29:13.051Z",
+          "source": "rollout-2026-10-10T21-51-05-01a12068-b0ee-7db3-b081-20531fa637b8_01a125dd-f478-7770-aa45-03585a12442f.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-11T14:59:01.472Z",
+          "source": "rollout-2026-10-10T21-51-05-01a12068-b0ee-7db3-b081-20531fa637b8_01a125dd-f478-7770-aa45-03585a12442f.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-11T17:38:53.479Z",
+          "source": "rollout-2026-10-10T21-51-05-01a12068-b0ee-7db3-b081-20531fa637b8_01a125dd-f478-7770-aa45-03585a12442f.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-13T10:53:41.909Z",
+          "source": "rollout-2026-10-12T21-51-41-01a12068-b0ee-7db3-b081-20531fa637b8_01a1302b-39f7-7053-b0a5-f2a995759d5c.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-13T11:54:26.232Z",
+          "source": "rollout-2026-10-12T21-51-41-01a12068-b0ee-7db3-b081-20531fa637b8_01a1302b-39f7-7053-b0a5-f2a995759d5c.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-14T00:50:23.904Z",
+          "source": "rollout-2026-10-13T21-32-33-01a12068-b0ee-7db3-b081-20531fa637b8_01a13540-1275-7a60-944f-cd52a9bccb8f.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-14T00:52:00.045Z",
+          "source": "rollout-2026-10-13T21-32-33-01a12068-b0ee-7db3-b081-20531fa637b8_01a13540-1275-7a60-944f-cd52a9bccb8f.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-15T13:44:17.376Z",
+          "source": "rollout-2026-10-14T21-49-47-01a12068-b0ee-7db3-b081-20531fa637b8_01a13a76-3505-7032-becf-6a0d80df196b.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-21T13:03:48.965Z",
+          "source": "rollout-2026-10-18T13-58-34-01a12068-b0ee-7db3-b081-20531fa637b8_01a14d60-3a66-70f3-8db7-e409bf9ca7ee.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-21T15:25:27.371Z",
+          "source": "rollout-2026-10-18T13-58-34-01a12068-b0ee-7db3-b081-20531fa637b8_01a14d60-3a66-70f3-8db7-e409bf9ca7ee.jsonl",
+          "evidence": "skill-read-command"
+        }
+      ],
+      "archive": "playwright-skill/SKILL.md",
+      "files": [
+        {
+          "path": "API_REFERENCE.md",
+          "sha256": "948e778e15e24d453219be6e05889416f088b59469818875f728d97a4ad17603",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "lib/helpers.js",
+          "sha256": "b837864b43126da1c0fc216b4d555b14a52c78bd78e0075af0c6acd1efa0e010",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "package-lock.json",
+          "sha256": "a0502f20d5c475c9654b8a6faa69263d2eb7ab0c7898c3c0a2490ddc75316df3",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "package.json",
+          "sha256": "8f1870c8f1124cadae0bf493eccdbc8e2df48124f90d2eecaef0c43638906d8e",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "run.js",
+          "sha256": "f2afe1a17379548abee60e91c9cee9a3907ff5ae9a2423d9190e45ace761399d",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "SKILL.md",
+          "sha256": "6dc254f552392e1f5b8704434e982cd26375d04ebe815084d1b47af1ee2a971f",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        }
+      ]
+    },
+    {
+      "name": "responsive-design",
+      "slug": "responsive-design-codex",
+      "sourceFile": "C:/Users/wangxr/.codex/skills/responsive-design/SKILL.md",
+      "observedReads": [
+        {
+          "timestamp": "2026-10-21T15:37:54.251Z",
+          "source": "rollout-2026-10-18T13-58-34-01a12068-b0ee-7db3-b081-20531fa637b8_01a14d60-3a66-70f3-8db7-e409bf9ca7ee.jsonl",
+          "evidence": "skill-read-command"
+        }
+      ],
+      "archive": "responsive-design-codex/SKILL.md",
+      "files": [
+        {
+          "path": "references/breakpoint-strategies.md",
+          "sha256": "d086c14641856aacdd38fd8aebf2988fb0055b7ed1b8773feb3104e69c7d1506",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "references/container-queries.md",
+          "sha256": "67b1697186a531751ec2aa364506919b9ae44680744603613c511d5132eb5a24",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "references/details.md",
+          "sha256": "6b8d84250249319719fc5d4a545628267edd16b8763c107536cf7341d37740b4",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "references/fluid-layouts.md",
+          "sha256": "d67ad19e57b015101da5d4c4a9208015909f60b89db5b7922d0bf9ca17673860",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "SKILL.md",
+          "sha256": "c8bd56f8fc0f122c4ff392b02617f0e6bb4a353b2d0189235c6ee77cdcfe8690",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        }
+      ]
+    },
+    {
+      "name": "ui-design",
+      "slug": "ui-design",
+      "sourceFile": "C:/Users/wangxr/.codex/skills/ui-design/SKILL.md",
+      "observedReads": [
+        {
+          "timestamp": "2026-10-10T14:37:33.036Z",
+          "source": "rollout-2026-10-10T21-51-05-01a12068-b0ee-7db3-b081-20531fa637b8_01a125dd-f478-7770-aa45-03585a12442f.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-10T15:40:32.575Z",
+          "source": "rollout-2026-10-10T21-51-05-01a12068-b0ee-7db3-b081-20531fa637b8_01a125dd-f478-7770-aa45-03585a12442f.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-11T18:10:10.469Z",
+          "source": "rollout-2026-10-10T21-51-05-01a12068-b0ee-7db3-b081-20531fa637b8_01a125dd-f478-7770-aa45-03585a12442f.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-11T18:17:54.214Z",
+          "source": "rollout-2026-10-10T21-51-05-01a12068-b0ee-7db3-b081-20531fa637b8_01a125dd-f478-7770-aa45-03585a12442f.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-13T13:04:49.067Z",
+          "source": "rollout-2026-10-13T21-32-33-01a12068-b0ee-7db3-b081-20531fa637b8_01a13540-1275-7a60-944f-cd52a9bccb8f.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-14T06:08:18.588Z",
+          "source": "rollout-2026-10-13T21-32-33-01a12068-b0ee-7db3-b081-20531fa637b8_01a13540-1275-7a60-944f-cd52a9bccb8f.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-14T08:50:31.017Z",
+          "source": "rollout-2026-10-14T17-26-42-01a12068-b0ee-7db3-b081-20531fa637b8_01a13985-5890-7300-a30a-867b9a805e7f.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-14T14:17:53.161Z",
+          "source": "rollout-2026-10-14T21-49-47-01a12068-b0ee-7db3-b081-20531fa637b8_01a13a76-3505-7032-becf-6a0d80df196b.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-14T14:20:30.146Z",
+          "source": "rollout-2026-10-14T21-49-47-01a12068-b0ee-7db3-b081-20531fa637b8_01a13a76-3505-7032-becf-6a0d80df196b.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-14T17:07:27.015Z",
+          "source": "rollout-2026-10-14T21-49-47-01a12068-b0ee-7db3-b081-20531fa637b8_01a13a76-3505-7032-becf-6a0d80df196b.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-15T16:29:17.756Z",
+          "source": "rollout-2026-10-14T21-49-47-01a12068-b0ee-7db3-b081-20531fa637b8_01a13a76-3505-7032-becf-6a0d80df196b.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-16T04:24:50.649Z",
+          "source": "rollout-2026-10-14T21-49-47-01a12068-b0ee-7db3-b081-20531fa637b8_01a13a76-3505-7032-becf-6a0d80df196b.jsonl",
+          "evidence": "skill-read-command"
+        },
+        {
+          "timestamp": "2026-10-16T04:38:46.218Z",
+          "source": "rollout-2026-10-14T21-49-47-01a12068-b0ee-7db3-b081-20531fa637b8_01a13a76-3505-7032-becf-6a0d80df196b.jsonl",
+          "evidence": "skill-read-command"
+        }
+      ],
+      "archive": "ui-design/SKILL.md",
+      "files": [
+        {
+          "path": "add-dark-mode.md",
+          "sha256": "7d96b7d3ee12f19d3f2f4d3938ce82c56c9f0a5a1d547017afa615e640d44c36",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "canonicalize-tailwind.md",
+          "sha256": "43a717028b0a4dabcd7638f8bd9169ddac8a608f1f988ec59c177c07bf0054b8",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "componentize.md",
+          "sha256": "93b0cbfb8eadbd68544db057fb713909eb14fb4c830237f0a209bf12b24f6403",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "dark-mode-image.md",
+          "sha256": "c5e04b5901303408f488034b2318067508e794025706e5f5a93bdec352f8cc42",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "design-guidelines.md",
+          "sha256": "53f4d83b22f0fbc0dd822b2fe38809c18692681a402e2226b9c3184f48256fa4",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "direction/aesthetic-direction.md",
+          "sha256": "696321dfa9cb90a6d31bba628bba33aecf23ff4aaadd3516ca2a2eea4e6219e1",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "direction/brand-kit-prompt.md",
+          "sha256": "22e604f542f9c812c0ce48bc242f904c355d8ee887ec566f5005d65544b1156b",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "direction/cro.md",
+          "sha256": "a3eb9343bbaaa573cc85d1e69e1b63ded0c8881c77f14c2820dc770fb006b265",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "direction/design-in-code.md",
+          "sha256": "8653f8f68de3b3c9d0a3b870b862c4cd9b138a1c6b1e6df00ae35a57789a5e52",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "direction/marketing-ui.md",
+          "sha256": "10d837602075229e4cb41e90881cdb44778be27b7953bd7172bcf56a7582500e",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "direction/modern.md",
+          "sha256": "1f6a2e34503e51aa99f2c5d1694a875af1c76ce515422bbbea2e5683a0cbeb75",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "direction/product-ui.md",
+          "sha256": "2a38acd485e68fde13f7d0de0655b8db92aaf558740321a9b72947a8dd9f978a",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "direction/testing.md",
+          "sha256": "f3e925225aa5960bb9118d20e76ab736f8cd01c2660f5a3f3b99e900a37997d9",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "guidelines/assets-api.md",
+          "sha256": "a0f7a2b5e0164f145a0e171550ebbbb6e341948d6f6d00e9813775fd29e01a85",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "guidelines/avatars.md",
+          "sha256": "6aad411fa6366a711bbdb2e249a0f1411e23d98fe433d7a40f8aad29a6121915",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "guidelines/badges.md",
+          "sha256": "de79bd7873fb2cfa7cbb94c209fe3e71c6e0e81b096d59c9a0c7a3fe7bdccf81",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "guidelines/border-radius.md",
+          "sha256": "9f4b63a88f33505e74a424f3f79cb7682921f3cb942ed4e1240dafc74af08b26",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "guidelines/buttons.md",
+          "sha256": "2d953839a791fb8f56008a0be665117487214fc012a38252538179a112b48169",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "guidelines/colors.md",
+          "sha256": "7297209b4e431458281735f7b585b41933572a89e60eae020eab9106bbe6b914",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "guidelines/copywriting.md",
+          "sha256": "a2999b35a3c8e3d2d46b603f6316edf095b3e6641e4eecaf39574b89e309d0ff",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "guidelines/custom-fonts.md",
+          "sha256": "9898f4f9e3b840d173a96525ae7f042ac4f7b20f1d70f3ceb02ff6ca185038c9",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "guidelines/dark-mode.md",
+          "sha256": "28b79e6b519a769e8d143e4a2ba0911020cf5d2560296e60e95161fe92502a7b",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "guidelines/dashboards.md",
+          "sha256": "e2f465446feffc666809404a018f6426458c4aa6ff3672ad2e05a3ec3102575c",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "guidelines/description-lists.md",
+          "sha256": "97a5f45a5b248e6a3aae421a331abae327ec43006ee00195d711499c326984e4",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "guidelines/feature-lists.md",
+          "sha256": "bbdfcdd8207a929b0c97a01b3cdbca5cb57d3924e498f296cd494ca571c6426a",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "guidelines/flexbox-layout.md",
+          "sha256": "bf86929860e9ff0b9328e913086fc10e9257981d64fab904fa772c1d45685bd0",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "guidelines/font-recommendations.md",
+          "sha256": "b941a9b73d8a31b9c7a930193bb6a0e0eedf98bb1f316411bff9dfbe8c55a44d",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "guidelines/footers.md",
+          "sha256": "aa83df420081772a2a89a0b6ce07f5381ec86546d53e26b0a2a89f921279128b",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "guidelines/form-controls.md",
+          "sha256": "e694747ebc97c1157b06ea910f59d16d55ab79574ae94adabf2bc71a3d3e6cb3",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "guidelines/general.md",
+          "sha256": "2323ff64cb1147392e96e400f710d6467b7033d8dd65a365ffdf96da3f207bfb",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "guidelines/headers.md",
+          "sha256": "dbfc0f432d5e4988aff9d7163288b237ee3d7b33767606e1eed5d33da7b94fe4",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "guidelines/heading-groups.md",
+          "sha256": "cd7120323b4bd1983eef32c95b881c1af866c564bb12569666d446fb97b3c825",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "guidelines/icons.md",
+          "sha256": "3e4138cc8a01f7ee23acf8e99769287d5125cf804694d0ef894a21bf295bb942",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "guidelines/images.md",
+          "sha256": "a6ebe70e2aedfee2d9dee8d66c574fcbed6aac8357a15bec4fffacc8a2a585c3",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "guidelines/landing-pages.md",
+          "sha256": "5f360169321023ef8eaba9064ecf51920284f66fd8bd35d6ce0af2281831e13e",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "guidelines/login-pages.md",
+          "sha256": "6f8326d920cfa3bc186a2a00ab99349470d47b5ca9a45d789a28984c3d157357",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "guidelines/logo-clouds.md",
+          "sha256": "1ce16a546d240c7ad4bd9b6d57218c9c488b6fc7d036401261e26b94821a0668",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "guidelines/materials.md",
+          "sha256": "1f91eb8578f755de4431d8a2a8f974f849182c0ccf1f4606ec1f0083f4e86b7e",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "guidelines/navigation.md",
+          "sha256": "1269eaa1eb9347909ead16366658710188cb55fe4addf31bcd84106603befaaf",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "guidelines/pagination.md",
+          "sha256": "57a18638905c48c9a8389539e684954c8f5dd80b21f60fb46e43cd9b56f3f504",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "guidelines/placeholder-content.md",
+          "sha256": "8132e694a272cd0ddd7be2139a5c067f8a771d5e082b02275e45935114d5d358",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "guidelines/pricing-cards.md",
+          "sha256": "61a7c5820c981b86fd6f0341035fd555b81b638cfb3e7440af9631f4a659d5a0",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "guidelines/prose-content.md",
+          "sha256": "3634d026493ff151e639bb0c233ab1c7f578a6c45312232e79130113c4fc5a9a",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "guidelines/responsive-design.md",
+          "sha256": "3ce2c9ad77d78b62c872db9f7e61e59c19f1828fe40c085b8d5b6b84680abf1b",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "guidelines/section-layout.md",
+          "sha256": "89a1b7dcbc467cbc75d4e869f3072bbfa3be81d40cbf0c8b7bada5903da76064",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "guidelines/shadows.md",
+          "sha256": "4665455e4a08e272081c25be6c7224de969213fa6e50d81e2dc368896ecb771d",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "guidelines/surfaces.md",
+          "sha256": "44b12f2c1c372fb2c59fa24cb56c0a739fc7c1531431733af93524123980ca90",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "guidelines/svg.md",
+          "sha256": "39de19f698c60157444ebe8318a1efaed4932ac3b11cecc582fb6c61081fbdd0",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "guidelines/tables.md",
+          "sha256": "6a4db7dd7956aae5449bd11161caddcd3f0a1aa7480bad438b0ba197e5641891",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "guidelines/team-sections.md",
+          "sha256": "ae3478411b23ca788031bf9bfda6bdf2e12b47203abfcc001cdc196935f9ef02",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "guidelines/testimonials.md",
+          "sha256": "5348cc4f18f15761a8c2f09d1e45eee344373790c687f3e5ebdb7ceb9c7ed965",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "guidelines/typography.md",
+          "sha256": "1c27633d92d76b8046306a66eb7937e3576dd737b171cb31973312e1a44a6c91",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "ideas.md",
+          "sha256": "8d994f407746aa4fa6da4597280a5a546ee9d387e7dc6673863d32444567d3ad",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "make-responsive.md",
+          "sha256": "11f43a5195278be5e65b6a9b2d84697e277b2039ed3512990839e0d41393a775",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "markup-from-image.md",
+          "sha256": "fe1089f2cfcb5d4218f7014abcde1c482fdebbef3599f68242129cb4e0653e6b",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "references/craft-checklist.md",
+          "sha256": "cfa1a59672cd292ef16c9ca64ca5999bb97509b44b6c888f4028b2c40e621bfe",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "references/defer-to-other-tools.md",
+          "sha256": "905c6ab6da34fd0d50753552d64774063e0db666758d911217dcadb2d9a71aad",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "references/feature-playbooks.md",
+          "sha256": "5503f425dedbb41999cc638444a3950b9ad9c75441f803baf556b9f494500d04",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "references/output-adapters.md",
+          "sha256": "a10fd09472219cc43fc1eed6557a94d13a8b4c33d02f2573389bbb806fe6727a",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "references/ship-readiness.md",
+          "sha256": "a3f471fa9d9da7dad7ea3fb74d05ce828f61168211f4cfae019abfe004ffbe7f",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "references/states-coverage.md",
+          "sha256": "1ba71b1ae342fead1ef217b0a4e45fd0fa10344f983ab82a31c04f3a2b6c22dd",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "rules/a11y-color-only-meaning.md",
+          "sha256": "c9a91e949c0ced2d5fdc7ffa0d3a53ae5e620bb86f63a08d3552ca2a79f07121",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "rules/a11y-data-table-semantics.md",
+          "sha256": "0db48967cd4251a7cdd56324405a30923cd27bfcb4a6a688bcb3ec5e8ac1fdc6",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "rules/a11y-document-language.md",
+          "sha256": "170c27f2745858d2ab62fa116a14db11bb9991ddce12280d38742816a2998ee0",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "rules/a11y-icon-controls-labeled.md",
+          "sha256": "ac90c783c8b12d706c8697164ed16643d7c2c23ea9cf77448f2c05af425fca5a",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "rules/a11y-image-alt-text.md",
+          "sha256": "5ff54950d08bf9ed7f4c0ca199a0abde31f82eebcb5b1277eae39c0367b94721",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "rules/a11y-media-captions.md",
+          "sha256": "e644ef7f5fecf25a6ecd18494a9c158a4a60a6e6887fa35fae8eb43aebf9645f",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "rules/a11y-semantic-html-first.md",
+          "sha256": "7a04ac7b7d825ebeaa9b35ce026c893cf0c6940a66d971e66811797acb7a8444",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "rules/a11y-skip-link-heading-order.md",
+          "sha256": "91ea4f1f65ae2e3e6f4b9da05ae5ff1d8416adc1a3b8a7dd2bbfba8a8f43dadf",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "rules/async-no-error-boundary.md",
+          "sha256": "d799e08e7c33ea18fee714de6639dc62feda4dc63de1a1b12e0aed8ca69ad8e9",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "rules/async-no-suspense-boundary.md",
+          "sha256": "3c85a6e1acbffffb266c4b9a020aab49a622c83489e94948674f232dcab9cbcc",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "rules/async-optimistic-without-rollback.md",
+          "sha256": "2b94beed6473d3d1a3c1e65c14d15cabf35444b36cf4420fc707c855cee5bbce",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "rules/async-out-of-order-responses.md",
+          "sha256": "293ab4d682398a772dd7b593cc32ee5dc925ac8f02d6ef9e6af715709ca32a71",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "rules/dark-i18n-rtl-untested.md",
+          "sha256": "fff00a214b53fd3d40c4dab0e2fe823193b3254ca0e425176f57e00706822f5c",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "rules/dark-i18n-untested.md",
+          "sha256": "3927de9f9b5a59bbbcba53327c7467b7b98859fb720651b9b0de19d649a98f2e",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "rules/focus-broken-focus-trap.md",
+          "sha256": "ecb41c42149ff38a0fc49b4e3abfcb49a6e727113f87bd6c6478d6f8bd4e44d1",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "rules/focus-not-restored.md",
+          "sha256": "47241f8dddee12c74d18ef8cd1c140a16aa6d9dd90184225de5e1e52508751eb",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "rules/focus-on-dynamic-content.md",
+          "sha256": "a048816b3767ff40513c80315cb70cd10bda43e2ff431c105c4b1d5cd3510d85",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "rules/forms-dont-block-paste-ime.md",
+          "sha256": "54ff41fb901d2cb32ab28cb64aac9b46a29a69b59b2424aebb4789f5bc2b5703",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "rules/forms-error-association.md",
+          "sha256": "ad17085d74839a35f7a1532207bcb9223739ffe0c5357803b7cd8fbf58750316",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "rules/forms-inline-errors-first-focus.md",
+          "sha256": "384d3d6b20adf2271c40d7ad8ea3fbd9c2ceb1cb30a23b66fa28c7b1208b8aba",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "rules/forms-labels-and-autocomplete.md",
+          "sha256": "ef503cfa74b78af3be45e6e7302ddee8c9a20f4b2e3296ffea8610c6bfb26f7f",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "rules/forms-lost-data-on-error.md",
+          "sha256": "d24ee8e45edc376a023b29db65358eaaf19fc7d29d6416f28fa579f7b5c7a610",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "rules/forms-mobile-input-font-size.md",
+          "sha256": "949bb935cb20213772fb475ae04e339ebb1412db925c61f6e7e1e49a2096de22",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "rules/forms-no-disable-while-submitting.md",
+          "sha256": "b43ac1051fa0490f26ff5719bdcdbfc6b26e27d4ac0da37948318ef4dae268cc",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "rules/forms-use-form-status-misuse.md",
+          "sha256": "ef214d29e4b8d8be0fabfbaf3bb0e86b20b24d4a5afea70655eac79f75e2de00",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "rules/interaction-focus-visible.md",
+          "sha256": "a706cdf208a01287035a4404e59df8c0caf91abee36e3566284d402c5543b488",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "rules/interaction-keyboard-operable.md",
+          "sha256": "e471538d463ad9f256db46946bd532aa90d718246ff161a03d298bb535618bb8",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "rules/interaction-target-size.md",
+          "sha256": "cbaf893d74a3cd7cc218b55032b531aba51de7e0b38ead9324d2704eb240cc41",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "rules/layout-long-content-safety.md",
+          "sha256": "7d44477f6554f04f966d816728c8556418053d627d1ae1ef1f8d02ad6e8e3280",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "rules/microcopy-leaked-error-message.md",
+          "sha256": "24bba05cbb48ed97cfd6b82ce7f841c2cbd0700ccb9d5d48208eddf660612d84",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "rules/microcopy-vague-error.md",
+          "sha256": "9ca66397a2059cccee6f252ce5ea97c3536f784623e7d063161e6d0f646f86a7",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "rules/mobile-hover-only-affordance.md",
+          "sha256": "9b8e2192fb5059695ded8bd57fd784f7c0bb5f80d495d3139046c3c4ffccaf29",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "rules/mobile-viewport-scaling.md",
+          "sha256": "76a73c1a5aeb223dd0e0ea44b354f3d35ceeebbc8bf2141499c8777b9b9fa4da",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "rules/motion-respect-reduced-motion.md",
+          "sha256": "44fcdd2300a9525c2108e8b77e7a19d54620cbeedb073295ef2870ebef024ded",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "rules/nav-live-region-feedback.md",
+          "sha256": "48cea89e0c3ca2e41e677f194d6eecc55f4c82b5a356318540c8569bccba32b7",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "rules/nav-semantic-links.md",
+          "sha256": "09e2de7a3e263b2dd145eb661ac460d9e49e3b360841bb3e8484f5f62d602347",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "rules/perf-image-dimensions-and-priority.md",
+          "sha256": "6fa77429ad03c357896cebe80ad0a4bf0b23ce6156485f598730637c5af09b6e",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "rules/perf-lazy-load-offscreen.md",
+          "sha256": "ee89307867a0159516cdcad42ff09ebb33e6512ff3b3e301aa0c6b99e243f5c6",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "rules/perf-virtualize-large-lists.md",
+          "sha256": "9ee7f352766df50e45b7f00701f3028f8a844d4760e006803ca802202118d057",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "rules/slop-affordance-mismatch.md",
+          "sha256": "1e28c6fdf60ca261d786b04e800527785d9bb07092288eaf0e804216e123936b",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "rules/slop-decoration-no-role.md",
+          "sha256": "0fff4fe9d62caa658243027ca3496cd64a045bef4aa9ee56f78eb0ca1dd830eb",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "rules/slop-faux-product-chrome.md",
+          "sha256": "d80e85b1ef7798b3068858932a365b13655260e2613924a5323ef4d8184fbadc",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "rules/slop-near-duplicate-scale.md",
+          "sha256": "cfec99a549b9837d2baad64daff618908ac5a57b40cd7bc0398e359c87cb0df2",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "rules/slop-unverifiable-proof.md",
+          "sha256": "0901fbcaeac7ed1d59328aa3012fb808332c4761ab4cb44c268433eb5a48d7f1",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "rules/states-layout-shift.md",
+          "sha256": "f3fe76051f7e48b7c82bb175b9dcbe9a4eeef301ebc7089421f715e8e90309e4",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "rules/states-no-empty-state.md",
+          "sha256": "8672b21f042728bd0c2848f58c34d275e43f62583b453fd114315ed00af7b30f",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "rules/states-no-error-state.md",
+          "sha256": "f6d9e3ad13b8547080d3d80510abd7fae6d27f8291bf764e096845b9ec8b88a0",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "rules/type-readable-scale.md",
+          "sha256": "b7c93aab2b0922786d9ff18c53ccefe9d127f7e8be14f7f2a10fb1f2b9c50086",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "rules/_sections.md",
+          "sha256": "87db0330aa5c47306733610a229d0b131c01e253b3179b36e059c1a8639eb7b8",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "rules/_template.md",
+          "sha256": "9d2a2f93d33b93fab0ed56bf527ba77bdd90ceb6d13a2455c1d0e08ee9b894c1",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "SKILL.md",
+          "sha256": "498c1beabcd30348dbd8e904d73ebf39e1a619c98c695f5ee90a79914db55a6c",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        }
+      ]
+    },
+    {
+      "name": "writing-for-agents",
+      "slug": "writing-for-agents",
+      "sourceFile": "C:/Users/wangxr/.codex/skills/writing-for-agents/SKILL.md",
+      "observedReads": [
+        {
+          "timestamp": "2026-10-21T15:45:57.072Z",
+          "source": "rollout-2026-10-18T13-58-34-01a12068-b0ee-7db3-b081-20531fa637b8_01a14d60-3a66-70f3-8db7-e409bf9ca7ee.jsonl",
+          "evidence": "skill-read-command"
+        }
+      ],
+      "archive": "writing-for-agents/SKILL.md",
+      "files": [
+        {
+          "path": "agents/openai.yaml",
+          "sha256": "eacb24b2a618cfb81dacb0416f4fdd75ddf3a8060f8ddb99aae1b1e301907e4b",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "SKILL-MECHANICS.md",
+          "sha256": "b4c54a0aaad3f6eddefde6d06770a0e401fbb8fc6a8f49ce18af816bd144d14d",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        },
+        {
+          "path": "SKILL.md",
+          "sha256": "a842323e664e5af104eac5c97ad22fda929ebeb62d81c501161ac1f6f482db58",
+          "whitespace": {
+            "trailingLineWhitespace": false,
+            "blankLineAtEof": false
+          }
+        }
+      ]
+    }
+  ],
+  "unavailableReadPaths": [
+    {
+      "sourceFile": "C:/Users/wangxr/.agents/skills/motion-foundations/SKILL.md",
+      "reason": "recorded read path is unavailable at export time"
+    },
+    {
+      "sourceFile": "C:/Users/wangxr/.codex/skills/imagegen/SKILL.md",
+      "reason": "recorded read path is unavailable at export time"
+    },
+    {
+      "sourceFile": "C:/Users/wangxr/.codex/skills/r0/ai-image-generation/SKILL.md",
+      "reason": "recorded read path is unavailable at export time"
+    },
+    {
+      "sourceFile": "C:/Users/wangxr/.codex/skills/r0/interaction-design/SKILL.md",
+      "reason": "recorded read path is unavailable at export time"
+    },
+    {
+      "sourceFile": "C:/Users/wangxr/.codex/skills/r0/motion-foundations/SKILL.md",
+      "reason": "recorded read path is unavailable at export time"
+    },
+    {
+      "sourceFile": "C:/Users/wangxr/.codex/skills/r0/ui-design/SKILL.md",
+      "reason": "recorded read path is unavailable at export time"
+    },
+    {
+      "sourceFile": "C:/Users/wangxr/.codex/skills/r1/improve-animations/SKILL.md",
+      "reason": "recorded read path is unavailable at export time"
+    },
+    {
+      "sourceFile": "C:/Users/wangxr/.codex/skills/r1/responsive-design/SKILL.md",
+      "reason": "recorded read path is unavailable at export time"
+    }
+  ]
+}

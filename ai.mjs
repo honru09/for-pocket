@@ -93,6 +93,17 @@ function amountToMinor(value, currency) {
   return minor;
 }
 
+function losesCurrencyPrecision(value, currency) {
+  // Inspect decimal digits before coercing model strings to Number. Binary
+  // multiplication can make valid 0.29 look imprecise, while Number can erase
+  // a genuinely extra digit from "0.0100000000000000001".
+  const match = String(value).trim().match(/^(\d+)(?:\.(\d+))?(?:e([+-]?\d+))?$/i);
+  if (!match) return false;
+  const fraction = match[2] || '';
+  const shift = CURRENCIES[currency].digits + Number(match[3] || 0) - fraction.length;
+  return shift < 0 && /[1-9]/.test((match[1] + fraction).slice(shift));
+}
+
 function safeTimezone(value, fallback = 'UTC') {
   const candidate = typeof value === 'string' && value.trim() ? value.trim().slice(0, 80) : '';
   const fallbackValue = typeof fallback === 'string' && fallback.trim() ? fallback.trim().slice(0, 80) : 'UTC';
@@ -198,6 +209,7 @@ function normaliseResult(raw, input, settings) {
   const currency = audio && raw.currencyExplicit !== true ? 'JPY' : requestedCurrency || settings.currency;
   const amount = typeof raw.amount === 'string' && /^\d+(?:\.\d+)?$/.test(raw.amount.trim()) ? Number(raw.amount.trim()) : raw.amount;
   const amountMinor = amountToMinor(amount, currency);
+  const amountPrecisionLoss = losesCurrencyPrecision(raw.amount, currency);
   let category;
   try { category = mapExpenseCategory(raw, type, settings); } catch { throw new AiError('errorAiCategory', 502); }
   const requestedTimezone = audio || !input.file && !input.image ? input.timezone : safeTimezone(raw.timezone, input.timezone);
@@ -208,11 +220,23 @@ function normaliseResult(raw, input, settings) {
   const rawText = typeof raw.rawText === 'string' ? raw.rawText.trim().slice(0, 400) : '';
   const confidence = Number.isFinite(Number(raw.confidence)) ? Math.min(1, Math.max(0, Number(raw.confidence))) : 0;
   const members = settings.consumers || [];
-  const matchMember = value => members.find(m => m.id === value || normal(m.name) === normal(value))?.id;
+  const matchMember = value => {
+    const exact = members.find(member => member.id === value);
+    if (exact) return exact.id;
+    if (typeof value !== 'string' || !normal(value)) return undefined;
+    const named = members.filter(member => normal(member.name) === normal(value));
+    return named.length === 1 ? named[0].id : undefined;
+  };
   const payer = raw.consumer || raw.consumerName;
   const consumer = matchMember(payer) || (!payer && (input.text || /^audio\//.test(input.file?.mimeType || '')) ? matchMember(input.defaultConsumer) : '') || '';
   const splitMode = type === 'expense' && raw.splitMode === 'equal' && members.length > 1 ? 'equal' : 'none';
-  const splitParticipants = splitMode === 'equal' ? [...new Set((Array.isArray(raw.splitParticipants) && raw.splitParticipants.length ? raw.splitParticipants : members.map(m=>m.id)).map(matchMember).filter(Boolean))] : [];
+  const suppliedSplit = Array.isArray(raw.splitParticipants) ? raw.splitParticipants : [];
+  const matchedSplit = suppliedSplit.map(matchMember);
+  const splitParticipants = splitMode === 'equal' ? [...new Set((suppliedSplit.length ? matchedSplit : members.map(m => m.id)).filter(Boolean))] : [];
+  const splitChanged = (raw.splitMode === 'equal' && splitMode !== 'equal')
+    || (raw.splitMode != null && !['none', 'equal'].includes(raw.splitMode))
+    || (raw.splitParticipants != null && !Array.isArray(raw.splitParticipants))
+    || (suppliedSplit.length > 0 && (splitMode !== 'equal' || matchedSplit.some(id => !id) || new Set(matchedSplit).size !== suppliedSplit.length));
   const recordKinds = new Set(['purchase', 'transfer', 'reimbursement', 'refund', 'gift', 'other']);
   const recordKind = recordKinds.has(raw.recordKind) ? raw.recordKind : 'purchase';
   const detectedLanguage = ['zh', 'en', 'uk'].includes(raw.detectedLanguage) ? raw.detectedLanguage : settings.language || 'zh';
@@ -220,14 +244,26 @@ function normaliseResult(raw, input, settings) {
   // Keep refunds on their existing path; only transfers/reimbursements and
   // explicit pay-on-behalf wording block automatic confirmation.
   const moneyMovementEvidence = movementRecordKind || hasMoneyMovementEvidence({ ...raw, recordKind: 'purchase' });
-  const needsReview = Boolean(raw.needsReview) || movementRecordKind || moneyMovementEvidence || !consumer || !time.occurredAt || Boolean(time.issue) || confidence < 0.7;
+  const needsReview = Boolean(raw.needsReview) || amountPrecisionLoss || splitChanged || movementRecordKind || moneyMovementEvidence || !consumer || !time.occurredAt || Boolean(time.issue) || confidence < 0.7;
+  const originalAmount = String(raw.amount).trim().slice(0, 60);
+  const amountReason = amountPrecisionLoss ? ({
+    zh:`${currency} 金额 ${originalAmount} 有多余小数，已取整到最小单位，请核对。`,
+    en:`${currency} ${originalAmount} has extra decimals and was rounded to minor units; check the amount.`,
+    uk:`Сума ${originalAmount} ${currency} має зайві десяткові знаки й округлена; перевірте суму.`,
+  })[detectedLanguage] : '';
+  const splitDetails = suppliedSplit.filter(value => typeof value === 'string').join(', ').slice(0, 60);
+  const splitReason = splitChanged ? ({
+    zh:`分摊名单有重复、未知或不适用的成员，请核对${splitDetails ? `：${splitDetails}` : ''}。`,
+    en:`Check split members: some were repeated, unknown or inapplicable${splitDetails ? ` (${splitDetails})` : ''}.`,
+    uk:`Перевірте учасників поділу: є повтори, невідомі чи непридатні імена${splitDetails ? ` (${splitDetails})` : ''}.`,
+  })[detectedLanguage] : '';
   const timeReason = time.issue && time.issue !== 'missingTime' ? ({ zh:'时间不够明确，请确认上午、下午和日期。', en:'Please confirm the date and AM/PM for this time.', uk:'Уточніть дату та час: до чи після полудня.' })[detectedLanguage] : '';
   const movementReason = moneyMovementEvidence ? ({
     zh: '检测到代付或转账线索，请确认付款方向和对象。',
     en: 'Payment-on-behalf or transfer wording was detected; confirm the direction and recipient.',
     uk: 'Виявлено ознаки переказу або оплати за іншу людину; підтвердьте напрямок і отримувача.',
   })[detectedLanguage] : '';
-  const reviewReason = [timeReason, movementReason, typeof raw.reviewReason === 'string' ? raw.reviewReason.trim() : ''].filter(Boolean).join(' ').slice(0,160);
+  const reviewReason = [amountReason, splitReason, timeReason, movementReason, typeof raw.reviewReason === 'string' ? raw.reviewReason.trim() : ''].filter(Boolean).join(' ').slice(0,160);
   const location = input.numericLocation?.location || normalizeLocation(input.previousRecord?.location);
   const suggestedLabel = normalizeCategorySuggestion(raw.categorySuggestion);
   const categorySuggestion = type === 'expense' && recordKind === 'purchase' && !needsReview && confidence >= 0.85

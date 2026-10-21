@@ -1,10 +1,11 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import PocketIllustration from './PocketIllustration.jsx';
 import { Button, Input, Select, Tappable, Textarea } from '@telegram-apps/telegram-ui';
 import { CURRENCIES, validateExpense } from '../public/shared.mjs';
 import { categoryLabel, translateError } from '../public/i18n.mjs';
 import { Icon } from './icons.jsx';
 import { aiUiEnabled } from './ai-availability.mjs';
+import { importDraftScope, readImportDraft, writeImportDraft, clearImportDraft, settleImportDraft, subscribeImportDraft } from './import-draft.mjs';
 import './ai-import.css';
 
 // Keep these keys together so the settings entry can add the same copy to
@@ -159,18 +160,20 @@ function fileTypeLabel(file) {
 }
 
 export default function AiImportPage({ t, profile, settings, busy = false, run, service, onImported, isRemote = false, config = {}, onAccount }) {
-  const [text, setText] = useState('');
+  const scope = importDraftScope(profile);
+  const [initialDraft] = useState(() => readImportDraft(scope, profile?.expenses));
+  const [text, setText] = useState(initialDraft?.text || '');
   const [files, setFiles] = useState([]);
+  const [missingFiles, setMissingFiles] = useState(initialDraft?.fileNames || []);
   const [previewUrls, setPreviewUrls] = useState({});
-  const [items, setItems] = useState([]);
+  const [items, setItems] = useState(initialDraft?.items || []);
   const [status, setStatus] = useState('');
   const [error, setError] = useState('');
-  const [warnings, setWarnings] = useState([]);
+  const [warnings, setWarnings] = useState(initialDraft?.warnings || []);
   const [working, setWorking] = useState(false);
   const [operation, setOperation] = useState('');
   const [imageAttempted, setImageAttempted] = useState(false);
-  const [expanded, setExpanded] = useState(new Set());
-  const scope = `${profile?.user?.id || ''}:${profile?.ledgerId || ''}`;
+  const [expanded, setExpanded] = useState(new Set(initialDraft?.items?.[0] ? [initialDraft.items[0].id] : []));
   const [itemsScope, setItemsScope] = useState(scope);
   const inputRef = useRef(null), scopeRef = useRef(scope), operationRef = useRef(0), workingRef = useRef(false), mountedRef = useRef(true);
   scopeRef.current = scope;
@@ -186,6 +189,7 @@ export default function AiImportPage({ t, profile, settings, busy = false, run, 
     setWarnings([]);
     setItems([]);
     setItemsScope(scope);
+    setMissingFiles([]);
     setImageAttempted(false);
     setExpanded(new Set());
     const rejected = next.filter(file => !IMPORT_TYPES.has(fileMime(file)) || file.size > MAX_FILE_BYTES);
@@ -201,14 +205,26 @@ export default function AiImportPage({ t, profile, settings, busy = false, run, 
     return () => { mountedRef.current = false; operationRef.current++; };
   }, []);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     operationRef.current++;
     workingRef.current = false;
-    setText(''); setFiles([]); setItems([]); setItemsScope(scope);
-    setExpanded(new Set()); setWarnings([]); setError(''); setStatus('');
     setWorking(false); setOperation(''); setImageAttempted(false);
-    if (inputRef.current) inputRef.current.value = '';
+    const restore = () => {
+      const draft = readImportDraft(scope, profile?.expenses);
+      setText(draft?.text || ''); setFiles([]); setMissingFiles(draft?.fileNames || []);
+      setItems(draft?.items || []); setItemsScope(scope);
+      setExpanded(new Set(draft?.items?.[0] ? [draft.items[0].id] : []));
+      setWarnings(draft?.warnings || []); setError(''); setStatus('');
+      if (inputRef.current) inputRef.current.value = '';
+    };
+    restore();
+    return subscribeImportDraft(scope, restore);
   }, [scope]);
+
+  useLayoutEffect(() => {
+    if (itemsScope !== scope) return;
+    writeImportDraft(scope, { text, items, warnings, fileNames: files.length ? files.map(file => file.name) : missingFiles });
+  }, [scope, itemsScope, text, items, warnings, files, missingFiles]);
 
   useEffect(() => {
     const next = {};
@@ -358,22 +374,38 @@ export default function AiImportPage({ t, profile, settings, busy = false, run, 
       setError(t('aiImportInvalidItem'));
       return;
     }
+    const requestScope = scope;
+    const submitted = { text, items, warnings, fileNames: files.length ? files.map(file => file.name) : missingFiles };
+    writeImportDraft(requestScope, submitted);
     const result = await execute(async () => {
-      if (typeof service.importExpenses === 'function') return service.importExpenses(payloads);
-      const saved = [];
-      for (const payload of payloads) {
-        const entry = await service.addExpense(payload);
-        if (entry) saved.push(entry);
+      let response;
+      if (typeof service.importExpenses === 'function') response = await service.importExpenses(payloads);
+      else {
+        const saved = [];
+        for (const payload of payloads) {
+          try {
+            const entry = await service.addExpense(payload);
+            if (!entry?.id) throw new Error('errorSave');
+            saved.push(entry);
+          } catch (error) {
+            if (!saved.length) throw error;
+            response = { entries: saved, partial: true, warnings: [error?.message || 'errorSave'] };
+            break;
+          }
+        }
+        response ||= { entries: saved };
       }
-      return saved;
+      const acknowledged = Array.isArray(response) ? response : response?.entries || response?.expenses || [];
+      settleImportDraft(requestScope, submitted, acknowledged.map(entry => entry.id));
+      return response;
     }, 'save');
     if (!result) return;
     const saved = Array.isArray(result) ? result : result.entries || result.expenses || [];
-    onImported?.(saved.length ? saved : result);
-    if (result.partial) {
-      const ids = new Set(saved.map(entry => entry.id));
+    onImported?.(saved);
+    const ids = new Set(saved.map(entry => entry.id));
+    if (result.partial || payloads.some(payload => !ids.has(payload.id))) {
       setItems(current => current.filter(item => !ids.has(item.id)));
-      setWarnings(result.warnings || []);
+      setWarnings(result.warnings?.length ? result.warnings : ['errorSave']);
       return;
     }
     setItems([]);
@@ -387,6 +419,7 @@ export default function AiImportPage({ t, profile, settings, busy = false, run, 
 
   const clear = () => {
     if (working || busy) return;
+    clearImportDraft(scope);
     setText('');
     updateFiles([]);
     setItems([]);
@@ -434,9 +467,14 @@ export default function AiImportPage({ t, profile, settings, busy = false, run, 
       </div>
       {isRemote && aiEnabled && files.length > 0 && !currentItems.length && !working && !busy && !status && !error && <PocketIllustration name="receipt-review-tactile-v1" compact className="ai-import-receipt-art"/>}
       <small className="quiet-copy">{t('aiImportFileLimits')}</small>
+      {missingFiles.length > 0 && <p className="quiet-copy ai-import-restored-files" role="status">{({
+        zh: '文件需重新选择；已整理的记录还在。',
+        en: 'Choose the files again to analyse them. Your reviewed records are still here.',
+        uk: 'Для повторного аналізу виберіть файли знову. Упорядковані записи збережено.',
+      })[settings.language] || 'Choose the files again to analyse them. Your reviewed records are still here.'} {missingFiles.join(' · ')}</p>}
       <div className="ai-import-actions">
         <Button type="submit" className="panel-primary" disabled={!canParse}>{operation === 'parse' ? t('aiImportParsing') : t('aiImportParse')}</Button>
-        {Boolean(text || files.length || items.length) && <Button type="button" mode="plain" className="text-button" disabled={working || busy} onClick={clear}>{t('aiImportClear')}</Button>}
+        {Boolean(text || files.length || missingFiles.length || items.length) && <Button type="button" mode="plain" className="text-button" disabled={working || busy} onClick={clear}>{t('aiImportClear')}</Button>}
       </div>
       {files.some(file => IMAGE_TYPES.has(fileMime(file))) && imageAttempted && <div className="ai-import-enhanced"><span>{t('aiImportEnhancedHint')}</span><Button type="button" mode="plain" className="ai-import-enhanced-button" disabled={!canParse} onClick={event => parse(event, true)}><span className="ai-import-enhanced-label"><Icon name="receipt"/>{operation === 'enhanced' ? t('aiImportEnhancing') : t('aiImportEnhanced')}</span></Button></div>}
     </form>

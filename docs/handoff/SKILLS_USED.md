@@ -1,39 +1,44 @@
-# for. Pocket · Skills and implementation references
+# for-pocket 技能与组件交接
 
-更新时间：2026-10-21。这里记录本项目在本轮及前序交互中实际使用或明确采用的 skill / 组件参考，方便下一个 agent 复用方法。技能正文属于 Codex 工作区的全局资源，不把系统文件复制进产品仓库；路径和用途保留在此。
+导出于 2026-10-21T16:11:26.972Z。这次通过主任务的实际读取命令核对技能，正文和必要文本参考已放入仓库；不再仅依赖原电脑的绝对路径。
 
-## 已明确采用
+## 有读取证据的技能
 
-| 名称 | 来源/路径 | 用途 |
-| --- | --- | --- |
-| TelegramUI | npm `@telegram-apps/telegram-ui` 2.1.13；官方仓库 <https://github.com/telegram-mini-apps-dev/TelegramUI> | AppRoot、Button、Input、Select、Cell、SegmentedControl、Snackbar、Placeholder、Tappable 与 Telegram 风格基础变量 |
-| interaction-design | `C:\Users\wangxr\.codex\skills\interaction-design\SKILL.md` | 本轮键盘按压与备注提交：反馈优先、100–150ms 微反馈、transform/opacity 合成层、可中断交互 |
-| responsive-design | `C:\Users\wangxr\.codex\skills\responsive-design\SKILL.md` | 320/390px 手机、短屏 Telegram WebView、安全区、弹性网格和不溢出布局 |
-| frontend-design / ui-design | `C:\Users\wangxr\.codex\skills\frontend-design\SKILL.md`；`C:\Users\wangxr\.codex\skills\ui-design\SKILL.md` | 奶油纸色、生活手账质感、信息层级、移动端可读性和组件一致性 |
-| design-system | `C:\Users\wangxr\.codex\skills\frontend-design-system\SKILL.md` | 统一字号、触控尺寸、主题 token、按钮/抽屉/设置页的间距规范 |
-| motion-foundations | `C:\Users\wangxr\.codex\skills\motion-foundations\SKILL.md` | 云朵、确认、表情和键盘动作的时间曲线、GPU 合成与可访问性约束 |
-| improve-animations / review-animations | `C:\Users\wangxr\.agents\skills\improve-animations\SKILL.md`；`C:\Users\wangxr\.agents\skills\review-animations\SKILL.md` | 前序云朵、路牌、Emoji 和按钮动作的高帧审查与缺帧修复 |
-| imagegen / gpt-image / asset-gen | `C:\Users\wangxr\.codex\skills\imagegen\SKILL.md`；`C:\Users\wangxr\.codex\skills\gpt-image\SKILL.md`；`C:\Users\wangxr\.codex\skills\asset-gen\SKILL.md` | 云朵状态图、手账插画、按钮/空状态素材；生成结果进入 `public/assets/` 前需检查透明边界 |
-| playwright-skill | `C:\Users\wangxr\.codex\skills\playwright-skill\SKILL.md` | 生产构建后的浏览器回归、320/390/600/768/1280 视口检查、交互与 pageerror 验证 |
-| diagnosing-bugs | `C:\Users\wangxr\.codex\skills\diagnosing-bugs\SKILL.md` | 录入按钮无效、位置泄漏、Emoji 重试、七次点击状态等问题的复现—定位—回归闭环 |
+| 技能 | 仓库内正文 | 读取记录日期（UTC） | 归档文件数 |
+| --- | --- | --- | --- |
+| animate | [SKILL.md](skills/animate/SKILL.md) | 2026-10-09 — 2026-10-14 | 2 |
+| emil-design-eng | [SKILL.md](skills/emil-design-eng/SKILL.md) | 2026-10-21 — 2026-10-21 | 1 |
+| improve-animations | [SKILL.md](skills/improve-animations/SKILL.md) | 2026-10-14 — 2026-10-14 | 3 |
+| interface-design | [SKILL.md](skills/interface-design/SKILL.md) | 2026-10-10 — 2026-10-11 | 2 |
+| pick-ui-library | [SKILL.md](skills/pick-ui-library/SKILL.md) | 2026-10-09 — 2026-10-13 | 1 |
+| responsive-design | [SKILL.md](skills/responsive-design/SKILL.md) | 2026-10-14 — 2026-10-16 | 5 |
+| review-animations | [SKILL.md](skills/review-animations/SKILL.md) | 2026-10-14 — 2026-10-14 | 2 |
+| computer-use | [SKILL.md](skills/computer-use/SKILL.md) | 2026-10-09 — 2026-10-14 | 1 |
+| imagegen | [SKILL.md](skills/imagegen/SKILL.md) | 2026-10-12 — 2026-10-21 | 10 |
+| code-review | [SKILL.md](skills/code-review/SKILL.md) | 2026-10-11 — 2026-10-11 | 2 |
+| diagnosing-bugs | [SKILL.md](skills/diagnosing-bugs/SKILL.md) | 2026-10-10 — 2026-10-21 | 3 |
+| ffmpeg-skill | [SKILL.md](skills/ffmpeg-skill/SKILL.md) | 2026-10-14 — 2026-10-14 | 90 |
+| frontend-design-system | [SKILL.md](skills/frontend-design-system/SKILL.md) | 2026-10-12 — 2026-10-12 | 4 |
+| frontend-design | [SKILL.md](skills/frontend-design/SKILL.md) | 2026-10-09 — 2026-10-14 | 1 |
+| gpt-image | [SKILL.md](skills/gpt-image/SKILL.md) | 2026-10-13 — 2026-10-13 | 37 |
+| impeccable | [SKILL.md](skills/impeccable/SKILL.md) | 2026-10-11 — 2026-10-13 | 156 |
+| interaction-design | [SKILL.md](skills/interaction-design/SKILL.md) | 2026-10-10 — 2026-10-21 | 4 |
+| interface-design (interface-design-codex) | [SKILL.md](skills/interface-design-codex/SKILL.md) | 2026-10-10 — 2026-10-10 | 2 |
+| motion-foundations | [SKILL.md](skills/motion-foundations/SKILL.md) | 2026-10-13 — 2026-10-14 | 1 |
+| playwright-skill | [SKILL.md](skills/playwright-skill/SKILL.md) | 2026-10-09 — 2026-10-21 | 6 |
+| responsive-design (responsive-design-codex) | [SKILL.md](skills/responsive-design-codex/SKILL.md) | 2026-10-21 — 2026-10-21 | 5 |
+| ui-design | [SKILL.md](skills/ui-design/SKILL.md) | 2026-10-10 — 2026-10-16 | 112 |
+| writing-for-agents | [SKILL.md](skills/writing-for-agents/SKILL.md) | 2026-10-21 — 2026-10-21 | 3 |
 
-## 产品中对应的实现入口
+证据与来源路径见 [skills/manifest.json](skills/manifest.json)。日期落在本轮的条目可用于定位本轮采用；较早的条目为历史采用。目录中的文件是导出时安装版本，未声称每份正文自最初读取以来完全没变。
 
-- TelegramUI 导入：`src/main.jsx`
-- 全局 token 与键盘：`src/styles.css`
-- 移动布局：`src/pocket-layout.css`、`src/refinements.css`、`src/ui-polish.css`
-- 云朵状态：`src/PocketMascot.jsx`、`src/mascot.css`、`public/assets/mascot/manifest.json`
-- 圈子表情：`src/CircleReactions.jsx`、`circle-reactions.mjs`、`reaction-notifications.mjs`
-- 账本权限/同步：`domain.mjs`、`ledger-sync.mjs`、`store.mjs`
-- Telegram 解析与路由：`bot.mjs`、`telegram-ai.mjs`、`telegram-intent.mjs`、`ai.mjs`
-- 定时摘要：`digest.mjs`、`digest-copy.mjs`、`missing-entry-reminder.mjs`、`scripts/setup-reminders.sh`
-- 位置：`location.mjs`、`src/location-client.mjs`、`src/LocationViews.jsx`、`public/timezone.mjs`
-- 测试：`tests/` 下的 `*.test.mjs` 与 `*.browser.cjs`
+## 已采用的组件参考
 
-## 技能使用约束
+TelegramUI：`@telegram-apps/telegram-ui` 2.1.13，来源 <https://github.com/telegram-mini-apps-dev/TelegramUI>，运行依赖以 package.json/package-lock.json 为准；导入入口 src/main.jsx。这是用户明确选用的组件库，不存在本地 TelegramUI SKILL.md。
 
-1. 不要为了视觉升级引入第二套 UI 框架；TelegramUI 是组件首选。
-2. 动效只优先改 `transform` 与 `opacity`，避免布局抖动和长时间锁定输入。
-3. 保持用户要求的简约可爱路线；不添加高光、扫描线、AI 星号或冗长解释。
-4. 任何云端/Telegram 外部写操作都要先完成本地测试，并使用已有授权与安全头；凭据只在私有环境。
-5. 所有新增素材要登记到 manifest，并做透明度、尺寸、加载 fallback 与浏览器回归。
+## 使用边界
+
+- [归档范围与说明](skills/README.md)；这些历史 skill 指南按需参考，不能覆盖当前用户要求。
+- 旧清单列过但本次没有可核对读取证据的 asset-gen 等仅视为候选，未将其冒充实际使用的技能。
+- 动效继续保持简约可爱与 transform/opacity 合成层；用户已取消全局减少动态规则，归档技能中的相反通用建议不能恢复该规则。
+- 产品素材仍在 public/assets；本目录存工作方法和依赖参考，不重复复制产品图片。

@@ -5,6 +5,7 @@ import { REACTION_COPY } from './reaction-i18n.mjs';
 export const LOCALES = { zh: 'zh-CN', en: 'en-US', uk: 'uk-UA' };
 export const MESSAGES = {
   zh: {
+    noteTitle: '备注',
     editEntry:'编辑记录', entryActions:'记录操作', settingsTools:'记账工具', settingsPersonalize:'偏好设置', locationAutoOn:'自动附上',
     footprintsPlacesOne: '{n} 处', footprintsCountOne: '{n} 笔',
     locationTitle: "地点与足迹",
@@ -70,6 +71,7 @@ export const MESSAGES = {
     aiImportTitle: '快速整理', aiImportIntro: "贴上小票、文件，或写一句话。先整理，再记下。", aiImportTextLabel: '文字内容', aiImportTextPlaceholder: '例如：昨晚在新宿吃拉面 188 日元，也可以粘贴多行账单', aiImportImageLabel: '文件 / 截图', aiImportChooseImage: '选择文件', aiImportReplaceImage: '更换文件', aiImportImageReady: '文件已选', aiImportParse: '开始整理', aiImportParsing: "正在整理…", aiImportNoSource: '输入文字或选择一个文件。', aiImportNoResult: '没有找到可记账内容。', aiImportResults: '整理出 {n} 笔', aiImportConfidence: '可信度', aiImportMerchant: '商户', aiImportAmount: '金额', aiImportCurrency: '币种', aiImportType: '类型', aiImportExpense: '支出', aiImportIncome: '入账', aiImportTime: '时间', aiImportCategory: '用途', aiImportConsumer: '谁花的', aiImportNote: '备注', aiImportRemove: '删除这条整理结果', aiImportClear: '清空', aiImportSaveAll: '导入记录', aiImportSaving: '正在导入…', aiImportSaved: '记录已导入。', aiImportHint: "金额、时间和用途都能修改；转账、代付和回款请核对。", aiImportUnavailable: '分析服务暂时不可用，请稍后再试。', aiImportNeedLogin: '登录后才能使用整理功能。', aiImportInvalidItem: '请补全金额、时间、用途和记账角色。', aiImportSelectedCount: '{n} 条待导入', aiImportSplit: '分摊', aiImportNoSplit: '不分摊', aiImportSplitEqual: '平摊', aiImportSplitParticipants: '平摊参与人', aiImportRecordKind: '账单类型', recordKindPurchase: '普通消费', recordKindTransfer: '转账往来', recordKindReimbursement: '代付 / 回款', recordKindRefund: '退款', recordKindGift: '礼物 / 红包', recordKindOther: '其他', aiImportReviewReason: '待核对：{reason}', aiImportBatchHint: '一次最多整理 50 笔；账单很多时按月份或来源分批，更容易核对。',
   },
   en: {
+    noteTitle: 'Note',
     editEntry:'Edit entry', entryActions:'Entry actions', settingsTools:'Entry tools', settingsPersonalize:'Preferences', locationAutoOn:'Automatic',
     footprintsPlacesOne: '{n} place', footprintsCountOne: '{n} entry',
     locationTitle: "Places & footprints",
@@ -135,6 +137,7 @@ export const MESSAGES = {
     aiImportTitle: 'Quick entry', aiImportIntro: "Attach receipts or files, or write a note. Review, then save.", aiImportTextLabel: 'Text', aiImportTextPlaceholder: 'For example: ramen in Shinjuku last night, ¥188 — longer statements are fine', aiImportImageLabel: 'File / screenshot', aiImportChooseImage: 'Choose files', aiImportReplaceImage: 'Replace files', aiImportImageReady: 'File selected', aiImportParse: 'Organize', aiImportParsing: "Putting your notes in order…", aiImportNoSource: 'Enter text or choose a file.', aiImportNoResult: 'No records were found.', aiImportResults: '{n} records found', aiImportConfidence: 'confidence', aiImportMerchant: 'Merchant', aiImportAmount: 'Amount', aiImportCurrency: 'Currency', aiImportType: 'Type', aiImportExpense: 'Expense', aiImportIncome: 'Income', aiImportTime: 'Time', aiImportCategory: 'Category', aiImportConsumer: 'Who paid', aiImportNote: 'Note', aiImportRemove: 'Remove this result', aiImportClear: 'Clear', aiImportSaveAll: 'Import records', aiImportSaving: 'Importing…', aiImportSaved: 'Records imported.', aiImportHint: "Adjust amounts, dates and categories. Check transfers, shared payments and repayments.", aiImportUnavailable: 'The analysis service is temporarily unavailable. Please try again later.', aiImportNeedLogin: 'Sign in to use entry analysis.', aiImportInvalidItem: 'Complete the amount, time, category, and member first.', aiImportSelectedCount: '{n} records ready', aiImportSplit: 'Split', aiImportNoSplit: 'No split', aiImportSplitEqual: 'Split equally', aiImportSplitParticipants: 'Split participants', aiImportRecordKind: 'Record type', recordKindPurchase: 'Purchase', recordKindTransfer: 'Transfer', recordKindReimbursement: 'Reimbursement / repayment', recordKindRefund: 'Refund', recordKindGift: 'Gift / red packet', recordKindOther: 'Other', aiImportReviewReason: 'Review: {reason}', aiImportBatchHint: 'Up to 50 records per batch. Split large statements by month or source to make review easier.',
   },
   uk: {
+    noteTitle: 'Нотатка',
     editEntry:'Редагувати', entryActions:'Дії із записом', settingsTools:'Інструменти', settingsPersonalize:'Уподобання', locationAutoOn:'Автоматично',
     footprintsPlacesOne: 'Місць: {n}', footprintsCountOne: 'Записів: {n}',
     locationTitle: "Місця та спогади",

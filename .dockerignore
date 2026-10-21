@@ -10,3 +10,4 @@ backups
 !.env.example
 work
 outputs
+docs/handoff

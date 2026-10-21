@@ -78,6 +78,27 @@ test('venue then numeric amount preserves explicit place and time, requires conf
   assert.equal(f.aiCalls.at(-1).input.locationContext, undefined);
 });
 
+test('location amounts use the synced ledger timezone, not the process or model timezone', async t => {
+  for (const source of ['venue', 'location']) await t.test(source, async t => {
+    const f = await fixture(t, { timezone: 'Asia/Tokyo' });
+    await f.handler.handle(source === 'venue' ? venue(600) : location(600));
+    await f.store.run(db => handleDomain(db, '101', '/timezone', 'PUT', {
+      timezone: 'America/Los_Angeles', ledgerId: '101',
+    }, { now: at, limit() {} }));
+    const result = await f.handler.handle(message(601, '850'));
+    assert.equal(result.kind, 'draft');
+    assert.equal(f.aiCalls[0].input.timezone, 'America/Los_Angeles');
+    assert.equal(f.aiCalls[0].settings.timezone, 'America/Los_Angeles');
+    const item = (await f.database()).telegram.drafts[result.draftId].items[0].expense;
+    assert.equal(item.timezone, 'America/Los_Angeles');
+    assert.equal(item.occurredAt, new Date(at).toISOString());
+    assert.equal((await f.handler.handle(callback(602, result.draftId))).kind, 'confirmed');
+    const saved = (await f.database()).ledgers['101'].expenses[0];
+    assert.equal(saved.dayKey, '2026-10-10');
+    assert.equal(saved.timezone, 'America/Los_Angeles');
+  });
+});
+
 test('country currency and common decimal/thousands formats are exact even if model suggests another amount', async t => {
   const f = await fixture(t, { resolveLocation: async input => ({ ...input, countryCode: 'CN' }) });
   await f.handler.handle(location(10));

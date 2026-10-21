@@ -191,3 +191,101 @@ test('income companion cards use received wording instead of spent', async () =>
   assert.match(expenseNotificationText({ type: 'income', amountMinor: 1000, currency: 'JPY', member: { name: 'Kojun' } }, 'en'), /received/);
   assert.doesNotMatch(expenseNotificationText({ type: 'income', amountMinor: 1000, currency: 'JPY', member: { name: 'Kojun' } }, 'en'), /spent/);
 });
+
+test('departed members lose old companion bindings before edits, deletes, or retries', async t => {
+  const { store } = await storeFixture(t, syncState()), calls = [];
+  const sync = createTelegramExpenseSync({ store, callTelegram: async (method, params) => {
+    calls.push({ method, params }); return { message_id: 1000 + calls.length };
+  } });
+  const entry = await store.run(db => structuredClone(db.ledgers.cir_ledger.expenses[0]));
+  await sync.notify(entry);
+  await store.run(db => { db.circles.c1.members = ['101']; });
+  calls.length = 0;
+  await sync.sync({ ...entry, note: 'private update' }, 'edit');
+  await sync.retry({ ...entry, note: 'private retry' }, 'edit');
+  await sync.sync(entry, 'delete');
+  assert.ok(calls.length > 0, 'remaining circle member still receives edits and deletion');
+  assert.ok(calls.every(call => call.params.chat_id === '101'));
+  assert.deepEqual(await store.run(db => db.telegram.expenseMessages), {});
+});
+
+test('companion dispatch rechecks membership while another recipient request is in flight', async t => {
+  const { store } = await storeFixture(t, syncState()), calls = [];
+  const sync = createTelegramExpenseSync({ store, callTelegram: async (method, params) => {
+    calls.push({ method, params });
+    if (params.chat_id === '101') await store.run(db => { db.circles.c1.members = ['101']; });
+    return { message_id: 2000 + calls.length };
+  } });
+  const entry = await store.run(db => structuredClone(db.ledgers.cir_ledger.expenses[0]));
+  assert.equal((await sync.notify(entry)).sent, 1);
+  assert.deepEqual(calls.map(call => call.params.chat_id), ['101']);
+});
+
+test('old companion cards cannot follow a private chat rebound to a different identity', async t => {
+  const { store } = await storeFixture(t, syncState()), calls = [];
+  const sync = createTelegramExpenseSync({ store, callTelegram: async (method, params) => {
+    calls.push({ method, params }); return { message_id: 3000 + calls.length };
+  } });
+  const entry = await store.run(db => structuredClone(db.ledgers.cir_ledger.expenses[0]));
+  await sync.notify(entry);
+  await store.run(db => { db.identities['telegram:202'] = '101'; });
+  calls.length = 0;
+  await sync.sync({ ...entry, note: 'changed identity' }, 'edit');
+  await sync.notify(entry);
+  assert.ok(calls.every(call => call.params.chat_id !== '202'));
+});
+
+test('legacy companion bindings are reauthorized individually during an edit batch', async t => {
+  const fixture = syncState();
+  fixture.telegram.expenseMessages['cir_ledger:sync-entry-1'] = [{ chatId: '101', messageId: 1 }, { chatId: '202', messageId: 2 }];
+  const { store } = await storeFixture(t, fixture), calls = [];
+  const sync = createTelegramExpenseSync({ store, callTelegram: async (method, params) => {
+    calls.push({ method, params });
+    if (params.chat_id === '101') await store.run(db => { db.circles.c1.members = ['101']; });
+    return true;
+  } });
+  const entry = await store.run(db => structuredClone(db.ledgers.cir_ledger.expenses[0]));
+  assert.equal((await sync.sync({ ...entry, note: 'legacy card update' }, 'edit')).synced, 1);
+  assert.deepEqual(calls.map(call => call.params.chat_id), ['101']);
+  const bindings = await store.run(db => db.telegram.expenseMessages['cir_ledger:sync-entry-1']);
+  assert.equal(bindings.length, 1);
+  assert.equal(bindings[0].uid, '101');
+});
+
+test('a persistence failure after capturing a companion snapshot blocks delivery and remains retryable', async t => {
+  const { store } = await storeFixture(t, syncState()), calls = [];
+  let failPersistence = true;
+  const sync = createTelegramExpenseSync({ store,
+    beforeDeliver: async () => {
+      if (failPersistence) throw new Error('injected persistence failure');
+      await store.flush();
+    },
+    callTelegram: async (method, params) => { calls.push({ method, params }); return { message_id: 5000 + calls.length }; },
+  });
+  const entry = await store.run(db => structuredClone(db.ledgers.cir_ledger.expenses[0]));
+  assert.equal((await sync.notify(entry, { excludeUid: '101' })).sent, 0);
+  assert.equal(calls.length, 0);
+  failPersistence = false;
+  assert.equal((await sync.notify(entry, { excludeUid: '101' })).sent, 1);
+  failPersistence = true;
+  await sync.sync({ ...entry, note: 'not durable' }, 'edit');
+  await sync.sync(entry, 'delete');
+  assert.equal(calls.length, 1, 'failed update/delete persistence cannot change the card');
+  failPersistence = false;
+  assert.equal((await sync.sync(entry, 'delete')).synced, 1);
+});
+
+for (const action of ['notify', 'edit', 'delete']) test(`membership revoked during the persistence gate blocks ${action}`, async t => {
+  const fixture = syncState();
+  if (action !== 'notify') fixture.telegram.expenseMessages['cir_ledger:sync-entry-1'] = [{ chatId: '202', uid: '202', messageId: 10 }];
+  const { store } = await storeFixture(t, fixture), calls = [];
+  const sync = createTelegramExpenseSync({ store,
+    beforeDeliver: () => store.run(db => { db.circles.c1.members = ['101']; }),
+    callTelegram: async (method, params) => { calls.push({ method, params }); return { message_id: 11 }; },
+  });
+  const entry = await store.run(db => structuredClone(db.ledgers.cir_ledger.expenses[0]));
+  if (action === 'notify') assert.equal((await sync.notify(entry, { excludeUid: '101' })).sent, 0);
+  else assert.equal((await sync.sync({ ...entry, note: 'changed' }, action)).synced, 0);
+  assert.equal(calls.length, 0);
+  assert.equal(await store.run(db => db.telegram.expenseMessages['cir_ledger:sync-entry-1']), undefined);
+});

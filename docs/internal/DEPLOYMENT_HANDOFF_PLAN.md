@@ -1,5 +1,7 @@
 # for. Pocket · Google Cloud 与本地交接
 
+> 这是 2026-10-10 的历史快照，含已被后续需求替代的界面与部署描述。当前任务从 [最新交接](../handoff/CURRENT_TASKS.md) 进入；实际生产状态需重新核对。
+
 更新：2026-10-10。正式平台已切换 Google Cloud Run；Render 资料仅作历史归档，不再用于部署。
 
 ## 当前项目与线上

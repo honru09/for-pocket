@@ -50,7 +50,15 @@ function canManageEntry(db, uid, entry) {
   const circle = entryCircle(db, entry);
   return entry?.createdBy === uid || (!entry?.createdBy && entry?.ledgerId === uid) || Boolean(circle?.admins.includes(uid));
 }
-function viewCircle(db, c, uid) { return { id: c.id, name: c.name, isAdmin: c.admins.includes(uid), memberCount: c.members.length, members: c.members.map(id => ({ ...member(db, id), isAdmin: c.admins.includes(id), ...(circleMemberLocation(c,id) ? {location:circleMemberLocation(c,id)} : {}) })) }; }
+function viewCircle(db, c, uid) {
+  const canSeeLocation = c.members.includes(uid);
+  return { id: c.id, name: c.name, isAdmin: c.admins.includes(uid), memberCount: c.members.length, members: c.members.map(id => {
+    // An invitation grants a preview of the circle, not access to its members'
+    // current whereabouts. Location becomes visible only after joining.
+    const location = canSeeLocation ? circleMemberLocation(c, id) : null;
+    return { ...member(db, id), isAdmin: c.admins.includes(id), ...(location ? { location } : {}) };
+  }) };
+}
 function requireAdmin(c, uid) { if (!c.admins.includes(uid)) fail('errorAdminOnly', 403); }
 function normalizeFixedCapitalForServer(value, timezone, now) {
   const enabled = value.enabled === true;
@@ -145,6 +153,9 @@ function mergeAccounts(db, source, target) {
     const recent = !previous || Number(incoming.seenAt || incoming.updatedAt || 0) > Number(previous.seenAt || previous.updatedAt || 0);
     db.telegram.preferences[target] = recent ? { ...previous, ...incoming } : { ...incoming, ...previous };
     delete db.telegram.preferences[source];
+  }
+  for (const bindings of Object.values(db.telegram?.expenseMessages || {})) {
+    if (Array.isArray(bindings)) for (const binding of bindings) if (binding.uid === source) binding.uid = target;
   }
   for (const [key, reminder] of Object.entries(db.cron?.missingEntryReminders || {})) if (reminder?.uid === source || key.startsWith(`${source}:`)) {
     const targetKey = `${target}:${reminder.localDate || key.slice(source.length + 1)}`;

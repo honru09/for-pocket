@@ -147,6 +147,17 @@
   -webkit-overflow-scrolling: touch;
 }
 
+/* Native dialogs otherwise center in the layout viewport, behind the iOS
+   keyboard. Keep the visible keyboard-sized viewport as the positioning frame.
+   Emoji drawers have their own avatar anchor and retain it. */
+.for-root .pocket-sheet:not(.emoji-sheet) {
+  position: fixed;
+  top: calc(var(--pocket-viewport-top, 0px) + var(--pocket-height, 100dvh) / 2);
+  bottom: auto;
+  margin-block: 0;
+  translate: 0 -50%;
+}
+
 @media (max-width: 600px) {
   .for-root .app-header { grid-template-columns: 36px minmax(0, 1fr) 36px; }
   .for-root .app-header .ledger-switcher { width: min(190px, 100%); max-width: calc(100vw - 112px); }
@@ -171,13 +182,24 @@
 }
 .for-root .note-form .note-field { width: 100%; min-height: 48px; }
 .for-root .note-form .note-submit {
-  width: 100%;
-  min-height: 48px;
-  border-radius: 16px;
+  width: 92px;
+  height: 68px;
+  align-self: center;
+  padding: 0;
+  border-radius: 22px;
   justify-content: center;
-  gap: 8px;
+  background: var(--accent-soft);
 }
-.for-root .note-form .note-submit .for-icon { width: 19px; height: 19px; }
+.for-root .note-submit img { display: block; width: 64px; height: 64px; object-fit: contain; pointer-events: none; transition: transform 160ms cubic-bezier(.2,.8,.3,1); }
+.for-root .note-submit:active img { transform: translateY(2px) scale(.92) rotate(-4deg); transition-duration: 90ms; }
+.for-root .note-submit:disabled img { opacity: .45; }
+.for-root .note-sheet[open] { animation: note-fade-in 180ms ease-out both; }
+.for-root .note-sheet.is-closing[open] { animation: note-fade-out 160ms ease-in both; pointer-events: none; }
+.note-sheet::backdrop { animation: note-fade-in 180ms ease-out both; }
+.note-sheet.is-closing::backdrop { animation: note-fade-out 160ms ease-in both; }
+@keyframes note-fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes note-fade-out { from { opacity: 1; } to { opacity: 0; } }
+.note-cash-flight { position: fixed; left: 0; top: 0; width: 64px; height: 64px; z-index: 1000; opacity: 0; pointer-events: none; will-change: transform, opacity; }
 
 /* The compact keyboard uses nearly all of a short viewport. Keep transient
    connection notices slim so they sit in the gap above the bottom navigation

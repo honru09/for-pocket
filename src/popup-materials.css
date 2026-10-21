@@ -1,0 +1,42 @@
+/* Generated paper is a quiet surface, never a layer over text or hit targets.
+   Theme colour remains dominant; raster originals live beside these web assets. */
+.for-root .pocket-sheet:not(.emoji-sheet),
+.for-root .emoji-sheet::before {
+  background-color: var(--paper);
+  background-image:
+    linear-gradient(color-mix(in srgb, var(--paper) 82%, transparent), color-mix(in srgb, var(--paper) 82%, transparent)),
+    url('../public/assets/popup-kit-v1/popup-paper-surface-v1.webp');
+  background-size: auto, cover;
+  background-repeat: no-repeat;
+}
+
+.for-root :is(.note-sheet, .theme-sheet) > header h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.for-root :is(.note-sheet, .theme-sheet) > header h2::before {
+  content: '';
+  flex: 0 0 26px;
+  height: 26px;
+  background: url('../public/assets/popup-kit-v1/cloud-stamp-v1.webp') center / contain no-repeat;
+  pointer-events: none;
+}
+
+.for-root .note-form .note-submit {
+  position: relative;
+  isolation: isolate;
+  background: transparent;
+  box-shadow: none;
+}
+.for-root .note-form .note-submit::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: url('../public/assets/popup-kit-v1/soft-button-surface-v1.webp') center / 100% 100% no-repeat;
+  pointer-events: none;
+  transition: transform 160ms cubic-bezier(.2,.8,.3,1), opacity 160ms ease;
+}
+.for-root .note-submit:active::before { transform: translateY(1px) scale(.97,.95); transition-duration: 90ms; }
+.for-root .note-submit:disabled::before { opacity: .55; }

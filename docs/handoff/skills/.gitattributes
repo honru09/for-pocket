@@ -1,0 +1,7 @@
+# LF keeps committed bytes identical to the archive SHA256 manifest.
+* text eol=lf
+# Only preserved source/code whitespace is exempt; generated prose is normalized.
+"/gpt-image/references/openai-cookbook.md" whitespace=-blank-at-eol
+"/impeccable/reference/harden.md" whitespace=-blank-at-eol
+"/impeccable/reference/optimize.md" whitespace=-blank-at-eol
+"/impeccable/scripts/lib/concept-catalog.mjs" whitespace=-blank-at-eof

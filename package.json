@@ -31,6 +31,7 @@
     "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
   },
   "devDependencies": {
+    "playwright": "1.62.1",
     "vite": "8.3.4"
   }
 }

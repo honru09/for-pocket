@@ -45,7 +45,21 @@ export function createApp({ token = process.env.BOT_TOKEN || '', dataDir = path.
   // across Cloud Run revisions.
   const resolvedCronSecret = typeof cronSecret === 'string' && cronSecret ? cronSecret : randomBytes(32).toString('hex');
   const locationResolver = resolveLocation || createLocationResolver({ publicUrl });
-  const expenseSync = createTelegramExpenseSync({ store, token, callTelegram, now });
+  const expenseSync = createTelegramExpenseSync({ store, token, callTelegram, beforeDeliver: () => store.flush(), now });
+  const companionDeliveries = new Set();
+  async function deliverCompanionAfterPersist(deliver) {
+    // A committed in-memory expense is not yet durable. Never announce it
+    // outside the app until its snapshot has survived the storage write.
+    await store.flush();
+    await deliver();
+    // Persist Telegram message references for idempotent edits/retries.
+    await store.flush();
+  }
+  function queueCompanionDelivery(deliver) {
+    const task = deliverCompanionAfterPersist(deliver).catch(() => {});
+    companionDeliveries.add(task);
+    void task.finally(() => companionDeliveries.delete(task));
+  }
   const telegramHandler = createTelegramHandler({ store, token, publicUrl, now, limit, callTelegram, resolveLocation: locationResolver,
     beforeDeliver: asyncPersist ? undefined : () => store.flush(),
     expenseSync,
@@ -404,22 +418,25 @@ export function createApp({ token = process.env.BOT_TOKEN || '', dataDir = path.
           actorUid = uid;
           return handleDomain(db, uid, route, req.method, body, { now: now(), limit, ledgerQuery: url.searchParams.get('ledgerId') });
         });
-        // Telegram companion notifications are best-effort and never change
-        // the web request result. References are kept in the server store so
-        // later edits/deletes can update or remove the original message.
+        // Build the external effect now, but dispatch only after persistence.
+        // Bot API failures remain best-effort; a failed durable write prevents
+        // the notification altogether and permits the original id to retry.
+        let deliverCompanion = null;
         if (route === '/circles/reactions' && req.method === 'POST') {
           await reactionNotifications.afterReaction(result);
         } else if (route === '/circles/reactions/ack' && req.method === 'POST') {
           try { await reactionNotifications.afterAcknowledgement(result); } catch {}
         } else if (['/expenses', '/expenses/import'].includes(route) && req.method === 'POST') {
           const entries = Array.isArray(result?.entries) ? result.entries : [result];
-          for (const entry of entries) { try { await expenseSync.notify(entry, { excludeUid: actorUid }); } catch {} }
+          deliverCompanion = async () => {
+            for (const entry of entries) { try { await expenseSync.notify(entry, { excludeUid: actorUid }); } catch {} }
+          };
         } else if (/^\/expenses\/[a-zA-Z0-9_-]{8,64}$/.test(route) && ['PUT','PATCH'].includes(req.method)) {
-          try { await expenseSync.sync(result, 'edit'); } catch {}
+          deliverCompanion = async () => { try { await expenseSync.sync(result, 'edit'); } catch {} };
         } else if (/^\/expenses\/[a-zA-Z0-9_-]{8,64}$/.test(route) && req.method === 'DELETE') {
-          try { await expenseSync.sync(result, 'delete'); } catch {}
+          deliverCompanion = async () => { try { await expenseSync.sync(result, 'delete'); } catch {} };
         } else if (/^\/expenses\/[a-zA-Z0-9_-]{8,64}\/restore$/.test(route) && req.method === 'POST') {
-          try { await expenseSync.notify(result, { excludeUid: actorUid }); } catch {}
+          deliverCompanion = async () => { try { await expenseSync.notify(result, { excludeUid: actorUid }); } catch {} };
         }
         // Return a shallow response envelope after the store commit. Never
         // mutate an object returned from store.run: domain entries can still
@@ -427,6 +444,14 @@ export function createApp({ token = process.env.BOT_TOKEN || '', dataDir = path.
         const response = req.telegramSessionToken && result && typeof result === 'object' && !Array.isArray(result)
           ? { ...result, sessionToken: req.telegramSessionToken }
           : result;
+        if (deliverCompanion && asyncPersist) {
+          // Explicit background mode keeps its immediate HTTP acknowledgement;
+          // only the notification waits for durable storage in the background.
+          await send(res, 200, response);
+          queueCompanionDelivery(deliverCompanion);
+          return;
+        }
+        if (deliverCompanion) await deliverCompanionAfterPersist(deliverCompanion);
         await send(res, 200, response); return;
       }
       if (['/health', '/healthz'].includes(url.pathname)) { await send(res, 200, { ok: true, ...release }); return; }
@@ -455,6 +480,7 @@ export function createApp({ token = process.env.BOT_TOKEN || '', dataDir = path.
   app.close = callback => {
     if (!closing) {
       closing = new Promise((resolve, reject) => closeServer(error => error ? reject(error) : resolve()))
+        .then(() => Promise.allSettled([...companionDeliveries]))
         .then(() => reactionNotifications.close()).then(() => store.close()).catch(error => {
         try { console.error('Store flush failed during shutdown:', error); } catch {}
         throw error;

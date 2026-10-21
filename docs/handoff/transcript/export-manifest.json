@@ -1,0 +1,126 @@
+{
+  "generatedAt": "2026-10-21T16:11:26.972Z",
+  "threadId": "01a12068-b0ee-7db3-b081-20531fa637b8",
+  "formattingPolicy": "All archived text uses LF with text eol=lf Git attributes so committed bytes match SHA256. Markdown prose has trailing whitespace removed, hard breaks expressed with a backslash and one final newline. Fenced/indented/preformatted code and non-Markdown source text retain meaningful line whitespace; exact-file Git whitespace exceptions record retained source whitespace.",
+  "preservedWhitespace": [],
+  "artifacts": {
+    "conversation": {
+      "path": "conversation.md",
+      "bytes": 812846,
+      "sha256": "9be91e667fe6b18b09c1285c959bc24f665a8a40d20604575e995d8f8af429cb"
+    }
+  },
+  "firstMessage": "2026-10-09T11:27:45.286Z",
+  "lastMessage": "2026-10-21T16:11:10.783Z",
+  "counts": {
+    "user": 228,
+    "assistant": 581
+  },
+  "duplicateMessages": 0,
+  "omittedContextMessages": 24,
+  "compactions": 67,
+  "malformedLines": 0,
+  "sources": [
+    {
+      "file": "rollout-2026-10-09T20-24-54-01a12068-b0ee-7db3-b081-20531fa637b8.jsonl",
+      "bytesAtExport": 36704588,
+      "firstEvent": "2026-10-09T11:27:45.240Z",
+      "lastEvent": "2026-10-10T12:50:16.647Z",
+      "visibleMessages": 136
+    },
+    {
+      "file": "rollout-2026-10-10T21-50-16-01a12068-b0ee-7db3-b081-20531fa637b8_01a125dd-35f0-73e1-b525-7d11934c8677.jsonl",
+      "bytesAtExport": 25863,
+      "firstEvent": "2026-10-10T12:50:16.691Z",
+      "lastEvent": "2026-10-10T12:50:53.187Z",
+      "visibleMessages": 1
+    },
+    {
+      "file": "rollout-2026-10-10T21-51-05-01a12068-b0ee-7db3-b081-20531fa637b8_01a125dd-f478-7770-aa45-03585a12442f.jsonl",
+      "bytesAtExport": 111527467,
+      "firstEvent": "2026-10-10T12:51:05.466Z",
+      "lastEvent": "2026-10-12T12:50:57.869Z",
+      "visibleMessages": 194
+    },
+    {
+      "file": "rollout-2026-10-12T21-51-41-01a12068-b0ee-7db3-b081-20531fa637b8_01a1302b-39f7-7053-b0a5-f2a995759d5c.jsonl",
+      "bytesAtExport": 96082577,
+      "firstEvent": "2026-10-12T12:51:41.689Z",
+      "lastEvent": "2026-10-13T12:31:59.696Z",
+      "visibleMessages": 153
+    },
+    {
+      "file": "rollout-2026-10-13T21-32-33-01a12068-b0ee-7db3-b081-20531fa637b8_01a13540-1275-7a60-944f-cd52a9bccb8f.jsonl",
+      "bytesAtExport": 193252619,
+      "firstEvent": "2026-10-13T12:32:33.912Z",
+      "lastEvent": "2026-10-14T06:55:38.689Z",
+      "visibleMessages": 110
+    },
+    {
+      "file": "rollout-2026-10-14T16-08-58-01a12068-b0ee-7db3-b081-20531fa637b8_01a1393e-2ed3-7522-87d3-d02420a62df6.jsonl",
+      "bytesAtExport": 25916,
+      "firstEvent": "2026-10-14T07:08:58.966Z",
+      "lastEvent": "2026-10-14T07:09:36.068Z",
+      "visibleMessages": 1
+    },
+    {
+      "file": "rollout-2026-10-14T17-26-42-01a12068-b0ee-7db3-b081-20531fa637b8_01a13985-5890-7300-a30a-867b9a805e7f.jsonl",
+      "bytesAtExport": 5960188,
+      "firstEvent": "2026-10-14T08:26:42.707Z",
+      "lastEvent": "2026-10-14T10:35:35.184Z",
+      "visibleMessages": 6
+    },
+    {
+      "file": "rollout-2026-10-14T19-35-37-01a12068-b0ee-7db3-b081-20531fa637b8_01a139fb-5f7d-72e1-bca9-859204684883.jsonl",
+      "bytesAtExport": 12038503,
+      "firstEvent": "2026-10-14T10:35:37.727Z",
+      "lastEvent": "2026-10-14T12:34:51.723Z",
+      "visibleMessages": 19
+    },
+    {
+      "file": "rollout-2026-10-14T21-49-47-01a12068-b0ee-7db3-b081-20531fa637b8_01a13a76-3505-7032-becf-6a0d80df196b.jsonl",
+      "bytesAtExport": 120062082,
+      "firstEvent": "2026-10-14T12:49:47.783Z",
+      "lastEvent": "2026-10-18T04:57:45.793Z",
+      "visibleMessages": 118
+    },
+    {
+      "file": "rollout-2026-10-18T13-58-08-01a12068-b0ee-7db3-b081-20531fa637b8_01a14d5f-d4d7-7220-8fc0-8b2795bf33c4.jsonl",
+      "bytesAtExport": 28459,
+      "firstEvent": "2026-10-18T04:58:08.472Z",
+      "lastEvent": "2026-10-18T04:58:24.415Z",
+      "visibleMessages": 1
+    },
+    {
+      "file": "rollout-2026-10-18T13-58-34-01a12068-b0ee-7db3-b081-20531fa637b8_01a14d60-3a66-70f3-8db7-e409bf9ca7ee.jsonl",
+      "bytesAtExport": 31145958,
+      "firstEvent": "2026-10-18T04:58:34.472Z",
+      "lastEvent": "2026-10-21T16:11:15.995Z",
+      "visibleMessages": 70
+    }
+  ],
+  "redactions": {
+    "render-token": 1,
+    "named-credential": 2
+  },
+  "excluded": [
+    "reasoning/analysis",
+    "system/developer",
+    "tool calls and outputs",
+    "raw response metadata",
+    "compaction summaries",
+    "ambient environment/browser blocks",
+    "binary attachments",
+    "unrelated threads"
+  ],
+  "skills": {
+    "sources": 23,
+    "files": 453,
+    "unavailablePaths": 8
+  },
+  "securityScan": {
+    "credentialPatternFindings": 0,
+    "syntheticRedactionChecksPassed": true,
+    "rawSourcePrinted": false
+  }
+}

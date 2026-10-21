@@ -106,9 +106,3 @@
   .free-money-orb-bubble { right: 60px; max-width: min(166px, calc(100vw - 92px)); }
   .free-money-inline-error { margin-left: 14px; }
 }
-@media (prefers-reduced-motion: reduce) {
-  .free-money-orb { animation: none; }
-  .free-money-orb-bubble,.free-money-confetti { animation: free-money-confetti-in 160ms ease both; }
-  .free-money-diagnosis-card.is-loading > img { animation: none; }
-  .free-money-entry,.free-money-art-wrap img,.free-money-coin-badge { transition-duration: 1ms; }
-}

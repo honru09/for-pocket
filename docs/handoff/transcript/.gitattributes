@@ -1,0 +1,3 @@
+# LF keeps committed bytes identical to the archive SHA256 manifest.
+* text eol=lf
+# Only preserved source/code whitespace is exempt; generated prose is normalized.

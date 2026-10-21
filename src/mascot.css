@@ -207,6 +207,23 @@
 .money-print { fill:none; stroke:#81915e; stroke-width:1.4; stroke-linecap:round; }
 .money-celebration.is-expense .money-bundle-flight { animation:money-send var(--cash-duration) linear both; }
 .money-celebration.is-income .money-bundle-flight { animation:money-catch var(--cash-duration) linear both; }
+.money-celebration[data-received] .money-bundle-flight { aspect-ratio:1; }
+.money-celebration.is-expense[data-received] .money-bundle-flight { animation-name:money-forward; }
+.money-celebration.is-income[data-received] .money-bundle-flight { animation-name:money-received; }
+@keyframes money-forward {
+  0%,15% { opacity:1; transform:translate3d(0,0,0) rotate(0) scale(1); }
+  31% { opacity:1; transform:translate3d(-12%,-12%,0) rotate(-13deg) scale(1); }
+  48% { opacity:1; transform:translate3d(45%,-72%,0) rotate(3deg) scale(1); }
+  70% { opacity:.95; transform:translate3d(145%,-200%,0) rotate(20deg) scale(.97); }
+  87%,100% { opacity:0; transform:translate3d(224%,-330%,0) rotate(30deg) scale(.94); }
+}
+@keyframes money-received {
+  0% { opacity:1; transform:translate3d(0,0,0) rotate(0) scale(1); }
+  20% { opacity:1; transform:translate3d(0,-8%,0) rotate(-5deg) scale(1.04,.96); }
+  49% { opacity:1; transform:translate3d(0,0,0) rotate(0) scale(1); }
+  73% { opacity:1; transform:translate3d(-2%,25%,0) rotate(5deg) scale(.97); }
+  87%,100% { opacity:0; transform:translate3d(-4%,42%,0) rotate(4deg) scale(.94); }
+}
 .money-streaks { position:absolute; left:40%; top:10%; width:54%; height:70%; fill:none; stroke:#bccb9d; stroke-width:2; stroke-linecap:round; animation:money-send-trail var(--cash-duration) linear both; }
 .money-streaks path:nth-child(2) { stroke-width:1.5; }
 .money-streaks path:nth-child(3) { stroke-width:1; }

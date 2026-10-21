@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createHmac } from 'node:crypto';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, rm, mkdir, rename, rmdir } from 'node:fs/promises';
 import { once } from 'node:events';
 import os from 'node:os';
 import path from 'node:path';
@@ -18,10 +18,11 @@ function signed(id) {
   return new URLSearchParams({ ...fields, hash: createHmac('sha256', key).update(text).digest('hex') }).toString();
 }
 
-async function fixture(t) {
+async function fixture(t, { asyncPersist = false } = {}) {
   const dataDir = await mkdtemp(path.join(os.tmpdir(), 'for-expense-notification-routes-'));
   const calls = [];
-  const app = createApp({ dataDir, token, webhookSecret, now: () => at,
+  const app = createApp({ dataDir, token, webhookSecret, now: () => at, asyncPersist,
+    storeOptions: { debounceMs: 60000, logger: { error() {} } },
     aiParser: { enabled: false }, aiSummarizer: { enabled: false }, aiChat: { enabled: false },
     reactionOptions: { localTimers: false }, enqueueReactionTask: null,
     callTelegram: async (method, parameters) => {
@@ -38,13 +39,13 @@ async function fixture(t) {
     assert.ok(path.basename(dataDir).startsWith('for-expense-notification-routes-'));
     await rm(dataDir, { recursive: true, force: true });
   });
-  async function request(route, { user = 101, body, method = body === undefined ? 'GET' : 'POST', headers = {} } = {}) {
+  async function request(route, { user = 101, body, method = body === undefined ? 'GET' : 'POST', headers = {}, expectedStatus = 200 } = {}) {
     const response = await fetch(base + '/api' + route, { method,
       headers: { 'Content-Type': 'application/json', ...(user ? { 'X-Telegram-Init-Data': signed(user) } : {}), ...headers },
       body: body === undefined ? undefined : JSON.stringify(body),
     });
     const data = await response.json();
-    assert.equal(response.status, 200, JSON.stringify(data));
+    assert.equal(response.status, expectedStatus, JSON.stringify(data));
     return data;
   }
   const created = await request('/circles/create', { body: { name: 'Two' } });
@@ -61,7 +62,7 @@ async function fixture(t) {
   calls.length = 0;
   const expense = (id, user = 101) => ({ id, ledgerId: created.ledgerId, consumer: `u_${user}`,
     amountMinor: 850, currency: 'JPY', categoryId: 'stomach', type: 'expense', note: 'Ramen', timezone: 'Asia/Tokyo' });
-  return { request, expense, calls, ledgerId: created.ledgerId };
+  return { request, expense, calls, ledgerId: created.ledgerId, app, dataDir };
 }
 
 function assertPartnerOnly(calls, chatId, count) {
@@ -101,5 +102,63 @@ test('HTTP delete and restore reuse the partner notification without sending one
   assert.equal(deleted[0].parameters.chat_id, original.parameters.chat_id);
   f.calls.length = 0;
   await f.request(`/expenses/${entry.id}/restore`, { body: {} });
+  assertPartnerOnly(f.calls, 202, 1);
+});
+
+async function blockSnapshot(f) {
+  await f.app.flushStore();
+  const snapshot = path.join(f.dataDir, '_pocket-v2.json'), backup = path.join(f.dataDir, '_pocket-v2.fixture-backup');
+  assert.equal(path.dirname(snapshot), f.dataDir);
+  assert.equal(path.dirname(f.dataDir), path.resolve(os.tmpdir()));
+  await rename(snapshot, backup);
+  await mkdir(snapshot);
+  return async () => {
+    // This is the empty directory created above, not a data-tree deletion.
+    await rmdir(snapshot);
+    await rename(backup, snapshot);
+  };
+}
+
+test('a failed HTTP expense flush sends no success card; the same id retries once after recovery', async t => {
+  const f = await fixture(t), payload = f.expense('web-flush-failure-1');
+  const restore = await blockSnapshot(f);
+  try {
+    await f.request('/expenses', { body: payload, expectedStatus: 500 });
+    assert.equal(f.calls.length, 0, 'unpersisted expenses must not be announced');
+  } finally { await restore(); }
+  await f.request('/expenses', { body: payload });
+  await f.request('/expenses', { body: payload });
+  assertPartnerOnly(f.calls, 202, 1);
+  const profile = await f.request('/profile');
+  assert.equal(profile.expenses.filter(entry => entry.id === payload.id).length, 1);
+});
+
+test('failed edit persistence leaves the existing Telegram card unchanged until a successful retry', async t => {
+  const f = await fixture(t), payload = f.expense('web-edit-flush-1');
+  await f.request('/expenses', { body: payload });
+  f.calls.length = 0;
+  const restore = await blockSnapshot(f);
+  const patch = { note: 'Changed after persistence', ledgerId: f.ledgerId };
+  try {
+    await f.request(`/expenses/${payload.id}`, { method: 'PATCH', body: patch, expectedStatus: 500 });
+    assert.equal(f.calls.length, 0);
+  } finally { await restore(); }
+  await f.request(`/expenses/${payload.id}`, { method: 'PATCH', body: patch });
+  await f.request(`/expenses/${payload.id}`, { method: 'PATCH', body: patch });
+  assert.equal(f.calls.filter(call => call.method === 'editMessageText').length, 1);
+});
+
+test('explicit background persistence responds immediately but defers companion delivery until durable', async t => {
+  const f = await fixture(t, { asyncPersist: true }), payload = f.expense('web-async-flush-1');
+  const restore = await blockSnapshot(f);
+  try {
+    await f.request('/expenses', { body: payload });
+    await assert.rejects(f.app.flushStore());
+    assert.equal(f.calls.length, 0);
+  } finally { await restore(); }
+  await f.request('/expenses', { body: payload });
+  await f.request('/expenses', { body: payload });
+  // Closing drains background delivery before checking its durable bindings.
+  await new Promise((resolve, reject) => f.app.close(error => error ? reject(error) : resolve()));
   assertPartnerOnly(f.calls, 202, 1);
 });

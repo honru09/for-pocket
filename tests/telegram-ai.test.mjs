@@ -265,6 +265,112 @@ test('missing or invalid Telegram sending timestamps fall back to the processing
   }
 });
 
+test('Telegram noon entries use the synced ledger timezone through parsing, preview and saving', async t => {
+  const cases = [
+    ['Asia/Tokyo', '2026-10-13T05:00:00Z', '2026-10-13T03:00:00.000Z'],
+    ['Europe/Kyiv', '2026-10-13T10:00:00Z', '2026-10-13T09:00:00.000Z'],
+    ['Asia/Kolkata', '2026-10-13T10:00:00Z', '2026-10-13T06:30:00.000Z'],
+    ['Asia/Kathmandu', '2026-10-13T10:00:00Z', '2026-10-13T06:15:00.000Z'],
+    ['America/New_York', '2026-03-08T18:00:00Z', '2026-03-08T16:00:00.000Z'],
+    ['America/New_York', '2026-11-01T18:00:00Z', '2026-11-01T17:00:00.000Z'],
+    ['America/Los_Angeles', '2026-10-14T06:58:00Z', '2026-10-13T19:00:00.000Z'],
+  ];
+  for (const [zone, sent, expected] of cases) await t.test(`${zone} at ${sent}`, async t => {
+    const inputs = [];
+    const aiParser = createExpenseParser({ modelClient: { async generateContent() {
+      return { response: { candidates: [{ content: { parts: [{ text: JSON.stringify([{
+        amount: 100, currency: 'JPY', type: 'expense', categoryId: 'stomach',
+        merchant: 'Ramen shop', note: 'Lunch', rawText: 'Lunch 100 JPY today at noon',
+        occurredAt: sent, timezone: 'UTC', confidence: 0.95, consumer: '',
+        splitMode: 'none', splitParticipants: [], recordKind: 'purchase', needsReview: false,
+      }]) }] } }] } };
+    } } });
+    const parse = aiParser.parse;
+    aiParser.parse = (input, settings) => { inputs.push({ input, settings }); return parse(input, settings); };
+    const f = await fixture(t, { aiParser, timezone: 'Asia/Tokyo', now: () => Date.parse(sent) + 5 * 60 * 1000 });
+    const syncedZone = await f.store.run(db => {
+      const uid = ensureUser(db, 'telegram:101', { first_name: 'First' });
+      return handleDomain(db, uid, '/timezone', 'PUT', { timezone: zone, ledgerId: uid }, { now: at, limit() {} }).timezone;
+    });
+    const update = message(700, 'Lunch 100 JPY today at noon', 101, 'en');
+    update.message.date = Date.parse(sent) / 1000;
+    const result = await f.handler.handle(update);
+    assert.equal(result.kind, 'draft');
+    assert.equal(inputs[0].input.timezone, syncedZone);
+    assert.equal(inputs[0].settings.timezone, syncedZone);
+    assert.equal(inputs[0].input.now, Date.parse(sent));
+    const item = (await f.database()).telegram.drafts[result.draftId].items[0].expense;
+    assert.equal(item.occurredAt, expected);
+    assert.equal(item.timezone, syncedZone);
+    assert.match(f.calls.at(-1).params.text, /12:00/);
+    assert.equal((await f.handler.handle(callback(701, result.draftId))).kind, 'confirmed');
+    assert.equal((await f.database()).ledgers['101'].expenses[0].occurredAt, expected);
+  });
+});
+
+test('voice, audio, image, document and summary requests share the active circle timezone', async t => {
+  const summaries = [];
+  const f = await fixture(t, { timezone: 'Asia/Tokyo', downloadFile: async () => Buffer.from('fixture-media'),
+    aiParser: {
+      async parse(input, settings) {
+        f.aiCalls.push({ input, settings });
+        return [parsed({ timezone: undefined })];
+      },
+      async summarize(input, profile) { summaries.push({ input, profile }); return 'Lunch saved.'; },
+    } });
+  await f.store.run(db => {
+    const uid = ensureUser(db, 'telegram:101', { first_name: 'First' });
+    const profile = handleDomain(db, uid, '/circles/create', 'POST', { name: 'Travel' }, { now: at, limit() {} });
+    handleDomain(db, uid, '/timezone', 'PUT', { timezone: 'Asia/Kathmandu', ledgerId: profile.ledgerId }, { now: at, limit() {} });
+    db.ledgers[uid].settings.timezone = 'Asia/Tokyo';
+  });
+  const variants = [
+    { voice: { file_id: 'voice', mime_type: 'audio/ogg', duration: 5 } },
+    { audio: { file_id: 'audio', mime_type: 'audio/mpeg', duration: 5 } },
+    { photo: [{ file_id: 'image' }] },
+    { document: { file_id: 'pdf', file_name: 'receipt.pdf', mime_type: 'application/pdf' } },
+  ];
+  for (const [index, attachment] of variants.entries()) {
+    const update = message(710 + index, '');
+    Object.assign(update.message, attachment);
+    const draft = await f.handler.handle(update);
+    assert.equal(draft.kind, 'draft');
+    const timezone = f.aiCalls.at(-1).input.timezone;
+    assert.equal(new Intl.DateTimeFormat('en', { timeZone: timezone }).resolvedOptions().timeZone,
+      new Intl.DateTimeFormat('en', { timeZone: 'Asia/Kathmandu' }).resolvedOptions().timeZone);
+    assert.equal(f.aiCalls.at(-1).settings.timezone, timezone);
+    assert.equal((await f.database()).telegram.drafts[draft.draftId].items[0].expense.timezone, timezone);
+  }
+  assert.equal((await f.handler.handle(message(720, '/month'))).kind, 'summary');
+  assert.equal(summaries[0].input.timezone, f.aiCalls[0].input.timezone);
+});
+
+test('an image retry preserves its original timezone and sending date after midnight or travel', async t => {
+  let clock = Date.parse('2026-10-13T20:58:00Z');
+  const f = await fixture(t, { now: () => clock, timezone: 'Asia/Tokyo',
+    downloadFile: async () => Buffer.from('fixture-image'),
+    aiParser: { async parse(input, settings) { f.aiCalls.push({ input, settings }); return [parsed({ timezone: undefined })]; } },
+  });
+  const syncedZone = await f.store.run(db => {
+    const uid = ensureUser(db, 'telegram:101', { first_name: 'First' });
+    return handleDomain(db, uid, '/timezone', 'PUT', { timezone: 'Europe/Kyiv', ledgerId: uid }, { now: clock, limit() {} }).timezone;
+  });
+  const update = message(730, '');
+  update.message.date = clock / 1000;
+  update.message.photo = [{ file_id: 'image' }];
+  const draft = await f.handler.handle(update);
+  const retryId = (await f.database()).telegram.drafts[draft.draftId].retryId;
+  const sentAt = clock;
+  clock += 5 * 60 * 1000;
+  await f.store.run(db => handleDomain(db, '101', '/timezone', 'PUT', { timezone: 'America/New_York', ledgerId: '101' }, { now: clock, limit() {} }));
+  const retried = await f.handler.handle(callback(731, retryId, 'retry'));
+  assert.equal(retried.kind, 'draft');
+  assert.equal(f.aiCalls[1].input.now, sentAt);
+  assert.equal(f.aiCalls[1].input.timezone, syncedZone);
+  assert.equal(f.aiCalls[1].settings.timezone, syncedZone);
+  assert.equal((await f.database()).telegram.drafts[retried.draftId].items[0].expense.timezone, syncedZone);
+});
+
 test('spoken noon ramen is corrected from the model output through preview and final ledger write', async t => {
   const modelRequests = [];
   const aiParser = createExpenseParser({ modelClient: { async generateContent(request) {

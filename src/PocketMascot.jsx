@@ -12,6 +12,7 @@ import mascotPopAtlas from '../public/assets/mascot/mascot-pop-frames-v1.png';
 // The 256px raster is bundled inline: a cold cache or late network response
 // cannot consume the short falling animation before the sign becomes visible.
 import stopSignAsset from './stop-sign-compact.png?inline';
+import noteCashBundle from '../public/assets/note-cash-bundle-v1.webp';
 import MorphFacePath from './MorphFacePath.jsx';
 import { EYE_POSES, MOUTH_POSES, SLEEP_EYES } from './mascot-face.mjs';
 
@@ -166,11 +167,11 @@ function Cloud({ mood, cashAction, cashId, environment, tapNonce, bursting = fal
 }
 
 function CashCelebration({ event, cloudVisible }) {
-  return <span key={event.id} className={`money-celebration is-${event.type}`} style={{ '--cash-duration':`${CASH_DURATION[event.type]}ms` }} aria-hidden="true">
+  return <span key={event.id} className={`money-celebration is-${event.type}`} data-received={event.received || undefined} style={{ '--cash-duration':`${CASH_DURATION[event.type]}ms` }} aria-hidden="true">
     <svg className="money-streaks" viewBox="0 0 70 76"><path d="M17 61 39 27"/><path d="m30 66 20-30"/><path d="m12 42 9-14"/></svg>
-    <span className="money-bundle-flight"><svg className="money-bundle money-bundle-art" viewBox="1635 50 115 105">
+    <span className="money-bundle-flight">{event.received ? <img className="money-bundle" src={noteCashBundle} alt=""/> : <svg className="money-bundle money-bundle-art" viewBox="1635 50 115 105">
       <image href={mascotCashAtlas} width={MASCOT_ATLAS.width} height={MASCOT_ATLAS.height}/>
-    </svg></span>
+    </svg>}</span>
     {event.type === 'income' && cloudVisible && <svg className="money-cotton-tuck" viewBox="0 0 60 28"><path d="M3 22C-2 17 2 7 11 9C13 1 23 1 29 6C35 0 44 4 46 10C56 5 63 15 56 22C51 29 39 27 31 25C22 31 9 29 3 22Z"/></svg>}
   </span>;
 }
@@ -180,7 +181,7 @@ function StopSign() {
   return <span className="cloud-stop-sign-wrap" data-ready={ready} aria-hidden="true"><span className="cloud-stop-sign-fallback"><i>止まれ</i></span><img className="cloud-stop-sign" src={stopSignAsset} alt="" onLoad={() => setReady(true)} onError={() => setReady(false)}/></span>;
 }
 
-export default function PocketMascot({ mascotRef, t, onTap, canConfirm = false, busy = false, confirmLabel, onConfirm, celebrate = null, environment = null }) {
+export default function PocketMascot({ mascotRef, t, onTap, canConfirm = false, busy = false, confirmLabel, onConfirm, celebrate = null, environment = null, receiving = false }) {
   const [step, setStep] = useState(0), [phase, setPhase] = useState('cloud');
   const [returning, setReturning] = useState(false);
   const [signTaps, setSignTaps] = useState(0), [flight, setFlight] = useState(null), [celebration, setCelebration] = useState(null), [confirmFrame, setConfirmFrame] = useState(0), [tapNonce, setTapNonce] = useState(0);
@@ -192,7 +193,7 @@ export default function PocketMascot({ mascotRef, t, onTap, canConfirm = false, 
     // Decode before an interaction, so the first short sequence cannot finish
     // while its image is still downloading on a mobile connection.
     void prepareStopSign();
-    for (const src of [mascotTapAtlas, mascotCashAtlas, mascotPopAtlas]) {
+    for (const src of [mascotTapAtlas, mascotCashAtlas, mascotPopAtlas, noteCashBundle]) {
       const image = new Image();
       image.src = src;
       image.decode?.().catch(() => {});
@@ -225,6 +226,8 @@ export default function PocketMascot({ mascotRef, t, onTap, canConfirm = false, 
     finishReset();
   }, [finishReset]);
 
+  useEffect(() => { if (receiving && phaseRef.current !== 'cloud') reset(true); }, [receiving, reset]);
+
   // One deadline from the sixth tap. Rerenders and the landing do not restart it.
   useEffect(() => {
     if (step !== 6) return;
@@ -243,7 +246,12 @@ export default function PocketMascot({ mascotRef, t, onTap, canConfirm = false, 
     clearTimeout(celebrationTimer.current);
     clearTimeout(returnTimer.current);
     setReturning(false);
-    setCelebration({ id: celebrationId, type: celebrationType });
+    if (celebrate?.received) {
+      signAnimationRef.current?.cancel(); signExitRef.current = false;
+      stepRef.current = 0; tapsRef.current = 0;
+      setStep(0); setSignTaps(0); setFlight(null); setPhase('cloud'); setTapNonce(0);
+    }
+    setCelebration({ id: celebrationId, type: celebrationType, received:celebrate?.received });
     celebrationTimer.current = setTimeout(() => setCelebration(null), CASH_DURATION[celebrationType]);
   }, [celebrationId, celebrationType]);
 

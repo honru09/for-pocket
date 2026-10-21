@@ -1,0 +1,11 @@
+{
+  "id": "note-cash-bundle-v1",
+  "file": "note-cash-bundle-v1.png",
+  "runtimeFile": "note-cash-bundle-v1.webp",
+  "derivativeManifest": "popup-kit-v1/manifest.json",
+  "generatedAt": "2026-10-22",
+  "source": "built-in image_gen",
+  "use": "Note submit icon, flight to the cloud, then income tuck / expense throw; imported by Vite from NoteEntrySheet.jsx and PocketMascot.jsx",
+  "motion": {"sheetFadeInMs":180,"sheetFadeOutMs":160,"flightMs":520,"expenseMs":860,"incomeMs":1040},
+  "prompt": "Use case: stylized-concept. Create one production bitmap UI asset for the existing for-pocket cute minimal expense notebook app: a small thick stack of Japanese-style banknotes wrapped with one pale butter-yellow paper band. Muted sage-green bills, warm ivory edges, simple rounded corners, very soft hand-painted flat gouache texture, simple chunky silhouette readable at 48 pixels, no glossy highlights, no sparkles, no faces, no arms, no shadows outside the object, no surrounding decorations. Three-quarter view tilted slightly up to the right, one single cash bundle only centered in square canvas, subject filling 88% width. The band has a single tiny simple yen symbol ¥, no other text, no numbers, no logos. Genuine fully transparent PNG background with clean alpha edges, not a checkerboard painted behind it. It is the clickable save icon and will fly into a small soft cloud mascot; cute, restrained stationery feel, not photorealistic and not an SVG illustration."
+}

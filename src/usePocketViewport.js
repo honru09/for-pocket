@@ -7,6 +7,7 @@ export default function usePocketViewport(telegram) {
       const browserHeight = window.visualViewport?.height || window.innerHeight;
       const appHeight = Math.min(telegram?.viewportStableHeight || browserHeight, browserHeight);
       document.documentElement.style.setProperty('--pocket-height', `${Math.round(appHeight)}px`);
+      document.documentElement.style.setProperty('--pocket-viewport-top', `${window.visualViewport?.offsetTop || 0}px`);
       const shell = document.querySelector('.app-shell');
       const style = shell && getComputedStyle(shell);
       const insets = style ? (parseFloat(style.paddingTop) || 0) + Math.max(0, (parseFloat(style.paddingBottom) || 62) - 62) : 0;
@@ -17,13 +18,16 @@ export default function usePocketViewport(telegram) {
     update();
     window.addEventListener('resize', update);
     window.visualViewport?.addEventListener('resize', update);
+    window.visualViewport?.addEventListener('scroll', update);
     telegram?.onEvent?.('viewportChanged', update);
     try { telegram?.ready?.(); telegram?.expand?.(); } catch {}
     return () => {
       window.removeEventListener('resize', update);
       window.visualViewport?.removeEventListener('resize', update);
+      window.visualViewport?.removeEventListener('scroll', update);
       telegram?.offEvent?.('viewportChanged', update);
       document.documentElement.style.removeProperty('--pocket-height');
+      document.documentElement.style.removeProperty('--pocket-viewport-top');
       delete document.documentElement.dataset.pocketCompact;
       delete document.documentElement.dataset.pocketShort;
       delete document.documentElement.dataset.pocketTiny;

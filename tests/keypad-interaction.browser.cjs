@@ -1,5 +1,4 @@
 const assert = require('node:assert/strict');
-const { randomInt } = require('node:crypto');
 const { pathToFileURL } = require('node:url');
 const path = require('node:path');
 const { chromium } = require('playwright');
@@ -12,7 +11,7 @@ const ROOT = path.resolve(__dirname, '..');
 
 (async () => {
   const { createServer } = await import(pathToFileURL(`${ROOT}/node_modules/vite/dist/node/index.js`));
-  const server = await createServer({ configFile:false, root:ROOT, publicDir:false, logLevel:'error', server:{ host:'127.0.0.1', port:randomInt(20000,60000) } });
+  const server = await createServer({ configFile:false, root:ROOT, publicDir:false, logLevel:'error', server:{ host:'127.0.0.1', port:0 } });
   await server.listen();
   const base = `http://127.0.0.1:${server.httpServer.address().port}`;
   const browser = await chromium.launch({ headless:true });

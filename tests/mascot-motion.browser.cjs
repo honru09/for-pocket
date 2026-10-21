@@ -2,7 +2,6 @@ const { chromium } = require('playwright');
 const { expect } = require('playwright/test');
 const assert = require('node:assert/strict');
 const { pathToFileURL } = require('node:url');
-const { randomInt } = require('node:crypto');
 const fs = require('node:fs');
 const path = require('node:path');
 
@@ -35,7 +34,7 @@ createRoot(document.getElementById('root')).render(<Fixture/>);
   fs.mkdirSync(ARTIFACTS, {recursive:true});
   const { createServer } = await import(pathToFileURL(path.join(ROOT, 'node_modules/vite/dist/node/index.js')));
   const server = await createServer({configFile:false,root:ROOT,publicDir:false,logLevel:'error',
-    server:{host:'127.0.0.1',port:randomInt(20000,60000)},
+    server:{host:'127.0.0.1',port:0},
     plugins:[{name:'mascot-fixture',resolveId:id => id === '/__mascot-fixture.jsx' ? id : undefined,
       load:id => id === '/__mascot-fixture.jsx' ? fixture : undefined}]});
   await server.listen();

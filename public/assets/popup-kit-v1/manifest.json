@@ -1,0 +1,165 @@
+{
+  "version": 1,
+  "generatedAt": "2026-10-21T16:02:26.003Z",
+  "generation": {
+    "tool": "image_gen.imagegen",
+    "mode": "built-in",
+    "calls": 3,
+    "postProcessing": "Original generated PNG files retained unchanged. Separate WebP delivery derivatives were downscaled and encoded using Pillow; no design changes."
+  },
+  "styleReference": "public/assets/note-cash-bundle-v1.png",
+  "assets": [
+    {
+      "file": "popup-paper-surface-v1.png",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 2246739,
+      "sha256": "edccfb281d6c4fd9d0a8525d6aa772b9a6863ff10a29ce0f377f229e36571333",
+      "usage": "Low-opacity paper texture over the theme-colored backgrounds of note, theme and emoji dialogs; no homepage decoration.",
+      "background": "opaque",
+      "sourceFile": "exec-a667a2d8-1f24-4eac-81eb-2265ba9115f0.png",
+      "prompt": "Use case: stylized-concept. Asset type: seamless square background texture for a small cream-colored Telegram-style bookkeeping dialog. Create a 1024x1024 uniformly lit, edge-to-edge, warm ivory cream paper surface. Very pale fibers and extremely fine matte paper grain, almost invisible; average color near #f8f5e9, tonal variation only a few percent. Authentic quiet Japanese stationery paper, calm and clean, low contrast, suitable underneath readable small UI text. Seamless repeatable texture, opposite edges match visually, no visible seams, no vignette, no directional lighting, no shadows, no framing or border, no fold, no ripped edges, no objects, no letters, no numbers, no symbols, no stamps, no logo, no sparkles, no glossy highlights. The entire canvas is opaque paper, not transparency. Generate a raster PNG texture.",
+      "verification": {
+        "cornerAlpha": [
+          255,
+          255,
+          255,
+          255
+        ],
+        "centerAlpha": 255,
+        "visual": "Uniform warm ivory paper with subtle fibers, no border, vignette, text, symbols or objects.",
+        "seamlessness": "Requested in generation; visually uniform. Pixel-perfect tiling was not asserted. Use as a low-opacity covering surface to avoid visible repeat edges."
+      }
+    },
+    {
+      "file": "soft-button-surface-v1.png",
+      "width": 1448,
+      "height": 1086,
+      "bytes": 2044458,
+      "sha256": "48528dbdc70002bcff54b9834c1385cda238075c6637f6ea70c29f8e55314612",
+      "usage": "Matte paper pad beneath the note cash-submit image, intended for a roughly 92 by 68 pixel button.",
+      "background": "transparent alpha",
+      "sourceFile": "exec-cff1fb71-449e-42db-8aa4-312cb088609c.png",
+      "prompt": "Use case: stylized-concept. Asset type: transparent raster background component for a 92 by 68 pixel button in a cute minimal bookkeeping popup. Generate a single warm cream paper cushion, a gently rounded rectangle with width-to-height ratio about 1.4:1, straight-on view, no perspective tilt. Landscape 4:3 canvas, the paper pad occupies about 90 percent of canvas width and height, evenly centered with transparent margin. Warm ivory and very pale butter yellow, delicate matte fibers, quiet handmade Japanese stationery texture. Very softly layered rounded edges with subtle paper thickness, only a tiny low-contrast warm contact shadow at the bottom edge. Mostly flat clear interior reserved for a separately overlaid image. Actual alpha transparency outside the single pad, no background color or checkerboard baked in. No words, no letters, no numbers, no symbols, no logo, no face, no cloud, no cash, no star, no shine, no glossy specular highlights, no outline frame, no extra objects. Elegant softly tactile paper component, not a 3D plastic button. PNG.",
+      "verification": {
+        "cornerAlpha": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "centerAlpha": 252,
+        "visual": "One horizontal rounded cream paper pad on a 4:3 canvas; transparent margins, softly layered edges, low shadow, no text or symbols."
+      }
+    },
+    {
+      "file": "cloud-stamp-v1.png",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 1132742,
+      "sha256": "3686985b48632b998e3e74c22b079d6d8fae0b5ba31f8d6befde4da5bcd8a97b",
+      "usage": "A quiet 24px stamp beside note/theme dialog headings; no change to the interactive main mascot or homepage.",
+      "background": "transparent alpha",
+      "reference": "public/assets/mascot-main.png",
+      "sourceFile": "exec-ebd466be-affd-4fe4-a742-5a694b14bb19.png",
+      "prompt": "Use case: style-transfer. Asset type: tiny transparent stationery stamp logo for a 24px popup heading. Reference image: the attached existing yellow cloud mascot, D:/Projects/Tools/for-pocket/public/assets/mascot-main.png. Preserve this exact mascot identity: its asymmetrical five soft lobes, proportions, gentle short upright eyes, broad curved smiling mouth and two oval cheeks; same silhouette and face placement. Change only its rendering into a very simple matte hand-stamped paper-ink icon: pale warm butter-yellow fill, muted dark sage-green eyes and smile, restrained pale apricot cheeks, barely perceptible ink grain. Keep clear strong facial readability at 24px. No 3D shading, no glossy highlights, no glow, no extra facial features, no limbs, no star, no circle around it, no border, no text, no characters, no second cloud, no extra objects. Center one cloud on a genuinely transparent square PNG canvas, 10 percent transparent padding, all alpha outside silhouette. This is a quiet brand stamp derived from the existing mascot, not a redesign or a new expression.",
+      "verification": {
+        "cornerAlpha": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "centerAlpha": 253,
+        "visual": "Existing asymmetrical cloud outline and gentle smile retained in warm yellow/sage/apricot matte ink; no circle frame, text or extra features."
+      }
+    }
+  ],
+  "derivatives": [
+    {
+      "file": "popup-paper-surface-v1.webp",
+      "source": "popup-paper-surface-v1.png",
+      "width": 384,
+      "height": 384,
+      "sourceWidth": 1254,
+      "sourceHeight": 1254,
+      "bytes": 756,
+      "sha256": "8813bde23554369615b242bd7221e12067ffdf306640f3b662768e7ee44b6640",
+      "encoding": {
+        "format": "WebP",
+        "quality": 75,
+        "method": 6,
+        "resize": "Lanczos, aspect ratio preserved, maximum edge 384px",
+        "tool": "Pillow 12.3.0"
+      },
+      "alphaRange": null,
+      "processing": "Only downscaled and encoded; design and original PNG unchanged."
+    },
+    {
+      "file": "soft-button-surface-v1.webp",
+      "source": "soft-button-surface-v1.png",
+      "width": 256,
+      "height": 192,
+      "sourceWidth": 1448,
+      "sourceHeight": 1086,
+      "bytes": 9418,
+      "sha256": "1b3ad3b74e344a34884e27151381c50b0b1ad5ed2184d5e5b4b6803843646a78",
+      "encoding": {
+        "format": "WebP",
+        "quality": 85,
+        "method": 6,
+        "resize": "Lanczos, aspect ratio preserved, maximum edge 256px",
+        "tool": "Pillow 12.3.0"
+      },
+      "alphaRange": [
+        0,
+        255
+      ],
+      "processing": "Only downscaled and encoded; design and original PNG unchanged."
+    },
+    {
+      "file": "cloud-stamp-v1.webp",
+      "source": "cloud-stamp-v1.png",
+      "width": 96,
+      "height": 96,
+      "sourceWidth": 1254,
+      "sourceHeight": 1254,
+      "bytes": 3488,
+      "sha256": "f4e6cabd142eaaa7309fbb6720365b0b0da413ff137d7337e5a0e5b4edc5698d",
+      "encoding": {
+        "format": "WebP",
+        "quality": 90,
+        "method": 6,
+        "resize": "Lanczos, aspect ratio preserved, maximum edge 96px",
+        "tool": "Pillow 12.3.0"
+      },
+      "alphaRange": [
+        0,
+        255
+      ],
+      "processing": "Only downscaled and encoded; design and original PNG unchanged."
+    },
+    {
+      "file": "../note-cash-bundle-v1.webp",
+      "source": "../note-cash-bundle-v1.png",
+      "width": 192,
+      "height": 192,
+      "sourceWidth": 1254,
+      "sourceHeight": 1254,
+      "bytes": 10182,
+      "sha256": "8424a3d5a552ba8f508c39c07361831777437131c23f26aded57fb56341ccd1a",
+      "encoding": {
+        "format": "WebP",
+        "quality": 90,
+        "method": 6,
+        "resize": "Lanczos, aspect ratio preserved, maximum edge 192px",
+        "tool": "Pillow 12.3.0"
+      },
+      "alphaRange": [
+        0,
+        255
+      ],
+      "processing": "Only downscaled and encoded; design and original PNG unchanged."
+    }
+  ]
+}

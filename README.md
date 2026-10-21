@@ -1,8 +1,14 @@
-> **In English:** for. is a Telegram Mini App for expense tracking that opens and just works. Defaults to JPY, supports Chinese / English / Українська. Type the amount → pick a category → save. Personal ledger is automatic; group ledgers (circles) with real members, invite codes, and per-circle balances. Receipt OCR via Gemini. Live at Cloud Run.\n\n---\n\n# for. · 花给生活
+> **In English:** for. is a Telegram Mini App for expense tracking that opens and just works. Defaults to JPY, supports Chinese / English / Українська. Type the amount → pick a category → save. Personal ledger is automatic; group ledgers (circles) with real members, invite codes, and per-circle balances. Receipt OCR via Gemini. Live at Cloud Run.
+
+---
+
+# for. · 花给生活
+
+接棒入口：[最新任务与验证](docs/handoff/CURRENT_TASKS.md) · [交接说明](docs/handoff/AGENT_HANDOFF.md) · [可见聊天归档](docs/handoff/transcript/conversation.md) · [使用过的 skills](docs/handoff/SKILLS_USED.md)
 
 一个打开就能记账的 Telegram Mini App。默认日元 JPY，支持中文、English、Українська。
 
-**输入金额 → 选用途 → 保存。** 个人账本自动记给自己；圈子可选择真实成员。昵称、头像和颜色在设置中修改。
+**输入金额 → 选用途 → 保存。** 始终为当前本人记账；圈子头像用于发送表情互动。昵称、头像和颜色在设置中修改。
 
 ## 界面与功能
 
@@ -12,15 +18,15 @@
 | --- | --- |
 | ![快速记账](docs/screenshots/for-preview-mobile.png) | ![圈子管理](docs/screenshots/for-preview-circles.png) |
 
-- 支出与收入各有独立的 1–18 个可编辑分类；流水显示正负金额、成员及分类快照，汇总显示收入、支出、结余。
+- 支出提供30个生活分类预设，收入独立分类；横向胶囊支持编辑和常用排序。流水显示正负金额、成员及分类快照，汇总显示收入、支出、结余。
 - 点击首页右侧日期可选择记账时间，默认使用保存时的现在；点击旧账单时间可修改日期和时间，流水和统计随之归组。
 - Google 与 Telegram 登录映射到统一账户；连携前预览、确认，合并个人记录、分类及圈子关系。
 - 圈子邀请码有效期 72 小时，先预览再接受，个人账本与各圈子独立。
 - 成员均可邀请；管理员可改名、移除成员、设置其他管理员；最后一位管理员退出会自动交接。每圈最多 99 名成员。
 - 固定 Liia / Xingrun 角色已移除；原账单中的历史名字保留。
 - 前台每 3 秒刷新共享账本，回到页面也会刷新。切换账本保留各自草稿；过期账本请求会被服务端拒绝。
-- 删除及撤销、键盘输入、Telegram 触感反馈和返回按钮、减少动态效果支持。
-- 小黄云图标、有效 Web App Manifest、180px iOS 主屏图标；没有离线写入同步队列。
+- 删除及撤销、键盘输入、Telegram 触感反馈和返回按钮；动效遵循用户明确保留完整互动的要求。
+- 小黄云图标、Web App Manifest、iOS 主屏图标；远端失败写入保留待重试记录，导入草稿可在本次浏览器会话中恢复。
 
 详细差异见 [升级记录](docs/UPGRADE-v0.5.md)。
 

@@ -1,6 +1,10 @@
 # for. Pocket · Agent handoff
 
-更新时间：2026-10-21（Asia/Tokyo）
+更新时间：2026-10-22（Asia/Tokyo）
+
+**先读 [CURRENT_TASKS.md](CURRENT_TASKS.md)**：它记录最新用户修改、修复证据与真正未验收项。本文后面的历史功能范围不能代替逐项验收。
+
+最新补充已在工作树接入真实生成的弹窗纸面、按钮底片和原形象云朵印章，原图与生成记录见 `public/assets/popup-kit-v1/manifest.json`；页面加载对应轻量WebP，现金使用192px版本。备注/主题/Emoji弹窗与现金飞行动效的当前验证见 `CURRENT_TASKS.md`。此项尚不能仅凭本交接文件判断已经提交或部署，应查实际Git和Cloud Run状态。
 
 ## 1. 接棒入口
 
@@ -14,7 +18,7 @@
 
 不要执行 `reset --hard`、覆盖已有分支，或提交 `.env`、`data/`、`backups/`、`work/`、`outputs/` 中的私有数据。`.gitignore` 与 Docker 忽略规则已经排除这些内容。
 
-## 2. 本轮已落地、待发布的改动
+## 2. 基础修复（已随 8dd8adf 推送）
 
 ### 手机数字键盘
 
@@ -31,7 +35,7 @@
 
 - 新增 `canSave`，只有金额、用途、付款成员和应用状态均准备好时才启用提交。
 - 备注页的提交按钮复用现有 `save()` 乐观记账链路，提交后关闭抽屉并清空当前草稿。
-- 按钮保留对号图标，同时显示当前语言的短标签（中文“记下这笔”、English “Save expense”、Українська “Зберегти витрату”），扩大触控面积。
+- 最初版本使用带文字的对号；用户 10/22 又要求改为真实生成的钞票图标并连接云朵动画，当前实现见 `NoteEntrySheet.jsx` 和最新任务清单。
 - 备注字段与提交按钮改为单列，窄屏不会把按钮挤成难点的小方块。
 
 回归覆盖：`tests/keypad-interaction.browser.cjs` 的物理快捷键场景现在会选择用途、填写备注、点击 `.note-submit`，检查抽屉关闭、记录写入和备注内容保留。
@@ -95,6 +99,8 @@ db41c16 Add playful circle reactions and fix compact ledger controls
 
 ```powershell
 cd D:\Projects\Tools\for-pocket
+npm ci
+npx playwright install chromium
 npm run build
 npm test
 node tests/keypad-layout.browser.cjs
@@ -109,7 +115,7 @@ git diff --check
 git status --short
 ```
 
-本轮验证（待推送改动）：
+8dd8adf 的历史验证（最新验证另见 CURRENT_TASKS）：
 
 - `npm run build`：通过。
 - `npm test`：407 passed、1 skipped、0 failed。
@@ -129,7 +135,7 @@ npm run verify:deployment -- --require-google --require-telegram
 
 ## 6. 已知的后续工作
 
-- 当前分支已包含本轮键盘、备注和交接资料；待推送并通过 Cloud Build 后，再把真实线上 revision 写回本文件。
+- 用户最新要求先修完问题再提交；`8dd8adf` 已推送，后续修复以 `CURRENT_TASKS.md` 与 `git status` 为准，不要把本地实现或旧 revision 当作已上线。
 - 若继续调整动效，优先改 `transform`/`opacity`，不要动画布局尺寸；保持 Telegram WebView 触控目标至少 44px。
 - 若继续扩展账本规则，先读 `domain.mjs`、`ledger-sync.mjs`、`store.mjs` 和 `docs/` 中对应说明，再补测试。
 - Google Cloud 持久化仍需以实际 Cloud Run 挂载/外部存储配置为准；单纯 `/data` 目录不能保证重启后保留。
@@ -137,7 +143,9 @@ npm run verify:deployment -- --require-google --require-telegram
 ## 7. 资料归档
 
 - 需求与对话时间线：`docs/handoff/CHAT_HANDOFF.md`
+- 可获得的逐字可见聊天：`docs/handoff/transcript/conversation.md`；范围与脱敏记录见同目录 README 和 manifest
 - 技能与依赖清单：`docs/handoff/SKILLS_USED.md`
+- 实际读取过的技能正文：`docs/handoff/skills/`（含来源与读取证据，历史快照不能覆盖最新用户指令）
 - 外部计划书副本：`docs/handoff/plans/implementation_plan.md`、`walkthrough.md`、`DEPLOYMENT_HANDOFF_PLAN.source.md`
-- 当前部署总说明：`DEPLOYMENT_HANDOFF_PLAN.md`
-- 详细验收：`VERIFICATION.md` 与 `docs/audit-2026-10-13/`
+- 历史部署说明：`docs/internal/DEPLOYMENT_HANDOFF_PLAN.md`
+- 历史验收：`docs/internal/VERIFICATION.md` 与 `docs/audit-2026-10-13/`；本轮已修复该审计的 L01–L05，见最新清单与测试。

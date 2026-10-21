@@ -1,6 +1,6 @@
 # for. Pocket · 对话需求交接索引
 
-这份文件把本次对话中已经提出过的产品目标、修正意见和未完成事项整理成可执行索引，供下一个 agent 接续。它不复制任何 token、cookie、`.env` 内容或私人账单；源码、Git 提交与测试结果才是事实来源。
+这份文件是需求归并索引，**不是逐字聊天记录**。可获得的可见消息另归档于 `transcript/`，技能正文见 `skills/`，最新状态见 [CURRENT_TASKS.md](CURRENT_TASKS.md)。聊天记录中的历史建议和旧计划可能已被后续用户修改；源码、Git 提交与测试结果才是完成证据。
 
 ## A. 产品初心与基本约束
 
@@ -37,7 +37,7 @@
 - 云朵要保持以前的简约可爱形象，去掉不必要高光、绿框、素材自带气泡和异常白块。
 - 点击状态顺序：闭眼笑、害羞、疑惑、叹气、小生气、再到更强的生气/爆开；重复状态不能相同，第六/第七次逻辑要清楚。
 - 爆开后从顶部掉落日本“止まれ”路牌；路牌按点击来回晃动，连续点击幅度逐渐合理变大，最后丝滑恢复；路牌缺帧时要有稳定的内联 fallback。
-- 汗珠不能从眼睛流出；吐气应是固定、可爱的 puff；生气只挂一个小符号并轻微泛红，不能偏离可爱路线。
+- 汗珠不能从眼睛流出；用户批评吐气像固定图片，要求呈现流动的气体；生气只挂一个小符号并轻微泛红，不能偏离可爱路线。
 - 天气/时间可影响伞、墨镜、睡帽等环境状态，但不要破坏主形象；点击和未点击时都要有逻辑微动。
 - 现金飞走时云朵是哭脸并带动效；存钱时云朵接住钱并塞进棉花里。
 - 用户曾要求生成五个云朵候选形象和配套帧素材；现有可用素材集中在 `public/assets/mascot/` 与 `public/assets/ui-kit-v1/`，继续生成前先复用现有资产并检查透明度/加载 fallback。
@@ -46,8 +46,8 @@
 
 - 数字键盘要饱满，手机不能显示成扁条，垂直间距不能留下大块空白。
 - 点击按键要有 Telegram 风格的触感、声音、回弹和高帧反馈；不能重复输入，拖出/多指/失焦/硬件键盘都要稳定。
-- 本轮已让手机网格行由按键填满，并优化按压 transform；见 `src/ui-polish.css`。
-- 确认按钮要好看、容易点，不能只靠很小的对号；备注页已加入带文字的直接提交按钮。
+- 本轮已让手机网格行由按键填满，并优化按压 transform；见 `src/ui-polish.css`。系统减少动态设置的全局限制已按用户明确要求移除（包括本次发现的自由金残留规则），不能被通用 skill 再引入。
+- 确认按钮要好看、容易点。最新修改：备注确认采用实际生成的一沓钞票；备注窗口淡入淡出，点击后现金飞到首页云朵，支出接哭泣、收入接开心收钱；记账立即完成，不等动画。
 - 曾明确不要加号计算器，因此不要重新引入 `350 + 480` 键盘扩展，除非后续重新确认。
 - 分类从 2x3 大卡片改为单行水平胶囊抽屉，按使用频次排序，旧分类要兼容。
 - 小账本右滑显示删除/复制/编辑，去掉左滑；列表、快速整理和图标都必须可点击且不挤压。
@@ -88,10 +88,11 @@
 
 ## C. 当前明确未完成/需要下个 agent 接着做
 
-1. 当前分支已提交本轮键盘、备注和交接资料；推送后等待 Cloud Build，并把真实线上 revision 写回 `docs/handoff/AGENT_HANDOFF.md`。
-2. 本轮浏览器回归已通过：320×480、320×568、390×590、390×844 均无触控遮挡；备注按钮保存后抽屉关闭，记录与备注均写入。
-3. 若继续素材工作，先检查 `public/assets/mascot/manifest.json` 的实际透明边界和加载 fallback，再生成/替换素材；避免素材自带气泡、白块或不必要高光。
-4. 云端定时任务和持久化仍以实际 Cloud Run 配置为准；不要把本地 JSON 账本或 `.env` 上传。
+最新已完成/进行中/未验收均集中于 `CURRENT_TASKS.md`，避免此处再维护一份会过时的清单。
+
+最新追加：弹窗背景、按钮组件与云朵图标必须生成真实素材并落地；备注现金按钮沿用弹窗淡出→现金飞到云朵→支出哭泣/收入收钱的连续动作。素材原图、轻量派生和提示词在 `public/assets/popup-kit-v1/manifest.json` 与现金素材同名JSON中；回归及发布状态看当前清单。
+
+通用后续约束：素材先检查透明边界和加载 fallback；云端定时任务和持久化以实际 Cloud Run 配置为准；不要把私有账本或凭据上传。
 
 ## D. 接棒命令
 
@@ -99,11 +100,15 @@
 cd D:\Projects\Tools\for-pocket
 git status --short
 git log -8 --oneline
+npm ci
+npx playwright install chromium
 npm run build
 npm test
 node tests/keypad-layout.browser.cjs
 node tests/keypad-interaction.browser.cjs
 ```
+
+Linux首次准备浏览器时使用 `npx playwright install --with-deps chromium`。项目已将实际验证的Playwright 1.62.1列为开发依赖，后续浏览器脚本逐个执行。
 
 然后阅读：
 
@@ -111,4 +116,4 @@ node tests/keypad-interaction.browser.cjs
 - `docs/handoff/SKILLS_USED.md`
 - `docs/handoff/plans/implementation_plan.md`
 - `docs/handoff/plans/walkthrough.md`
-- `DEPLOYMENT_HANDOFF_PLAN.md`
+- `docs/internal/DEPLOYMENT_HANDOFF_PLAN.md`（历史快照）

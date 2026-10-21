@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createHmac, randomInt } from 'node:crypto';
+import { createHmac } from 'node:crypto';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { once } from 'node:events';
 import os from 'node:os';
@@ -31,11 +31,11 @@ async function fixture(t, { resolver, parser, local = false } = {}) {
     return parser ? parser(input, settings) : [];
   } };
   let server;
-  // This host can assign listen(0) a port blocked by Fetch. Match the store
-  // fixture's safe high range and retry only an actual address collision.
+  // Let the OS avoid Windows' excluded port reservations. Picking a random
+  // high port can still hit those ranges and fail with EACCES.
   for (let attempt = 0; attempt < 12; attempt++) {
     server = createApp({ token: local ? '' : token, dataDir, resolveLocation, aiParser, now: () => now });
-    server.listen(randomInt(20000, 60000), '127.0.0.1');
+    server.listen(0, '127.0.0.1');
     try { await once(server, 'listening'); break; }
     catch (error) {
       await new Promise(resolve => server.close(resolve));
