@@ -64,7 +64,7 @@ npm run verify:deployment -- --require-google --require-telegram
 
 当前仍为单进程原子 JSON 存储：DATA_DIR/_pocket-v2.json，旧文件迁移保留，浏览器预览与已登录服务器账本独立。Google 使用官方服务端 verifyIdToken；Telegram 使用 initData；连携需预览与明确确认。
 
-**创建 /data 目录不能提供 Cloud Run 持久化。** 容器停止后未挂载外部存储的数据会消失；单实例配置只能减少副本分歧，不能解决持久化。截图中的旧修订版没有卷，当前修订版的实际持久方案尚未核实。后续发布前应确认外部存储及真实线上数据备份。[Google 容器文件系统说明](https://cloud.google.com/run/docs/container-contract#file_system)
+**持久化方案已核实并上线**：生产环境已通过 Cloud Storage FUSE 将存储桶 `for-pocket-data-698348906987` 挂载至容器内部 `/data`，Cloud Run 开启第二代执行环境 (Gen 2)，数据已实现跨容器重启持久化。详细架构与挂载说明请参考权威指南 [GOOGLE_CLOUD_DEPLOYMENT.md](../GOOGLE_CLOUD_DEPLOYMENT.md)。
 
 ```powershell
 npm run backup

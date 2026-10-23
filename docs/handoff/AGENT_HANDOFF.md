@@ -16,6 +16,7 @@
 - 生产地址：<https://for-pocket-698348906987.asia-northeast1.run.app>
 - 当前生产平台：Google Cloud Run（`for-pocket` / `asia-northeast1`）
 - 生产发布方式：推送 `main`，由已配置的 Cloud Build 触发器构建；发布后运行 `npm run verify:deployment -- --require-google --require-telegram`
+- 云基础设施全景指南：详见 [GOOGLE_CLOUD_DEPLOYMENT.md](../GOOGLE_CLOUD_DEPLOYMENT.md)（含 GCS 存储桶 FUSE 挂载、Vertex AI、IAM 权限及调度配置）
 - 默认货币：JPY；界面语言：中文、English、Українська
 
 不要执行 `reset --hard`、覆盖已有分支，或提交 `.env`、`data/`、`backups/`、`work/`、`outputs/` 中的私有数据。`.gitignore` 与 Docker 忽略规则已经排除这些内容。

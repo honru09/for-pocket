@@ -123,7 +123,7 @@ React 18 + Vite，实际使用 TelegramUI 的 AppRoot、Button、Input、Select�
 ## Google Cloud 与本地目录
 
 项目已完整迁到 **D:\Projects\Tools\for-pocket**。正式平台为 Google Cloud Run：
-[生产站点](https://for-pocket-698348906987.asia-northeast1.run.app)。线上 Google/Telegram 配置已存在，真实 OAuth 验收仍需实际账号。
+[生产站点](https://for-pocket-698348906987.asia-northeast1.run.app)。完整云端架构、GCS 存储桶 FUSE 挂载、IAM 权限与定时调度说明请参阅 [Google Cloud 部署全景指南](docs/GOOGLE_CLOUD_DEPLOYMENT.md)。线上 Google/Telegram 配置已存在，真实 OAuth 验收仍需实际账号。
 
 记账页按 Telegram 实际可用高度适配，一屏显示金额、用途、数字键和成员选择；确认键放在云朵旁。“记一笔 / 小账本”固定在底部并预留安全区。较矮屏幕将分类和数字键并排排列。圈子名称可由管理员点击直接编辑；分类图标按钮展开图标与颜色选项。界面改动通过本地验证后，推送 main 会由 Cloud Build 自动发布到 Cloud Run。
 
