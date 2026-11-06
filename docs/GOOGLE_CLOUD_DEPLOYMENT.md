@@ -174,7 +174,7 @@ node scripts/verify-deployment.mjs https://for-pocket-698348906987.asia-northeas
 ```powershell
 # 1. 健康检查端点
 curl -s https://for-pocket-698348906987.asia-northeast1.run.app/health
-# 返回格式示例: {"ok":true,"version":"0.5.0","commit":null,"revision":"for-pocket-00064-7cn"}
+# 返回格式示例: {"ok":true,"version":"0.5.0","commit":null,"revision":"for-pocket-00065-w4b"}
 
 # 2. 配置与特性就绪检查
 curl -s https://for-pocket-698348906987.asia-northeast1.run.app/api/config

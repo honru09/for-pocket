@@ -68,6 +68,11 @@
 最近的关键提交（从新到旧）：
 
 ```text
+ca67d27 docs: add comprehensive Google Cloud deployment guide and clarify persistence architecture
+c48eb87 unify category artwork typography and compact layouts
+295849d refresh journal materials and rebuild free money experience
+a9550d1 fix note cash flow and ledger safeguards; add popup assets and handoff archive
+8dd8adf improve mobile keypad and handoff
 afcba21 polish mobile layout and ledger experience
 1afba0f finish free money setup and polish settings UI
 953a1da polish mobile layout themes and mascot fallback
