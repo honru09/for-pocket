@@ -28,6 +28,8 @@ import { bindForegroundRefresh } from './foreground-refresh.mjs';
 import { parseClipboardExpense } from '../public/clipboard.mjs';
 import { readClipboardQuietly } from './clipboard-client.mjs';
 import { createEntryMutations } from './entry-mutations.mjs';
+import { readProfileCache, writeProfileCache, clearProfileCache } from './profile-cache.mjs';
+import { readOutbox, writeOutbox, isRetryableWriteError, nextRetryDelay } from './outbox.mjs';
 import ExpenseEditor from './ExpenseEditor.jsx';
 import SettingsPage from './SettingsPage.jsx';
 import { createWeatherClient, weatherCell, mascotEnvironment as resolveMascotEnvironment } from './weather.mjs';
@@ -36,7 +38,6 @@ import { filterLedgerEntries, selectedLedgerMembers } from './history-filter.mjs
 const telegram = window.Telegram?.WebApp;
 const language = resolveLanguage(telegram?.initDataUnsafe?.user?.language_code || navigator.language);
 const blankDraft = () => ({ raw: '0', selected: null, consumer: null, note: '', type: 'expense', occurredAt: null });
-const OUTBOX_KEY = 'for-pocket.unconfirmed.v1';
 const THEME_OPTIONS = ['matcha', 'cheese', 'peach', 'sea'];
 const SOUND_OPTIONS = ['off', 'water', 'wood'];
 function haptic(kind = 'selection') { try { if (!telegram?.isVersionAtLeast?.('6.1')) return; kind === 'success' ? telegram.HapticFeedback.notificationOccurred(kind) : telegram.HapticFeedback.selectionChanged(); } catch {} }
@@ -268,6 +269,7 @@ export default function App() {
 
   const service = useRef(null), busyRef = useRef(false), state = useRef({}), settingsRef = useRef(settings), currentProfile = useRef(null), pending = useRef(null), drafts = useRef(new Map());
   const pendingWrites = useRef(new Map()), failedWrites = useRef(new Map()), entryOperations = useRef(null), settingWrites = useRef(new Map()), settingQueue = useRef(Promise.resolve());
+  const flushOutboxRef = useRef(null), flushTimer = useRef(null), flushAttempt = useRef(0);
   const confirmedSettings = useRef(new Map());
   const pageRef = useRef(null), mascotRef = useRef(null), stageRef = useRef(null), keyboard = useRef(false), epoch = useRef(0);
   const keypadPointer = useRef(null);
@@ -303,11 +305,7 @@ export default function App() {
   });
   const persistOutbox = useCallback((scope = `${currentProfile.current?.user.id}:${currentProfile.current?.ledgerId}`) => {
     setFailedCount([...failedWrites.current.values()].filter(write => write.scope === scope).length);
-    const writes = new Map([...failedWrites.current, ...pendingWrites.current]);
-    try {
-      if (!writes.size) localStorage.removeItem(OUTBOX_KEY);
-      else localStorage.setItem(OUTBOX_KEY, JSON.stringify([...writes.values()].map(({ scope, payload, optimistic }) => ({ scope, payload, optimistic }))));
-    } catch {}
+    writeOutbox(new Map([...failedWrites.current, ...pendingWrites.current]).values());
   }, []);
   const apply = useCallback(p => {
     const scope = `${p.user.id}:${p.ledgerId}`;
@@ -347,6 +345,11 @@ export default function App() {
       });
     }
     settingsRef.current = next; currentProfile.current = p; setSettings(next); setProfile(p);
+    // Cache the confirmed snapshot so the next open renders instantly.
+    // Unconfirmed outbox entries stay out of the cache; the outbox itself
+    // restores them and they are re-added when their upload lands.
+    const unconfirmed = new Set([...pendingWrites.current.keys(), ...failedWrites.current.keys()]);
+    writeProfileCache({ ...p, expenses: p.expenses.filter(entry => !unconfirmed.has(entry.id)) });
   }, [persistOutbox]);
   const run = useCallback(async (operation, success) => {
     if (busyRef.current) return null;
@@ -368,29 +371,64 @@ export default function App() {
   useEffect(() => { if (view !== 'record') setReactionHost(null); }, [view]);
   useEffect(() => {
     let cancelled = false;
-    async function boot() {
-      setFailed(false);
+    const flushRestored = () => { if (!cancelled) requestAnimationFrame(() => { if (!cancelled) flushOutboxRef.current?.(false); }); };
+    async function refreshInBackground(backend) {
+      // The UI is already usable from the cache or local data. A failure
+      // here only marks the sync state; it never blanks the ledger.
       try {
-        telegram?.ready?.(); telegram?.expand?.();
-        if (telegram?.isVersionAtLeast?.('6.1')) { telegram.setHeaderColor('#f8f7f1'); telegram.setBackgroundColor('#f8f7f1'); }
         const response = await fetch('/api/config', { signal: AbortSignal.timeout(10000) });
         if (!response.ok) throw new Error('errorConnect');
         const c = await response.json(); if (cancelled) return;
         setConfig({ ...c, inTelegram: Boolean(telegram?.initData) });
-        const remote = c.mode !== 'local' && Boolean(telegram?.initData || localStorage.getItem(SESSION_KEY));
+        if (c.mode === 'local' && backend.getInvite !== undefined) {
+          backend = localService(language); service.current = backend; setRemote(false);
+          apply(await backend.getProfile()); setSyncFailed(false); return;
+        }
+        const p = await backend.getProfile(); if (cancelled) return;
+        if (backend === service.current && JSON.stringify(p) !== JSON.stringify(currentProfile.current)) apply(p);
+        setSyncFailed(false);
+      } catch { if (!cancelled) setSyncFailed(true); }
+      flushRestored();
+    }
+    async function boot() {
+      setFailed(false);
+      telegram?.ready?.(); telegram?.expand?.();
+      if (telegram?.isVersionAtLeast?.('6.1')) { telegram.setHeaderColor('#f8f7f1'); telegram.setBackgroundColor('#f8f7f1'); }
+      for (const write of readOutbox()) failedWrites.current.set(write.payload.id, { ...write, backend: null, retryable: true });
+      const hasSession = Boolean(telegram?.initData || localStorage.getItem(SESSION_KEY));
+      const cached = hasSession ? readProfileCache() : null;
+      if (cached) {
+        // Instant open: render the last confirmed ledger immediately and
+        // let the network catch up in the background.
+        const backend = remoteService(telegram);
+        service.current = backend; setRemote(true); apply(cached); setReady(true);
+        void refreshInBackground(backend);
+        return;
+      }
+      if (!hasSession) {
+        const backend = localService(language);
+        service.current = backend; setRemote(false);
+        try { apply(await backend.getProfile()); setReady(true); setSyncFailed(false); }
+        catch (error) { if (!cancelled) { setFailed(true); showError(error); } return; }
+        void refreshInBackground(backend);
+        return;
+      }
+      // First open with a session (no cache yet): the one path that still
+      // waits for the network. Every later open takes the cached path.
+      try {
+        const response = await fetch('/api/config', { signal: AbortSignal.timeout(10000) });
+        if (!response.ok) throw new Error('errorConnect');
+        const c = await response.json(); if (cancelled) return;
+        setConfig({ ...c, inTelegram: Boolean(telegram?.initData) });
+        const remote = c.mode !== 'local' && hasSession;
         let backend = remote ? remoteService(telegram) : localService(language), p;
         try { p = await backend.getProfile(); } catch (error) {
           if (error.status !== 401 || telegram?.initData) throw error;
-          localStorage.removeItem(SESSION_KEY); backend = localService(language); p = await backend.getProfile(); notify('errorSignIn');
+          localStorage.removeItem(SESSION_KEY); clearProfileCache(); backend = localService(language); p = await backend.getProfile(); notify('errorSignIn');
         }
         if (cancelled) return;
-        try {
-          const restored = JSON.parse(localStorage.getItem(OUTBOX_KEY) || '[]');
-          for (const write of Array.isArray(restored) ? restored : []) {
-            if (write?.payload?.id && write.optimistic?.id === write.payload.id && typeof write.scope === 'string') failedWrites.current.set(write.payload.id, { ...write, backend: null });
-          }
-        } catch {}
         service.current = backend; setRemote(backend.getInvite !== undefined); apply(p); setReady(true); setSyncFailed(false);
+        flushRestored();
       } catch (error) { if (!cancelled) { setFailed(true); showError(error); } }
     }
     boot();
@@ -468,7 +506,22 @@ export default function App() {
     try { view === 'record' ? telegram?.BackButton?.hide?.() : telegram?.BackButton?.show?.(); } catch {}
     return () => telegram?.BackButton?.offClick?.(back);
   }, [view, navigate]);
-  useEffect(() => { if (telegram?.isVersionAtLeast?.('6.2')) { try { amountMinor || draft.note || writeCount || failedCount ? telegram.enableClosingConfirmation() : telegram.disableClosingConfirmation(); } catch {} } }, [amountMinor, draft.note, writeCount, failedCount]);
+  // Unconfirmed entries upload themselves: a failure schedules its own
+  // backoff retry (see submitWrite), and reconnecting or returning to the
+  // foreground flushes the outbox immediately. No manual retry is ever
+  // required, and retries never spin in a tight loop.
+  useEffect(() => {
+    if (!ready) return undefined;
+    const flush = () => flushOutboxRef.current?.(false);
+    window.addEventListener('online', flush);
+    window.addEventListener('focus', flush);
+    document.addEventListener('visibilitychange', flush);
+    return () => { window.removeEventListener('online', flush); window.removeEventListener('focus', flush); document.removeEventListener('visibilitychange', flush); };
+  }, [ready]);
+  // Recorded entries are durable in the outbox and upload automatically, so
+  // they must never trigger Telegram's "unsaved data will be lost" closing
+  // confirmation. Only a half-typed, not-yet-recorded draft still does.
+  useEffect(() => { if (telegram?.isVersionAtLeast?.('6.2')) { try { amountMinor || draft.note ? telegram.enableClosingConfirmation() : telegram.disableClosingConfirmation(); } catch {} } }, [amountMinor, draft.note]);
   useLayoutEffect(() => {
     if (keyboard.current) return;
     const animation = pageRef.current?.animate([{ opacity: 0, transform: 'translateY(8px)' }, { opacity: 1, transform: 'translateY(0)' }], { duration: 220, easing: 'cubic-bezier(.23,1,.32,1)' });
@@ -616,6 +669,11 @@ export default function App() {
     if (pressed) stageRef.current?.setAttribute('data-press', 'true');
     else if (!nodes.some(item => item.dataset.pressed === 'true')) stageRef.current?.removeAttribute('data-press');
   }, []);
+  const scheduleOutboxRetry = useCallback(() => {
+    if (flushTimer.current) return;
+    const delay = nextRetryDelay(flushAttempt.current++);
+    flushTimer.current = setTimeout(() => { flushTimer.current = null; flushOutboxRef.current?.(false); }, delay);
+  }, []);
   const submitWrite = useCallback(write => {
     const { payload, backend, scope } = write;
     if (pendingWrites.current.has(payload.id)) return;
@@ -628,30 +686,41 @@ export default function App() {
       persistOutbox();
       return backend.addExpense(resolved);
     }).then(entry => {
+      flushAttempt.current = 0;
       const current = currentProfile.current;
       if (service.current === backend && `${current?.user.id}:${current?.ledgerId}` === scope) {
         const next = { ...current, expenses: [...current.expenses.filter(item => item.id !== payload.id), { ...entry, canDelete: true }] };
         currentProfile.current = next; setProfile(next);
       }
     }).catch(error => {
+      // The entry stays on screen and in the durable outbox. Retryable
+      // failures re-send themselves in the background; the user is only
+      // interrupted for a rejection that can never succeed on its own.
+      write.retryable = isRetryableWriteError(error);
       failedWrites.current.set(payload.id, write);
-      const current = currentProfile.current;
-      if (service.current === backend && `${current?.user.id}:${current?.ledgerId}` === scope) {
-        const next = { ...current, expenses: current.expenses.filter(item => item.id !== payload.id) };
-        currentProfile.current = next; setProfile(next);
+      if (write.retryable) scheduleOutboxRetry();
+      else if (service.current === backend && `${currentProfile.current?.user.id}:${currentProfile.current?.ledgerId}` === scope) {
         notify(null, null, { error: error.message || 'errorSave', retryWrites: true });
       }
     }).finally(() => { pendingWrites.current.delete(payload.id); epoch.current++; setWriteCount(pendingWrites.current.size); persistOutbox(); });
-  }, [notify, persistOutbox]);
-  const retryWrites = useCallback(() => {
-    const current = currentProfile.current, scope = `${current?.user.id}:${current?.ledgerId}`;
-    const writes = [...failedWrites.current.values()].filter(write => write.scope === scope);
-    if (!writes.length) return;
+  }, [notify, persistOutbox, scheduleOutboxRetry]);
+  const flushWrites = useCallback((manual = false) => {
+    const current = currentProfile.current, backend = service.current;
+    if (!current || !backend) return;
+    const scope = `${current.user.id}:${current.ledgerId}`;
+    const writes = [...failedWrites.current.values()].filter(write => write.scope === scope && (manual || write.retryable !== false));
+    if (!writes.length) { flushAttempt.current = 0; return; }
     const ids = new Set(current.expenses.map(entry => entry.id));
-    const next = { ...current, expenses: [...current.expenses, ...writes.filter(write => !ids.has(write.payload.id)).map(write => write.optimistic)] };
-    currentProfile.current = next; setProfile(next); setNotice(null);
-    writes.forEach(write => { write.backend = service.current; submitWrite(write); });
+    const missing = writes.filter(write => !ids.has(write.payload.id));
+    if (missing.length) {
+      const next = { ...current, expenses: [...current.expenses, ...missing.map(write => write.optimistic)] };
+      currentProfile.current = next; setProfile(next);
+    }
+    if (manual) setNotice(null);
+    writes.forEach(write => { write.backend = backend; submitWrite(write); });
   }, [submitWrite]);
+  flushOutboxRef.current = flushWrites;
+  const retryWrites = useCallback(() => flushWrites(true), [flushWrites]);
   const save = useCallback((noteOrigin = null) => {
     const { draft: d, amountMinor, ready } = state.current;
     if (!ready || busyRef.current || !amountMinor || !d.selected || !currentProfile.current?.user.id) return;
@@ -788,10 +857,10 @@ export default function App() {
   async function login(credential) {
     const backend = isRemote ? service.current : remoteService(telegram);
     const res = await run(() => backend.loginWithGoogle(credential, isRemote, settingsRef.current.language));
-    if (res?.profile) { service.current = backend; setRemote(true); apply(res.profile); notify('savedShort'); }
+    if (res?.profile) { service.current = backend; setRemote(true); apply(res.profile); notify('savedShort'); flushWrites(true); }
     return res;
   }
-  async function logout() { const result = await run(() => service.current.logout()); if (result !== null) { service.current = localService(language); setRemote(false); apply(await service.current.getProfile()); } }
+  async function logout() { const result = await run(() => service.current.logout()); if (result !== null) { clearProfileCache(); service.current = localService(language); setRemote(false); apply(await service.current.getProfile()); } }
   function mutateEntry(entry, optimistic, request) {
     const p = currentProfile.current, backend = service.current, scope = p.user.id + ':' + p.ledgerId;
     return entryOperations.current.enqueue({ key:scope + ':' + entry.id, id:entry.id, backend, scope, optimistic, fallback:p.expenses.find(item => item.id === entry.id) || null, request:() => request(backend, p.ledgerId) });
