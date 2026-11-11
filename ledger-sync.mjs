@@ -104,6 +104,19 @@ function projectLedgers(db, updatedEntry, seedLedgerId) {
   // infer their owner from a polluted mirror, and never silently delete them.
   for (const entry of db.ledgerSyncArchive || []) collect(entry);
   if (updatedEntry?.id) records.set(updatedEntry.id, { ...updatedEntry, ledgerId:updatedEntry.ledgerId || seedLedgerId });
+  // Member snapshots on entries must never carry a custom avatar image.
+  // A data-URL avatar can be ~256KB; embedding it in every entry (and in
+  // every mirrored copy of that entry) once bloated the whole database to
+  // tens of megabytes and made heavy profiles too large to load on a
+  // phone. The live member list still carries the real avatar; entry rows
+  // render name/colour badges and fall back gracefully without it.
+  for (const entry of records.values()) {
+    const avatar = entry?.member?.avatar;
+    if (typeof avatar === 'string' && avatar.length > 2048 && avatar.startsWith('data:')) {
+      entry.member = { ...entry.member, avatar: null };
+      changed = true;
+    }
+  }
   const projected = new Map(Object.keys(db.ledgers || {}).map(id => [id, []])), archive = [];
   const ownerCircles = new Map();
   for (const circle of Object.values(db.circles || {})) for (const uid of circle.members || []) {

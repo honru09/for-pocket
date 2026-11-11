@@ -34,6 +34,23 @@ test('a record stays in the ledger it was written to even when its spender is so
   assert.deepEqual(db.ledgers.b.expenses.map(entry => entry.id), ['paid-for-b'], 'spender still gets the mirror');
 });
 
+test('custom avatar images are stripped from entry member snapshots, presets are kept', () => {
+  const db = database();
+  const blob = `data:image/png;base64,${'A'.repeat(3000)}`;
+  db.ledgers.a.expenses = [
+    { id: 'fat', amountMinor: 100, consumer: 'u_a', ledgerId: 'a', member: { id: 'u_a', name: 'A', color: 'blue', avatar: blob } },
+    { id: 'thin', amountMinor: 100, consumer: 'u_a', ledgerId: 'a', member: { id: 'u_a', name: 'A', color: 'blue', avatar: 'cat' } },
+  ];
+  db.ledgers.home_ledger.expenses = [];
+  syncAllLedgerGroups(db);
+  for (const ledger of ['a', 'home_ledger']) {
+    const fat = db.ledgers[ledger].expenses.find(entry => entry.id === 'fat');
+    assert.equal(fat.member.avatar, null, `${ledger} must not embed the image`);
+    assert.equal(fat.member.name, 'A');
+    assert.equal(db.ledgers[ledger].expenses.find(entry => entry.id === 'thin').member.avatar, 'cat');
+  }
+});
+
 test('a newer deletion and its split participants survive mirroring', () => {
   const db = database();
   db.ledgers.a.expenses = [{ id: 'same', consumer:'u_a', ledgerId:'a', amountMinor: 100, splitParticipants: ['u_a'], createdAt: '2026-01-01', updatedAt: '2026-01-02' }];
