@@ -24,6 +24,16 @@ test('personal ledgers contain own records and shared ledger contains member his
   assert.deepEqual(db.ledgers.unrelated.expenses.map(entry => entry.id), ['private']);
 });
 
+test('a record stays in the ledger it was written to even when its spender is someone else', () => {
+  const db = database();
+  db.circles = {};
+  db.ledgers.a.expenses = [{ id: 'paid-for-b', amountMinor: 300, consumer: 'u_b', ledgerId: 'a' }];
+  db.ledgers.home_ledger.expenses = [];
+  syncAllLedgerGroups(db);
+  assert.deepEqual(db.ledgers.a.expenses.map(entry => entry.id), ['paid-for-b'], 'origin ledger keeps the record');
+  assert.deepEqual(db.ledgers.b.expenses.map(entry => entry.id), ['paid-for-b'], 'spender still gets the mirror');
+});
+
 test('a newer deletion and its split participants survive mirroring', () => {
   const db = database();
   db.ledgers.a.expenses = [{ id: 'same', consumer:'u_a', ledgerId:'a', amountMinor: 100, splitParticipants: ['u_a'], createdAt: '2026-01-01', updatedAt: '2026-01-02' }];

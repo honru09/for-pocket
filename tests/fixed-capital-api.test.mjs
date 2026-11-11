@@ -255,6 +255,11 @@ test('localService persists fixed capital, computes summaries, and rejects stora
     if (previousStorage === undefined) delete globalThis.localStorage;
     else globalThis.localStorage = previousStorage;
   });
+  // The daily allowance divides by the length of the current payday cycle
+  // (payday 10: the Oct 10 - Nov 10 cycle has 31 days, the next has 30),
+  // so the expected 60000/31 = 1935 only holds inside that cycle. Freeze
+  // the clock to keep this test deterministic instead of date-dependent.
+  t.mock.timers.enable({ apis: ['Date'], now: new Date('2026-11-06T03:00:00.000Z') });
 
   const service = localService('en');
   const saved = await service.saveFixedCapital(capital(), 'local');

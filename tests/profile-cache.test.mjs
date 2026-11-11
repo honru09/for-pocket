@@ -46,3 +46,28 @@ test('clearing the profile cache forces the next open back to the network path',
   clearProfileCache(store);
   assert.equal(readProfileCache(store), null);
 });
+
+test('a cache tagged with one Telegram account is invisible to another', () => {
+  const store = storage();
+  writeProfileCache(profile(), store, { telegramId: 111 });
+  assert.deepEqual(readProfileCache(store, { telegramId: 111 }), profile());
+  assert.equal(readProfileCache(store, { telegramId: 222 }), null);
+  // Untagged legacy caches and untagged reads stay usable (one-time migration).
+  const legacy = storage();
+  writeProfileCache(profile(), legacy);
+  assert.deepEqual(readProfileCache(legacy, { telegramId: 222 }), profile());
+});
+
+test('an oversized profile is trimmed to its newest entries instead of dropped', () => {
+  const store = storage();
+  const big = profile();
+  big.expenses = Array.from({ length: 500 }, (_, i) => ({
+    id: `e${i}`, amountMinor: 100, occurredAt: new Date(Date.UTC(2026, 0, 1 + i)).toISOString(), note: 'x'.repeat(12000),
+  }));
+  assert.equal(writeProfileCache(big, store), true);
+  const cached = readProfileCache(store);
+  assert.ok(cached.expenses.length < big.expenses.length, 'cache must be trimmed');
+  assert.ok(cached.expenses.length >= 80, 'cache keeps a useful recent window');
+  const times = cached.expenses.map(e => e.occurredAt);
+  assert.equal(times[0], big.expenses.at(-1).occurredAt, 'newest entries survive trimming');
+});

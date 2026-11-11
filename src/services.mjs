@@ -112,7 +112,7 @@ export function remoteService(telegram) {
     }
     return p;
   };
-  async function request(route, method = 'GET', body, { includeInitData = false, timeout = 15000 } = {}) {
+  async function request(route, method = 'GET', body, { includeInitData = false, timeout = 15000 } = {}, retried = false) {
     const headers = { 'Content-Type': 'application/json' };
     if (!telegramDisabled && telegram?.initData && (includeInitData || !currentToken)) headers['X-Telegram-Init-Data'] = telegram.initData;
     if (currentToken) headers.Authorization = `Bearer ${currentToken}`;
@@ -120,7 +120,22 @@ export function remoteService(telegram) {
     try { response = await fetch(`/api${route}`, { method, headers, body: body === undefined ? undefined : JSON.stringify(body), signal: AbortSignal.timeout(timeout) }); }
     catch { throw new Error('errorNetwork'); }
     const data = await response.json();
-    if (!response.ok) { const error = new Error(data.error || 'errorSave'); error.status = response.status; throw error; }
+    if (!response.ok) {
+      const error = new Error(data.error || 'errorSave'); error.status = response.status;
+      // A stored session token can die server-side (expiry, revocation)
+      // while this page still holds it. Because the token suppresses the
+      // initData header, every call would 401 forever. Drop the dead
+      // token, re-exchange the Telegram identity once, and retry.
+      if (response.status === 401 && !retried && currentToken && !route.startsWith('/auth/')
+        && !telegramDisabled && telegram?.initData) {
+        currentToken = null;
+        try { localStorage.removeItem(SESSION_KEY); } catch {}
+        lastInitData = null;
+        try { await exchangeTelegram(); } catch { throw error; }
+        return request(route, method, body, { includeInitData, timeout }, true);
+      }
+      throw error;
+    }
     return remember(data);
   }
   async function exchangeTelegram() {

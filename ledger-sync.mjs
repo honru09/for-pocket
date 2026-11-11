@@ -119,7 +119,12 @@ function projectLedgers(db, updatedEntry, seedLedgerId) {
       destinations.add(owner);
       for (const id of ownerCircles.get(owner) || []) destinations.add(id);
     }
-    if (entry.ledgerId && !db.users?.[entry.ledgerId]) destinations.add(entry.ledgerId);
+    // The ledger a record was written to always keeps it. Ownership
+    // decides where else it is mirrored, never whether it may stay:
+    // a record must not vanish from its own ledger (into the archive or
+    // anywhere else) just because its owner could not be resolved or
+    // changed circles after the fact.
+    if (entry.ledgerId && projected.has(entry.ledgerId)) destinations.add(entry.ledgerId);
     let retained = false;
     for (const id of destinations) if (projected.has(id)) {
       projected.get(id).push(entry); retained = true;

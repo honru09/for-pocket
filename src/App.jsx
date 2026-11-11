@@ -28,7 +28,7 @@ import { bindForegroundRefresh } from './foreground-refresh.mjs';
 import { parseClipboardExpense } from '../public/clipboard.mjs';
 import { readClipboardQuietly } from './clipboard-client.mjs';
 import { createEntryMutations } from './entry-mutations.mjs';
-import { readProfileCache, writeProfileCache, clearProfileCache } from './profile-cache.mjs';
+import { readProfileCache, readProfileCacheEntry, writeProfileCache, clearProfileCache } from './profile-cache.mjs';
 import { readOutbox, writeOutbox, isRetryableWriteError, nextRetryDelay } from './outbox.mjs';
 import ExpenseEditor from './ExpenseEditor.jsx';
 import SettingsPage from './SettingsPage.jsx';
@@ -36,6 +36,7 @@ import { createWeatherClient, weatherCell, mascotEnvironment as resolveMascotEnv
 import { filterLedgerEntries, selectedLedgerMembers } from './history-filter.mjs';
 
 const telegram = window.Telegram?.WebApp;
+const REMOTE_ACCOUNT_KEY = 'for-pocket.remote-account.v1';
 const language = resolveLanguage(telegram?.initDataUnsafe?.user?.language_code || navigator.language);
 const blankDraft = () => ({ raw: '0', selected: null, consumer: null, note: '', type: 'expense', occurredAt: null });
 const THEME_OPTIONS = ['matcha', 'cheese', 'peach', 'sea'];
@@ -345,11 +346,14 @@ export default function App() {
       });
     }
     settingsRef.current = next; currentProfile.current = p; setSettings(next); setProfile(p);
+    // Remember that this device holds a real account, so a later expired
+    // session is treated as "sign in again", never as a fresh local user.
+    if (p.user?.id && p.user.id !== 'u_local') { try { localStorage.setItem(REMOTE_ACCOUNT_KEY, '1'); } catch {} }
     // Cache the confirmed snapshot so the next open renders instantly.
     // Unconfirmed outbox entries stay out of the cache; the outbox itself
     // restores them and they are re-added when their upload lands.
     const unconfirmed = new Set([...pendingWrites.current.keys(), ...failedWrites.current.keys()]);
-    writeProfileCache({ ...p, expenses: p.expenses.filter(entry => !unconfirmed.has(entry.id)) });
+    writeProfileCache({ ...p, expenses: p.expenses.filter(entry => !unconfirmed.has(entry.id)) }, undefined, { telegramId: telegram?.initDataUnsafe?.user?.id || null });
   }, [persistOutbox]);
   const run = useCallback(async (operation, success) => {
     if (busyRef.current) return null;
@@ -372,9 +376,11 @@ export default function App() {
   useEffect(() => {
     let cancelled = false;
     const flushRestored = () => { if (!cancelled) requestAnimationFrame(() => { if (!cancelled) flushOutboxRef.current?.(false); }); };
-    async function refreshInBackground(backend) {
+    async function refreshInBackground(backend, confirmReady = false) {
       // The UI is already usable from the cache or local data. A failure
-      // here only marks the sync state; it never blanks the ledger.
+      // here only marks the sync state; it never blanks the ledger. When
+      // confirmReady is set, the cached snapshot was rendered but is not
+      // yet trusted for input, so this refresh also decides readiness.
       try {
         const response = await fetch('/api/config', { signal: AbortSignal.timeout(10000) });
         if (!response.ok) throw new Error('errorConnect');
@@ -382,12 +388,13 @@ export default function App() {
         setConfig({ ...c, inTelegram: Boolean(telegram?.initData) });
         if (c.mode === 'local' && backend.getInvite !== undefined) {
           backend = localService(language); service.current = backend; setRemote(false);
-          apply(await backend.getProfile()); setSyncFailed(false); return;
+          apply(await backend.getProfile()); setSyncFailed(false); if (confirmReady) setReady(true); return;
         }
         const p = await backend.getProfile(); if (cancelled) return;
         if (backend === service.current && JSON.stringify(p) !== JSON.stringify(currentProfile.current)) apply(p);
         setSyncFailed(false);
-      } catch { if (!cancelled) setSyncFailed(true); }
+        if (confirmReady) setReady(true);
+      } catch { if (!cancelled) { setSyncFailed(true); if (confirmReady) setFailed(true); } }
       flushRestored();
     }
     async function boot() {
@@ -396,13 +403,21 @@ export default function App() {
       if (telegram?.isVersionAtLeast?.('6.1')) { telegram.setHeaderColor('#f8f7f1'); telegram.setBackgroundColor('#f8f7f1'); }
       for (const write of readOutbox()) failedWrites.current.set(write.payload.id, { ...write, backend: null, retryable: true });
       const hasSession = Boolean(telegram?.initData || localStorage.getItem(SESSION_KEY));
-      const cached = hasSession ? readProfileCache() : null;
+      const launchTelegramId = telegram?.initDataUnsafe?.user?.id || null;
+      const cacheEntry = hasSession ? readProfileCacheEntry(undefined, { telegramId: launchTelegramId }) : null;
+      const cached = cacheEntry?.profile || null;
       if (cached) {
         // Instant open: render the last confirmed ledger immediately and
-        // let the network catch up in the background.
+        // let the network catch up in the background. The snapshot is
+        // trusted for input at once only when the launching Telegram
+        // account matches the cache tag (or the cache predates tagging).
+        // Any other launch renders it read-only until the refresh proves
+        // whose ledger this session actually owns.
         const backend = remoteService(telegram);
-        service.current = backend; setRemote(true); apply(cached); setReady(true);
-        void refreshInBackground(backend);
+        service.current = backend; setRemote(true); apply(cached);
+        const ownerVerified = Boolean(launchTelegramId) && (!cacheEntry.telegramId || cacheEntry.telegramId === launchTelegramId);
+        if (ownerVerified) setReady(true);
+        void refreshInBackground(backend, !ownerVerified);
         return;
       }
       if (!hasSession) {
@@ -424,7 +439,14 @@ export default function App() {
         let backend = remote ? remoteService(telegram) : localService(language), p;
         try { p = await backend.getProfile(); } catch (error) {
           if (error.status !== 401 || telegram?.initData) throw error;
-          localStorage.removeItem(SESSION_KEY); clearProfileCache(); backend = localService(language); p = await backend.getProfile(); notify('errorSignIn');
+          localStorage.removeItem(SESSION_KEY); clearProfileCache();
+          // A device that has held a real account must never fall through
+          // to an empty local ledger: that reads as "all my data is gone",
+          // and anything typed there would never sync. Stop at the
+          // sign-in failure state instead. Only a device that has never
+          // held an account may start out as a fresh local user.
+          if (localStorage.getItem(REMOTE_ACCOUNT_KEY)) { notify('errorSignIn'); throw error; }
+          backend = localService(language); p = await backend.getProfile(); notify('errorSignIn');
         }
         if (cancelled) return;
         service.current = backend; setRemote(backend.getInvite !== undefined); apply(p); setReady(true); setSyncFailed(false);
@@ -860,7 +882,7 @@ export default function App() {
     if (res?.profile) { service.current = backend; setRemote(true); apply(res.profile); notify('savedShort'); flushWrites(true); }
     return res;
   }
-  async function logout() { const result = await run(() => service.current.logout()); if (result !== null) { clearProfileCache(); service.current = localService(language); setRemote(false); apply(await service.current.getProfile()); } }
+  async function logout() { const result = await run(() => service.current.logout()); if (result !== null) { clearProfileCache(); try { localStorage.removeItem(REMOTE_ACCOUNT_KEY); } catch {} service.current = localService(language); setRemote(false); apply(await service.current.getProfile()); } }
   function mutateEntry(entry, optimistic, request) {
     const p = currentProfile.current, backend = service.current, scope = p.user.id + ':' + p.ledgerId;
     return entryOperations.current.enqueue({ key:scope + ':' + entry.id, id:entry.id, backend, scope, optimistic, fallback:p.expenses.find(item => item.id === entry.id) || null, request:() => request(backend, p.ledgerId) });

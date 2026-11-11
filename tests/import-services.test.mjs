@@ -42,6 +42,22 @@ test('authentication or ledger changes abort multi-file analysis rather than exp
   assert.equal(calls, 2);
 });
 
+test('a dead stored token is dropped, re-exchanged via Telegram and the call retried once', async t => {
+  const calls = [];
+  browserGlobals(t, async (url, options) => {
+    calls.push({ url, authorization: options.headers.Authorization });
+    if (url === '/api/auth/telegram') return response({ sessionToken: 'fresh-token' });
+    if (options.headers.Authorization === 'Bearer fresh-token') return response({ id: 'e1', ledgerId: 'ledger-original' });
+    return response({ error: 'errorSignIn' }, 401);
+  });
+  const service = remoteService({ initData: 'raw-init-data' });
+  const saved = await service.addExpense(entry('e1'));
+  assert.equal(saved.id, 'e1');
+  assert.deepEqual(calls.map(call => call.url), ['/api/expenses', '/api/auth/telegram', '/api/expenses']);
+  assert.equal(calls[0].authorization, 'Bearer fixture-session');
+  assert.equal(calls[2].authorization, 'Bearer fresh-token');
+});
+
 test('client text clipping is accompanied by a warning for both text-only and file requests', async t => {
   const requests = [];
   browserGlobals(t, async (url, options) => { requests.push(JSON.parse(options.body)); return response({ items: [entry('one')] }); });
