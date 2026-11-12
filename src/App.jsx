@@ -98,15 +98,17 @@ const Categories = memo(function Categories({ categories, lang, selected, disabl
   const [expanded, setExpanded] = useState(false);
   const areaRef = useRef(null);
   const pickFromPanel = id => { onSelect(id); setExpanded(false); };
-  // The visual backdrop cannot cover every strip of the screen: the bottom
-  // nav lives in a different stacking context and stays hit-testable above
-  // it. A document-level outside-tap check closes the panel reliably no
-  // matter which element actually receives the tap.
+  // Closing is click-based on purpose: the backdrop covers the whole
+  // screen (including the toggle), so a pointerdown close would unmount it
+  // mid-tap and let the tap's click land on whatever is underneath —
+  // reopening the panel from the toggle or even typing a keypad digit.
+  // A document-level outside-click check also covers the bottom nav,
+  // which lives in a different stacking context above the backdrop.
   useEffect(() => {
     if (!expanded) return undefined;
     const close = event => { if (!areaRef.current?.contains(event.target)) setExpanded(false); };
-    document.addEventListener('pointerdown', close, true);
-    return () => document.removeEventListener('pointerdown', close, true);
+    document.addEventListener('click', close, true);
+    return () => document.removeEventListener('click', close, true);
   }, [expanded]);
   const clearClickBlock = useCallback(() => {
     // A native horizontal touch scroll may dispatch a click after pointerup.
@@ -181,8 +183,8 @@ const Categories = memo(function Categories({ categories, lang, selected, disabl
     {categories.map((c, index) => <button type="button" className={`category category-pill ${selected === c.id ? 'selected' : ''}`} key={c.id} data-category={c.id} aria-label={categoryDisplayLabel(c, lang)} aria-pressed={selected === c.id} disabled={disabled} onClick={() => onSelect(c.id)}><span className="category-icon" style={{ background: `var(--${c.color})` }}><CategoryArt category={c} eager={index < 6}/></span><span className="category-label">{categoryDisplayLabel(c, lang)}</span></button>)}
     </div>
    </div>
-   {expanded && <div className="categories-backdrop" aria-hidden="true" onPointerDown={() => setExpanded(false)}/>}
-   {expanded && <div className="categories-panel" role="group" aria-label={translate(lang, 'allCategories')}>
+   {expanded && <div className="categories-backdrop" aria-hidden="true" onClick={() => setExpanded(false)}/>}
+   {expanded && <div className="categories-panel" role="group" aria-label={translate(lang, 'allCategories')} onClick={event => { if (event.target === event.currentTarget) setExpanded(false); }}>
     {categories.map((c, index) => <button type="button" className={`category category-tile ${selected === c.id ? 'selected' : ''}`} key={c.id} aria-label={categoryDisplayLabel(c, lang)} aria-pressed={selected === c.id} disabled={disabled} onClick={() => pickFromPanel(c.id)}><span className="category-icon" style={{ background: `var(--${c.color})` }}><CategoryArt category={c} eager={index < 6}/></span><span className="category-label">{categoryDisplayLabel(c, lang)}</span></button>)}
    </div>}
   </div>;
