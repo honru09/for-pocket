@@ -95,6 +95,19 @@ function countText(n, lang, currency) {
 const Categories = memo(function Categories({ categories, lang, selected, disabled, onSelect }) {
   const drawerRef = useRef(null), gesture = useRef(null), blockClick = useRef(false), pointerSelection = useRef(null), selectionInput = useRef('pointer');
   const [scrollHints, setScrollHints] = useState({ left: false, right: false });
+  const [expanded, setExpanded] = useState(false);
+  const areaRef = useRef(null);
+  const pickFromPanel = id => { onSelect(id); setExpanded(false); };
+  // The visual backdrop cannot cover every strip of the screen: the bottom
+  // nav lives in a different stacking context and stays hit-testable above
+  // it. A document-level outside-tap check closes the panel reliably no
+  // matter which element actually receives the tap.
+  useEffect(() => {
+    if (!expanded) return undefined;
+    const close = event => { if (!areaRef.current?.contains(event.target)) setExpanded(false); };
+    document.addEventListener('pointerdown', close, true);
+    return () => document.removeEventListener('pointerdown', close, true);
+  }, [expanded]);
   const clearClickBlock = useCallback(() => {
     // A native horizontal touch scroll may dispatch a click after pointerup.
     // Suppress only that synthetic click, then release the guard immediately
@@ -148,7 +161,10 @@ const Categories = memo(function Categories({ categories, lang, selected, disabl
     }
     gesture.current = null;
   };
-  return <div ref={drawerRef} className={`categories category-drawer ${scrollHints.left ? 'has-scroll-left' : ''} ${scrollHints.right ? 'has-scroll-right' : ''}`} id="categories" role="group" aria-label={translate(lang, 'categories')}
+  return <div className="categories-area" ref={areaRef}>
+   <div className="categories-row">
+    <button type="button" className={`category-expand ${expanded ? 'is-open' : ''}`} aria-expanded={expanded} aria-label={translate(lang, 'allCategories')} disabled={disabled} onClick={() => setExpanded(open => !open)}><Icon name="grid"/><span className="category-expand-label">{translate(lang, 'allCategoriesShort')}</span></button>
+    <div ref={drawerRef} className={`categories category-drawer ${scrollHints.left ? 'has-scroll-left' : ''} ${scrollHints.right ? 'has-scroll-right' : ''}`} id="categories" role="group" aria-label={translate(lang, 'categories')}
     onPointerDownCapture={event => { selectionInput.current = 'pointer'; blockClick.current = false; gesture.current = { x:event.clientX, y:event.clientY, dragged:false }; }}
     onPointerMoveCapture={moved}
     onPointerUpCapture={released}
@@ -163,6 +179,12 @@ const Categories = memo(function Categories({ categories, lang, selected, disabl
       }
     }}>
     {categories.map((c, index) => <button type="button" className={`category category-pill ${selected === c.id ? 'selected' : ''}`} key={c.id} data-category={c.id} aria-label={categoryDisplayLabel(c, lang)} aria-pressed={selected === c.id} disabled={disabled} onClick={() => onSelect(c.id)}><span className="category-icon" style={{ background: `var(--${c.color})` }}><CategoryArt category={c} eager={index < 6}/></span><span className="category-label">{categoryDisplayLabel(c, lang)}</span></button>)}
+    </div>
+   </div>
+   {expanded && <div className="categories-backdrop" aria-hidden="true" onPointerDown={() => setExpanded(false)}/>}
+   {expanded && <div className="categories-panel" role="group" aria-label={translate(lang, 'allCategories')}>
+    {categories.map((c, index) => <button type="button" className={`category category-tile ${selected === c.id ? 'selected' : ''}`} key={c.id} aria-label={categoryDisplayLabel(c, lang)} aria-pressed={selected === c.id} disabled={disabled} onClick={() => pickFromPanel(c.id)}><span className="category-icon" style={{ background: `var(--${c.color})` }}><CategoryArt category={c} eager={index < 6}/></span><span className="category-label">{categoryDisplayLabel(c, lang)}</span></button>)}
+   </div>}
   </div>;
 });
 

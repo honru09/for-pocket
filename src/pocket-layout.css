@@ -281,3 +281,47 @@
   html[data-pocket-compact=true] .for-root #record-view .key { min-height:44px; }
   html[data-pocket-compact=true] .for-root #record-view .finish { grid-column:1; grid-row:4; }
 }
+
+/* Expand-all categories: a fixed toggle at the head of the pill drawer opens
+   a full grid panel over the keypad. Picking a category (or tapping outside)
+   closes it. The panel is absolutely positioned so the fixed record-layout
+   rows never move. */
+.for-root #record-view .categories-area { position:relative; min-width:0; }
+.for-root #record-view .categories-row { display:flex; align-items:center; gap:6px; min-width:0; }
+.for-root #record-view .categories-row .categories.category-drawer { flex:1 1 auto; width:auto; }
+.for-root #record-view .category-expand {
+  flex:0 0 auto; height:42px; min-height:42px; display:inline-flex; align-items:center; gap:4px;
+  padding:5px 10px 5px 8px; border:1px solid transparent; border-radius:999px;
+  background:#f0f0e7; color:#5c6651; font-size:12px; font-weight:800; line-height:1; white-space:nowrap;
+  box-shadow:0 1px 0 rgba(51,58,48,.03); cursor:pointer;
+  transition:transform 260ms var(--spring),background-color 180ms ease,border-color 180ms ease;
+}
+.for-root #record-view .category-expand .for-icon { width:17px; height:17px; }
+.for-root #record-view .category-expand:active { transform:scale(.94); }
+.for-root #record-view .category-expand.is-open { background:#f8e7c9; border-color:#e4c681; color:#765829; }
+/* Absolute with oversized insets: an ancestor transform makes position:fixed
+   resolve against the app shell instead of the viewport, which would leave
+   the bottom nav strip uncovered. */
+.for-root #record-view .categories-backdrop { position:absolute; inset:-100dvh -50vw; z-index:39; background:transparent; }
+.for-root #record-view .categories-panel {
+  position:absolute; top:calc(100% + 6px); left:0; right:0; z-index:40;
+  display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px;
+  max-height:min(46dvh,368px); overflow-y:auto; overscroll-behavior:contain;
+  padding:10px; border:1px solid var(--soft-line); border-radius:20px;
+  background:var(--paper); box-shadow:0 18px 44px rgba(51,58,48,.20);
+  animation:cat-panel-in 180ms ease-out;
+}
+@keyframes cat-panel-in { from { opacity:0; transform:translate3d(0,6px,0); } to { opacity:1; transform:translate3d(0,0,0); } }
+.for-root #record-view .category.category-tile {
+  grid-column:auto; grid-row:auto;
+  height:64px; min-height:64px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:5px;
+  padding:6px 4px; border:1.5px solid transparent; border-radius:16px; background:#f0f0e7; color:#5c6651;
+  font-size:11px; font-weight:800; overflow:hidden;
+}
+.for-root #record-view .category.category-tile .category-icon { width:29px; height:29px; border-radius:10px; }
+.for-root #record-view .category.category-tile .category-icon .for-icon { width:19px; height:19px; }
+.for-root #record-view .category.category-tile .category-label { max-width:100%; }
+.for-root #record-view .category.category-tile.selected { background:#f8e7c9; border-color:#e4c681; color:#765829; }
+.for-root #record-view .category.category-tile.selected .category-icon { background:#f4d48e!important; color:#765829; }
+@media(max-width:355px) { .for-root #record-view .categories-panel { grid-template-columns:repeat(3,minmax(0,1fr)); } }
+html[data-pocket-compact=true] .for-root #record-view .categories-area { flex:1 1 0; min-width:0; }
