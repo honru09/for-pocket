@@ -41,7 +41,7 @@ const language = resolveLanguage(telegram?.initDataUnsafe?.user?.language_code |
 const blankDraft = () => ({ raw: '0', selected: null, consumer: null, note: '', type: 'expense', occurredAt: null });
 const THEME_OPTIONS = ['matcha', 'cheese', 'peach', 'sea'];
 const SOUND_OPTIONS = ['off', 'water', 'wood'];
-function haptic(kind = 'selection') { try { if (!telegram?.isVersionAtLeast?.('6.1')) return; kind === 'success' ? telegram.HapticFeedback.notificationOccurred(kind) : telegram.HapticFeedback.selectionChanged(); } catch {} }
+function haptic(kind = 'selection') { try { if (!telegram?.isVersionAtLeast?.('6.1')) return; kind === 'success' || kind === 'error' ? telegram.HapticFeedback.notificationOccurred(kind) : telegram.HapticFeedback.selectionChanged(); } catch {} }
 function playKeySound(pack) {
   if (!pack || pack === 'off') return;
   try {
@@ -263,6 +263,38 @@ function RecurringEditor({ settings, categories, t, updateSettings, disabled }) 
   return <section className="recurring-panel"><p className="quiet-copy">{t('recurringHint')}</p><div className="recurring-list">{recurring.map(item => <div className="recurring-item" key={item.id}><span className="recurring-date">{item.day}</span><div><strong>{format(item)}</strong><small>{categoryDisplayLabel(categories.find(c => c.id === item.categoryId) || {}, settings.language)}{item.note ? ` · ${item.note}` : ''}</small></div><button type="button" aria-label={t('removeRecurring')} disabled={disabled} onClick={() => updateSettings({ recurringExpenses: recurring.filter(other => other.id !== item.id) })}>×</button></div>)}{!recurring.length && <div className="recurring-empty-state"><PocketIllustration name="recurring-reminder-tactile-v1" compact/><span className="quiet-copy">{t('recurringEmpty')}</span></div>}</div><form className="recurring-form" onSubmit={add}><label><span>{t('recurringDay')}</span><input inputMode="numeric" type="number" min="1" max="31" value={draft.day} onChange={event => setDraft(current => ({ ...current, day:event.target.value }))}/></label><label><span>{t('amountLabel')}</span><input inputMode="decimal" type="number" min="0" step="any" required value={draft.amount} onChange={event => setDraft(current => ({ ...current, amount:event.target.value }))}/></label><label><span>{t('currency')}</span><select value={draft.currency} onChange={event => setDraft(current => ({ ...current, currency:event.target.value }))}>{Object.keys(CURRENCIES).map(currency => <option key={currency}>{currency}</option>)}</select></label><label className="recurring-wide"><span>{t('categoryFilter')}</span><select value={draft.categoryId} onChange={event => setDraft(current => ({ ...current, categoryId:event.target.value }))}>{categories.map(category => <option key={category.id} value={category.id}>{categoryDisplayLabel(category, settings.language)}</option>)}</select></label><label className="recurring-wide"><span>{t('note')}</span><input maxLength="160" value={draft.note} onChange={event => setDraft(current => ({ ...current, note:event.target.value }))}/></label><Button className="compact-save" type="submit" disabled={disabled}>{t('addRecurring')}</Button></form></section>;
 }
 
+// The amount renders one span per character so a changed digit can roll
+// (odometer-style) and a fresh digit can pop in, while the settled DOM text
+// stays exactly the formatted amount. During a roll the base glyph hides and
+// an aria-hidden overlay track slides the previous digit out; the overlay
+// unmounts when the roll ends, so text readers always see the plain amount.
+const REDUCED_MOTION = typeof window !== 'undefined' && typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+function AmountDigit({ char, fromRight }) {
+  const [roll, setRoll] = useState(null);
+  const previous = useRef(char);
+  useEffect(() => {
+    const before = previous.current;
+    previous.current = char;
+    if (before === char || REDUCED_MOTION || !/\d/.test(before) || !/\d/.test(char)) return;
+    setRoll({ before, up: Number(char) > Number(before) });
+    const timer = setTimeout(() => setRoll(null), 460);
+    return () => clearTimeout(timer);
+  }, [char]);
+  const delay = `${Math.min(fromRight * 24, 120)}ms`;
+  return <span className={`amt-digit ${roll ? 'is-rolling' : ''}`}>
+    <span className="amt-digit-base">{char}</span>
+    {roll && <span className="amt-roll" aria-hidden="true"><span className={`amt-roll-track ${roll.up ? 'roll-up' : 'roll-down'}`} style={{ animationDelay: delay }}>{roll.up
+      ? <><span>{roll.before}</span><span>{char}</span></>
+      : <><span>{char}</span><span>{roll.before}</span></>}</span></span>}
+  </span>;
+}
+function AmountDigits({ text }) {
+  const chars = [...text];
+  return chars.map((char, index) => /\d/.test(char)
+    ? <AmountDigit key={index} char={char} fromRight={chars.length - 1 - index} />
+    : <span key={index} className="amt-sep">{char}</span>);
+}
+
 export default function App() {
   usePocketViewport(telegram);
   const [timezone, setTimezone] = useState(() => deviceTimezone());
@@ -298,6 +330,7 @@ export default function App() {
   const confirmedSettings = useRef(new Map());
   const pageRef = useRef(null), mascotRef = useRef(null), stageRef = useRef(null), keyboard = useRef(false), epoch = useRef(0);
   const keypadPointer = useRef(null);
+  const amountSwipe = useRef(null);
   const t = useCallback((key, values) => translate(settings.language, key, values), [settings.language]);
   const locale = LOCALES[settings.language], disabled = busy || !ready;
   const draftCurrency = draft.currency || settings.currency;
@@ -689,19 +722,41 @@ export default function App() {
     }, 700);
     return () => clearTimeout(timer);
   }, [draft.raw, draft.location, draft.selected, draft.type, draft.occurredAt, draft.currency, draft.currencyManual, isRemote, config.aiEnabled, view, locationScope, settings.currency]);
+  // A refused key (amount full, second decimal point, a '00' that does not
+  // fit) used to fail silently, which reads as a missed tap. Nudge the amount
+  // and buzz an error instead; the return value also lets a held key stop
+  // repeating once there is nothing left to change.
+  const refuseKey = useCallback(() => {
+    const display = document.querySelector('#amount-display');
+    if (display) {
+      display.classList.remove('is-refused');
+      void display.offsetWidth;
+      display.classList.add('is-refused');
+      setTimeout(() => display.classList.remove('is-refused'), 240);
+    }
+    haptic('error');
+    return 'refused';
+  }, []);
   const pushKey = useCallback(key => {
-    if (busyRef.current || !state.current.ready) return;
+    if (busyRef.current || !state.current.ready) return 'noop';
     const current = state.current.draft.raw, currency = state.current.draft.currency || settingsRef.current.currency, digits = CURRENCIES[currency].digits;
     let next = current;
     if (key === 'backspace') next = current.slice(0, -1) || '0';
     else if (key === 'clear') next = '0';
-    else if (key === '.') { const term = current; if (digits && !term.includes('.')) next += '.'; else return; }
-    else if (/^\d$/.test(key)) { const term = current, [whole, part] = term.split('.'); if (part !== undefined && part.length >= digits) return; if (part === undefined && whole.length >= 8) return; next = current === '0' ? key : current + key; }
-    else return;
-    if (next.length > 96) return;
+    else if (key === '.') { if (digits && !current.includes('.')) next += '.'; else return refuseKey(); }
+    else if (key === '00') {
+      const [whole, part] = current.split('.');
+      if (current === '0') return 'noop';
+      if (part !== undefined ? part.length + 2 > digits : whole.length + 2 > 8) return refuseKey();
+      next = current + '00';
+    }
+    else if (/^\d$/.test(key)) { const [whole, part] = current.split('.'); if (part !== undefined && part.length >= digits) return refuseKey(); if (part === undefined && whole.length >= 8) return refuseKey(); next = current === '0' ? key : current + key; }
+    else return 'noop';
+    if (next.length > 96) return refuseKey();
     pending.current = null; state.current.draft = { ...state.current.draft, raw: next }; setDraft(current => ({ ...current, raw: next }));
     playKeySound(settingsRef.current.soundPack); haptic();
-  }, []);
+    return key === 'backspace' && current === '0' ? 'noop' : 'applied';
+  }, [refuseKey]);
   // Keep the visual press state in sync for both pointer and physical
   // keyboard input.  The keypad buttons remain real HTML buttons so their
   // labels and focus behaviour stay accessible; this only toggles a transient
@@ -710,7 +765,7 @@ export default function App() {
     const nodes = [...document.querySelectorAll('#keypad .key')];
     const node = nodes.find(item => item.dataset.key === key);
     if (pressed && (!node || node.disabled)) return;
-    if (pressed && node) { node.dataset.input = source; node.setAttribute('data-pressed', 'true'); }
+    if (pressed && node) { node.dataset.input = source; node.setAttribute('data-pressed', 'true'); if (source === 'pointer') haptic(); }
     else if (node?.dataset.input === source) node.removeAttribute('data-pressed');
     if (pressed) stageRef.current?.setAttribute('data-press', 'true');
     else if (!nodes.some(item => item.dataset.pressed === 'true')) stageRef.current?.removeAttribute('data-press');
@@ -791,6 +846,9 @@ export default function App() {
     const event = { id: payload.id, type: d.type };
     if (noteOrigin) setNoteFlight({ ...event, origin:noteOrigin, scope });
     else { setNoteFlight(null); setCelebration(event); }
+    // A quick stamp press on the whole stage as the entry lands.
+    const stage = stageRef.current;
+    if (stage) { stage.classList.remove('is-saved-flash'); void stage.offsetWidth; stage.classList.add('is-saved-flash'); setTimeout(() => stage.classList.remove('is-saved-flash'), 400); }
     notify('savedShort'); haptic('success');
     submitWrite({ payload, optimistic, draft: d, backend, scope, locationResolution });
     return true;
@@ -1048,9 +1106,9 @@ export default function App() {
     </header>
 
     {failedCount > 0 && <button type="button" className="sync-retry-banner" onClick={retryWrites}>{t('retryUnconfirmed', { n: failedCount })}</button>}<main key={view} ref={pageRef} id={`${view}-view`} className="page">{view !== 'record' && view !== 'history' && <div className="page-heading"><h1 id={`${view}-title`} tabIndex={-1}>{t(titleKey)}</h1>{secondary && <Button mode="plain" size="s" className="text-button" onClick={() => navigate(view === 'settings' ? 'record' : 'settings')}>{t('back')}</Button>}</div>}
-    {view === 'record' && <><div className="today-strip"><span className="today-icon" aria-hidden="true"><Icon name="arrowDown"/></span><div><span>{t('todayTotal')}</span><strong id="today-total">{money(todayExpense)}</strong></div><Button id="edit-draft-time" mode="plain" className={`date-label date-button ${draft.occurredAt ? 'has-custom-time' : ''}`} aria-label={t('editEntryTime')} disabled={disabled} onClick={() => setTimeEditor({})}><Icon name="clock"/>{new Intl.DateTimeFormat(locale, { month:'short',day:'numeric', ...(draft.occurredAt ? { hour:'2-digit',minute:'2-digit',hourCycle:'h23' } : {}) }).format(new Date(draft.occurredAt || Date.now()))}</Button><Button id="open-ai-import" mode="plain" className="ai-quick-trigger" aria-label={t('aiImportTitle')} title={t('aiImportTitle')} disabled={busy} onClick={() => navigate('ai-import')}><Icon name="receipt"/></Button></div>{clipboardSuggestion && <button type="button" className="clipboard-capsule" onClick={applyClipboard}><Icon name="clip"/><span>{t('clipboardFound',{ amount:money(clipboardSuggestion.amountMinor, clipboardSuggestion.currency) })}</span><b>{t('clipboardFill')}</b></button>}{dueRecurring.length > 0 && <div className="recurring-due" role="status"><span>{t('recurringDue',{ n:dueRecurring.length })}</span><div>{dueRecurring.slice(0,2).map(item => <button type="button" key={item.id} onClick={() => applyRecurring(item)}>{categoryDisplayLabel(categories.find(c => c.id === item.categoryId) || {}, settings.language)} · {money(item.amountMinor,item.currency)}</button>)}</div></div>}<div className="record-layout"><section ref={stageRef} className={`amount-stage ${draft.raw.length >= 6 ? 'long-amount' : ''} ${draft.type === 'income' ? 'is-income' : ''}`} aria-label={t('amountInput')}><div className="amount-meta"><div className="type-toggle-pill" role="group" aria-label={t('transactionType')}>{['expense','income'].map(type => <Tappable Component="button" type="button" key={type} className={`type-pill-btn ${draft.type === type ? `active type-${type}` : ''}`} aria-pressed={draft.type === type} disabled={disabled} onClick={() => { editDraft({ type, selected:null }); haptic(); }}>{t(type)}</Tappable>)}</div><Select id="currency" className="currency-control" aria-label={t('currency')} value={draftCurrency} data-suggested={Boolean(draft.suggestedCurrency === draftCurrency && !draft.currencyManual)} title={draft.suggestedCurrency ? `${t('locationCurrency')} · ${draft.suggestedCurrency}` : t('currency')} disabled={disabled} onChange={e => { const currency=e.target.value; editDraft({ currency, currencyManual:true, raw:currency === 'JPY' ? draft.raw.replace(/\.[^+]+/g,'').replace(/\.$/,'') : draft.raw }); }}>{Object.keys(CURRENCIES).map(c => <option key={c} value={c}>{c}{draft.suggestedCurrency === c && draftCurrency !== c ? ` · ${t('locationCurrency')}` : ''}</option>)}</Select></div><div className="amount-line"><span className="currency-symbol">{draft.type === 'income' ? '+' : ''}{CURRENCIES[draftCurrency].symbol}</span><output id="amount-display" data-length={draft.raw.length < 6 ? 'short' : draft.raw.length > 9 ? 'long' : draft.raw.length} aria-label={t('currentAmount')} style={{ '--amount-chars':amount.length }}>{amount}</output><span className="input-caret" aria-hidden="true"/></div><div className="amount-bottom"><span>{(draft.selected ? categoryDisplayLabel(categories.find(c => c.id === draft.selected) || {}, settings.language) : '')}</span>{ratePreview && <small className="rate-preview">≈ {money(ratePreview.minor, ratePreview.currency)}</small>}</div><PocketMascot mascotRef={mascotRef} t={t} environment={mascotEnvironment} onTap={haptic} canConfirm={Boolean(!disabled && amountMinor && draft.selected && draft.consumer)} busy={busy} celebrate={celebration} receiving={Boolean(noteFlight)} confirmLabel={saveLabel} onConfirm={save}/></section>
+    {view === 'record' && <><div className="today-strip"><span className="today-icon" aria-hidden="true"><Icon name="arrowDown"/></span><div><span>{t('todayTotal')}</span><strong id="today-total">{money(todayExpense)}</strong></div><Button id="edit-draft-time" mode="plain" className={`date-label date-button ${draft.occurredAt ? 'has-custom-time' : ''}`} aria-label={t('editEntryTime')} disabled={disabled} onClick={() => setTimeEditor({})}><Icon name="clock"/>{new Intl.DateTimeFormat(locale, { month:'short',day:'numeric', ...(draft.occurredAt ? { hour:'2-digit',minute:'2-digit',hourCycle:'h23' } : {}) }).format(new Date(draft.occurredAt || Date.now()))}</Button><Button id="open-ai-import" mode="plain" className="ai-quick-trigger" aria-label={t('aiImportTitle')} title={t('aiImportTitle')} disabled={busy} onClick={() => navigate('ai-import')}><Icon name="receipt"/></Button></div>{clipboardSuggestion && <button type="button" className="clipboard-capsule" onClick={applyClipboard}><Icon name="clip"/><span>{t('clipboardFound',{ amount:money(clipboardSuggestion.amountMinor, clipboardSuggestion.currency) })}</span><b>{t('clipboardFill')}</b></button>}{dueRecurring.length > 0 && <div className="recurring-due" role="status"><span>{t('recurringDue',{ n:dueRecurring.length })}</span><div>{dueRecurring.slice(0,2).map(item => <button type="button" key={item.id} onClick={() => applyRecurring(item)}>{categoryDisplayLabel(categories.find(c => c.id === item.categoryId) || {}, settings.language)} · {money(item.amountMinor,item.currency)}</button>)}</div></div>}<div className="record-layout"><section ref={stageRef} className={`amount-stage ${draft.raw.length >= 6 ? 'long-amount' : ''} ${draft.type === 'income' ? 'is-income' : ''}`} aria-label={t('amountInput')}><div className="amount-meta"><div className="type-toggle-pill" role="group" aria-label={t('transactionType')}>{['expense','income'].map(type => <Tappable Component="button" type="button" key={type} className={`type-pill-btn ${draft.type === type ? `active type-${type}` : ''}`} aria-pressed={draft.type === type} disabled={disabled} onClick={() => { editDraft({ type, selected:null }); haptic(); }}>{t(type)}</Tappable>)}</div><Select id="currency" className="currency-control" aria-label={t('currency')} value={draftCurrency} data-suggested={Boolean(draft.suggestedCurrency === draftCurrency && !draft.currencyManual)} title={draft.suggestedCurrency ? `${t('locationCurrency')} · ${draft.suggestedCurrency}` : t('currency')} disabled={disabled} onChange={e => { const currency=e.target.value; editDraft({ currency, currencyManual:true, raw:currency === 'JPY' ? draft.raw.replace(/\.[^+]+/g,'').replace(/\.$/,'') : draft.raw }); }}>{Object.keys(CURRENCIES).map(c => <option key={c} value={c}>{c}{draft.suggestedCurrency === c && draftCurrency !== c ? ` · ${t('locationCurrency')}` : ''}</option>)}</Select></div><div className="amount-line" onPointerDown={event => { amountSwipe.current = { x:event.clientX, y:event.clientY }; }} onPointerUp={event => { const start = amountSwipe.current; amountSwipe.current = null; if (!start || disabled) return; if (start.x - event.clientX >= 48 && Math.abs(event.clientY - start.y) <= 28) { setKeyVisual('backspace', true); pushKey('backspace'); setTimeout(() => setKeyVisual('backspace', false), 130); } }}><span className="currency-symbol">{draft.type === 'income' ? '+' : ''}{CURRENCIES[draftCurrency].symbol}</span><output id="amount-display" data-length={draft.raw.length < 6 ? 'short' : draft.raw.length > 9 ? 'long' : draft.raw.length} aria-label={t('currentAmount')} style={{ '--amount-chars':amount.length }}><AmountDigits text={amount}/></output><span className="input-caret" aria-hidden="true"/></div><div className="amount-bottom"><span>{(draft.selected ? categoryDisplayLabel(categories.find(c => c.id === draft.selected) || {}, settings.language) : '')}</span>{ratePreview && <small className="rate-preview">≈ {money(ratePreview.minor, ratePreview.currency)}</small>}</div><PocketMascot mascotRef={mascotRef} t={t} environment={mascotEnvironment} onTap={haptic} canConfirm={Boolean(!disabled && amountMinor && draft.selected && draft.consumer)} busy={busy} celebrate={celebration} receiving={Boolean(noteFlight)} confirmLabel={saveLabel} onConfirm={save}/></section>
       <section className="purposes"><div className="section-heading"><h2>{t('categories')}</h2>{(!circle || circle.isAdmin) && <Button className="text-button" id="edit-categories" mode="plain" size="s" disabled={disabled} onClick={startEditing}>{t('editCategories')}</Button>}</div><Categories categories={orderedCategories} lang={settings.language} selected={draft.selected} disabled={disabled} onSelect={id => { editDraft({ selected:id }); haptic(); }}/></section>
-       <section id="keypad" className="keypad" aria-label={t('keypad')}>{keypadKeys.map((key,index) => <KeypadButton key={key+'-'+index} keyValue={key} label={key === 'clear' ? t('clear') : key === 'backspace' ? t('backspace') : key === '.' ? t('decimal') : key} disabled={disabled} secondary={['clear','backspace','.'].includes(key)} contextKey={[draftCurrency,draft.type,settings.theme].join(':')} pointerSession={keypadPointer} onInput={pushKey} onVisualChange={setKeyVisual}>{key === 'clear' ? 'C' : key === 'backspace' ? <Icon name="backspace"/> : key === '.' ? decimal : key}</KeypadButton>)}</section>
+       <section id="keypad" className="keypad" aria-label={t('keypad')}>{keypadKeys.map((key,index) => <KeypadButton key={key+'-'+index} keyValue={key} label={key === 'clear' ? t('clear') : key === 'backspace' ? t('backspace') : key === '.' ? t('decimal') : key} disabled={disabled} secondary={['clear','backspace','.'].includes(key)} contextKey={[draftCurrency,draft.type,settings.theme].join(':')} pointerSession={keypadPointer} onInput={pushKey} onVisualChange={setKeyVisual} holdRepeat={key === 'backspace'} holdValue={key === '0' ? '00' : null}>{key === 'clear' ? 'C' : key === 'backspace' ? <Icon name="backspace"/> : key === '.' ? decimal : key === '0' ? <>0<span className="key-double-hint" aria-hidden="true">00</span></> : key}</KeypadButton>)}</section>
       <section className="finish" aria-label={t('save')}><div className="entry-actions">{isRemote && circle && <div ref={setReactionHost} className="circle-presence-host"/>}<Button id="entry-location" mode="plain" className={`location-trigger ${draft.location ? 'has-location' : ''}`} aria-label={t('locationTitle')} aria-pressed={Boolean(draft.location)} title={locationLabel(draft.location) || t('locationTitle')} disabled={disabled} onClick={() => setLocationSheet(true)}><Icon name="pin"/></Button><Button id="edit-note" mode="plain" className={`note-trigger ${draft.note ? "has-note" : ""}`} aria-label={t('note')} title={draft.note || t('note')} disabled={disabled} onClick={() => setNoteEditor(true)}><Icon name="edit"/></Button></div></section></div>
       </>}
     {view === 'history' && <><div className="history-title-bar"><h1 id="history-title" tabIndex={-1}>{t('ledger')}</h1><div className="history-controls history-toolbar">

@@ -6,19 +6,26 @@ const within = (rect, event) => event.clientX >= rect.left && event.clientX <= r
 
 // Pointer input commits at a valid release; its compatibility click never
 // commits again. Keyboard and assistive-technology clicks keep button semantics.
-export default memo(function KeypadButton({ keyValue, children, label, disabled, contextKey, pointerSession, onInput, onVisualChange, secondary = false }) {
+export default memo(function KeypadButton({ keyValue, children, label, disabled, contextKey, pointerSession, onInput, onVisualChange, secondary = false, holdRepeat = false, holdValue = null }) {
   const buttonRef = useRef(null), pointer = useRef(null), keyboard = useRef(null);
   const latest = useRef({ disabled, onInput });
   latest.current = { disabled, onInput };
   const paint = useCallback((pressed, source) => onVisualChange(keyValue, pressed, source), [keyValue, onVisualChange]);
+  const stopHold = session => {
+    if (session.holdTimer) { clearTimeout(session.holdTimer); session.holdTimer = null; }
+    delete session.node.dataset.holding;
+  };
   const finishPointer = useCallback((session, commit = false) => {
     if (pointer.current !== session) return;
     pointer.current = null;
     if (pointerSession.current === session) pointerSession.current = null;
+    stopHold(session);
     session.detach();
     paint(false, 'pointer');
     try { if (session.node.hasPointerCapture?.(session.id)) session.node.releasePointerCapture(session.id); } catch {}
-    if (commit && !latest.current.disabled && session.node.isConnected) latest.current.onInput(keyValue);
+    // A held key already delivered its input (repeats, or the hold value);
+    // the release must not commit the plain key on top of it.
+    if (commit && !session.held && !latest.current.disabled && session.node.isConnected) latest.current.onInput(keyValue);
   }, [keyValue, paint, pointerSession]);
   const cancel = useCallback(() => {
     if (pointer.current) finishPointer(pointer.current);
@@ -47,10 +54,31 @@ export default memo(function KeypadButton({ keyValue, children, label, disabled,
     pointerSession.current = session;
     if (keyboard.current) keyboard.current.cancelled = true;
     paint(true, 'pointer');
+    // Long-press: backspace repeats (slow, then faster) and the 0 key
+    // delivers '00'. The hold fires while the finger is still down; the
+    // release afterwards is swallowed by finishPointer via session.held.
+    if (holdRepeat || holdValue) {
+      session.holdTimer = setTimeout(() => {
+        session.holdTimer = null;
+        if (pointer.current !== session || session.cancelled || latest.current.disabled) return;
+        session.held = true;
+        node.dataset.holding = 'true';
+        if (holdValue) { latest.current.onInput(holdValue); return; }
+        let ticks = 0;
+        const tick = () => {
+          if (pointer.current !== session || session.cancelled) return;
+          const result = latest.current.onInput(keyValue);
+          if (result === 'noop' || result === 'refused') { stopHold(session); return; }
+          ticks++;
+          session.holdTimer = setTimeout(tick, ticks < 6 ? 85 : 45);
+        };
+        tick();
+      }, 380);
+    }
     const inside = next => within(session.rect, next) && within(node.getBoundingClientRect(), next);
     const move = next => {
       if (next.pointerId !== session.id || pointer.current !== session || session.cancelled) return;
-      if (!inside(next)) { session.cancelled = true; paint(false, 'pointer'); }
+      if (!inside(next)) { session.cancelled = true; stopHold(session); paint(false, 'pointer'); }
     };
     const up = next => {
       if (next.pointerId === session.id) finishPointer(session, !session.cancelled && inside(next));
@@ -104,7 +132,7 @@ export default memo(function KeypadButton({ keyValue, children, label, disabled,
     onPointerDown={down}
     onPointerLeave={event => {
       const current = pointer.current;
-      if (current?.id === event.pointerId && !within(current.rect, event)) { current.cancelled = true; paint(false, 'pointer'); }
+      if (current?.id === event.pointerId && !within(current.rect, event)) { current.cancelled = true; stopHold(current); paint(false, 'pointer'); }
     }}
     onLostPointerCapture={event => { if (pointer.current?.id === event.pointerId) finishPointer(pointer.current); }}
     onKeyDown={keyDown} onKeyUp={keyUp} onBlur={cancel} onClick={click}>

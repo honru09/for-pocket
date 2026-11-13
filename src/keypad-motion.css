@@ -1,0 +1,59 @@
+/* Keypad & amount motion layer: odometer digit rolls, fresh-digit pop-in,
+   refusal and save feedback, the keypad entrance cascade, and the held-key
+   pose. Transform/opacity only; everything here yields to reduced motion. */
+
+/* Amount digits keep one width so rolls do not shove neighbours sideways,
+   and the size steps between digit counts glide instead of jumping. */
+.for-root #amount-display { font-variant-numeric:tabular-nums; transition:font-size 180ms ease; }
+
+.for-root .amt-digit { position:relative; display:inline-block; line-height:1; animation:amt-digit-in 180ms var(--ease-out); }
+.for-root .amt-digit.is-rolling .amt-digit-base { visibility:hidden; }
+.for-root .amt-roll { position:absolute; left:0; top:0; width:100%; height:1em; overflow:hidden; pointer-events:none; }
+.for-root .amt-roll-track { display:flex; flex-direction:column; animation-duration:240ms; animation-timing-function:cubic-bezier(.3,.7,.3,1); animation-fill-mode:both; }
+.for-root .amt-roll-track > span { display:block; height:1em; line-height:1; }
+.for-root .amt-roll-track.roll-up { animation-name:amt-roll-up; }
+.for-root .amt-roll-track.roll-down { animation-name:amt-roll-down; }
+@keyframes amt-roll-up { from { transform:translateY(0); } to { transform:translateY(-1em); } }
+@keyframes amt-roll-down { from { transform:translateY(-1em); } to { transform:translateY(0); } }
+@keyframes amt-digit-in { from { opacity:0; transform:translateY(.16em) scale(.86); } }
+
+.for-root .amt-sep { display:inline-block; animation:amt-sep-in 200ms ease-out; }
+@keyframes amt-sep-in { from { opacity:0; transform:translateY(3px); } }
+
+/* A refused key nudges the amount sideways instead of failing silently. */
+.for-root #amount-display.is-refused { animation:amt-refused 200ms ease; }
+@keyframes amt-refused { 0% { transform:translateX(0); } 30% { transform:translateX(-3px); } 65% { transform:translateX(2px); } 100% { transform:translateX(0); } }
+
+/* A saved entry stamps the stage once as it lands. */
+.for-root .amount-stage.is-saved-flash { animation:stage-stamp 340ms cubic-bezier(.3,.7,.3,1); }
+@keyframes stage-stamp { 0% { transform:scale(1); } 35% { transform:scale(.982); } 70% { transform:scale(1.004); } 100% { transform:scale(1); } }
+
+/* Held keys (repeat backspace, the 00 hold) sink deeper than a tap. */
+.for-root #keypad .key[data-holding="true"] .key-cap { transform:translate3d(0,2.5px,0) scale(.94,.92); transition-duration:80ms; }
+
+/* The 0 key advertises its long-press '00' in the corner of the cap. */
+.for-root #keypad .key-double-hint { position:absolute; top:-7px; right:-14px; font-size:9px; font-weight:700; font-style:normal; letter-spacing:.02em; opacity:.45; pointer-events:none; }
+
+/* Entering the record view, the caps float up in a quick cascade. */
+@media (prefers-reduced-motion: no-preference) {
+  .for-root[data-view="record"] #keypad .key-cap { animation:key-cap-in 380ms cubic-bezier(.22,.9,.28,1.15) backwards; }
+  .for-root[data-view="record"] #keypad .key:nth-child(2) .key-cap { animation-delay:16ms; }
+  .for-root[data-view="record"] #keypad .key:nth-child(3) .key-cap { animation-delay:32ms; }
+  .for-root[data-view="record"] #keypad .key:nth-child(4) .key-cap { animation-delay:48ms; }
+  .for-root[data-view="record"] #keypad .key:nth-child(5) .key-cap { animation-delay:64ms; }
+  .for-root[data-view="record"] #keypad .key:nth-child(6) .key-cap { animation-delay:80ms; }
+  .for-root[data-view="record"] #keypad .key:nth-child(7) .key-cap { animation-delay:96ms; }
+  .for-root[data-view="record"] #keypad .key:nth-child(8) .key-cap { animation-delay:112ms; }
+  .for-root[data-view="record"] #keypad .key:nth-child(9) .key-cap { animation-delay:128ms; }
+  .for-root[data-view="record"] #keypad .key:nth-child(10) .key-cap { animation-delay:144ms; }
+  .for-root[data-view="record"] #keypad .key:nth-child(11) .key-cap { animation-delay:160ms; }
+  .for-root[data-view="record"] #keypad .key:nth-child(12) .key-cap { animation-delay:176ms; }
+  @keyframes key-cap-in { from { opacity:0; transform:translate3d(0,10px,0) scale(.9); } }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .for-root #amount-display { transition:none; }
+  .for-root .amt-digit, .for-root .amt-sep, .for-root .amt-roll,
+  .for-root #amount-display.is-refused, .for-root .amount-stage.is-saved-flash { animation:none !important; }
+  .for-root .amt-roll { display:none; }
+}
